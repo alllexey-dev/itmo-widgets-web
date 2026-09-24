@@ -35,6 +35,7 @@ trailing slash. Routes live in `src/app/routes.tsx`:
 | `/admin/users/:isu`   | `UserPage`                      | `admin`     |
 | `/admin/sport`        | `SportPage`                     | `admin`     |
 | `/admin/system`       | `SystemPage`                    | `admin`     |
+| `/admin/reviews`      | `ReviewsPage`                   | `admin`     |
 | `/admin/audit`        | `AuditPage`                     | `admin`     |
 | `*`                   | `NotFoundPage` (in the shell)   | signed in   |
 
@@ -141,6 +142,7 @@ src/
     users/      users list, user page, moderator role switch
     dashboard/  DashboardPage, lazy TrendChart
     system/     SportPage, SystemPage (app version, moderation settings)
+    reviews/    ReviewsPage (reviews sync state and start)
     audit/      AuditPage
   ui/         design system (see design.md)
   test/       Vitest setup, MSW server and handlers, synthetic admin data, render helpers
@@ -158,7 +160,10 @@ Query keys start with the area (`['admin', 'moderation', …]`,
 whole area at once. A moderation decision writes the returned case into the
 cache and invalidates the rest of the area; a role change also invalidates the
 audit log. Paged lists keep the previous page on screen while the next loads.
-The next case in the queue is prefetched.
+The next case in the queue is prefetched. The reviews sync state
+(`['admin', 'reviews', 'sync']`) is polled every 3 s while a run is in
+progress; a start writes the returned state into the cache and invalidates the
+audit log, and a rejected start (409) refetches the state.
 
 ## Testing
 

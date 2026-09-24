@@ -105,7 +105,7 @@ export function AuditPage() {
     <>
       <PageHeader
         title="Журнал"
-        description="Роли, правила модерации и версия приложения: кто и когда менял"
+        description="Роли, правила модерации, версия приложения и синхронизация отзывов: кто и когда менял или запускал"
       />
       {audit.isError ? (
         <ErrorState
