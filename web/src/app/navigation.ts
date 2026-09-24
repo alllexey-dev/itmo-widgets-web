@@ -19,6 +19,7 @@ export const NAV_GROUPS: readonly (readonly NavItem[])[] = [
     { path: '/admin/users', label: 'Пользователи', icon: 'group', access: 'admin' },
     { path: '/admin/sport', label: 'Спорт', icon: 'fitness_center', access: 'admin' },
     { path: '/admin/system', label: 'Система', icon: 'settings', access: 'admin' },
+    { path: '/admin/reviews', label: 'Отзывы', icon: 'reviews', access: 'admin' },
     { path: '/admin/audit', label: 'Журнал', icon: 'history', access: 'admin' },
   ],
 ];

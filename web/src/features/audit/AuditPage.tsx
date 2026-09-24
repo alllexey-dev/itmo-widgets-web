@@ -30,11 +30,13 @@ const ACTIONS: Record<string, { label: string; icon: string }> = {
   ROLE_REVOKED: { label: 'Снята роль', icon: 'person_remove' },
   MODERATION_SETTINGS_CHANGED: { label: 'Правила модерации', icon: 'tune' },
   APP_VERSION_CHANGED: { label: 'Версия приложения', icon: 'system_update' },
+  REVIEWS_SYNC_STARTED: { label: 'Синхронизация отзывов', icon: 'sync' },
 };
 
 const TARGETS: Record<string, string> = {
   'moderation-settings': 'Настройки модерации',
   'app-version': 'Версия приложения',
+  'reviews-sync': 'Отзывы',
 };
 
 function Target({ target }: { target: string }) {

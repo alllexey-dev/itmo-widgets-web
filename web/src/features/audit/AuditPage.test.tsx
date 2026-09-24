@@ -45,6 +45,26 @@ describe('AuditPage', () => {
     expect(within(first).getByRole('link', { name: 'Анна Смирнова' })).toBeInTheDocument();
   });
 
+  it('names the reviews sync start', async () => {
+    mockSession(sessionOf(['ADMIN']));
+    const entry: AuditEntry = {
+      id: 'entry-sync',
+      action: 'REVIEWS_SYNC_STARTED',
+      target: 'reviews-sync',
+      details: null,
+      createdAt: minutesAgo(5),
+      actorIsu: 400001,
+      actorName: 'Анна Смирнова',
+    };
+    server.use(http.get('*/api/admin/audit', ({ request }) => ok(pageOf([entry], request))));
+
+    renderApp('/admin/audit');
+
+    const table = await screen.findByRole('table', { name: 'Журнал' });
+    const row = await within(table).findByRole('row', { name: /Синхронизация отзывов/ });
+    expect(row).toHaveTextContent('Отзывы');
+  });
+
   it('pages through older entries', async () => {
     mockSession(sessionOf(['ADMIN']));
     const pages = mockAudit();

@@ -13,6 +13,7 @@ const ADMIN_PATHS = [
   '/admin/users/311111',
   '/admin/sport',
   '/admin/system',
+  '/admin/reviews',
   '/admin/audit',
 ];
 

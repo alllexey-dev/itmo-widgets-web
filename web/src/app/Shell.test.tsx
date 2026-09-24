@@ -16,7 +16,7 @@ import {
 } from '../test/server';
 
 const MODERATOR_LINKS = ['Модерация', 'Ограничения'];
-const ADMIN_LINKS = ['Дашборд', 'Пользователи', 'Спорт', 'Система', 'Журнал'];
+const ADMIN_LINKS = ['Дашборд', 'Пользователи', 'Спорт', 'Система', 'Отзывы', 'Журнал'];
 
 async function navLinks() {
   const nav = await screen.findByRole('navigation', { name: 'Разделы' });

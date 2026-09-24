@@ -9,6 +9,7 @@ import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { HomePage } from '../features/home/HomePage';
 import { ModerationPage } from '../features/moderation/ModerationPage';
 import { RestrictionsPage } from '../features/moderation/RestrictionsPage';
+import { ReviewsPage } from '../features/reviews/ReviewsPage';
 import { SportPage } from '../features/system/SportPage';
 import { SystemPage } from '../features/system/SystemPage';
 import { UserPage } from '../features/users/UserPage';
@@ -61,6 +62,7 @@ export function AppRoutes() {
             <Route path="admin/users/:isu" element={<UserPage />} />
             <Route path="admin/sport" element={<SportPage />} />
             <Route path="admin/system" element={<SystemPage />} />
+            <Route path="admin/reviews" element={<ReviewsPage />} />
             <Route path="admin/audit" element={<AuditPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
