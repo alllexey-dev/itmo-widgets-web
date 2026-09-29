@@ -31,12 +31,15 @@ const ACTIONS: Record<string, { label: string; icon: string }> = {
   MODERATION_SETTINGS_CHANGED: { label: 'Правила модерации', icon: 'tune' },
   APP_VERSION_CHANGED: { label: 'Версия приложения', icon: 'system_update' },
   REVIEWS_SYNC_STARTED: { label: 'Синхронизация отзывов', icon: 'sync' },
+  SERVICE_CREDENTIAL_REPLACED: { label: 'Замена учётных данных', icon: 'key' },
 };
 
 const TARGETS: Record<string, string> = {
   'moderation-settings': 'Настройки модерации',
   'app-version': 'Версия приложения',
   'reviews-sync': 'Отзывы',
+  'credential:MY_ITMO_REFRESH_TOKEN': 'My ITMO · refresh-токен',
+  'credential:ISU_KEYCLOAK_IDENTITY': 'ИСУ · cookie KEYCLOAK_IDENTITY',
 };
 
 function Target({ target }: { target: string }) {
@@ -105,7 +108,7 @@ export function AuditPage() {
     <>
       <PageHeader
         title="Журнал"
-        description="Роли, правила модерации, версия приложения и синхронизация отзывов: кто и когда менял или запускал"
+        description="Роли, правила модерации, версия приложения, синхронизация отзывов и учётные данные: кто и когда менял или запускал"
       />
       {audit.isError ? (
         <ErrorState

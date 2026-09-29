@@ -16,15 +16,20 @@ import {
   CATEGORIES,
   hostOf,
   REPORT_REASONS,
+  VERIFICATION,
   visibilityLabel,
 } from './labels';
 import styles from './CaseDetail.module.css';
+import { TextDiff } from './TextDiff';
 import type {
   ModerationDecision,
   ModerationReport,
   SubjectLink,
   SubjectLinkRevision,
   SubjectLinkTarget,
+  SubmitterHistory,
+  TeacherReviewTarget,
+  UserData,
   UserRestriction,
 } from './types';
 
@@ -45,6 +50,10 @@ function UrlText({ url }: { url: string }) {
       <span className={styles.urlMuted}>{rest.join(host)}</span>
     </span>
   );
+}
+
+function scoreText(score: number): string {
+  return score > 0 ? `+${score}` : String(score);
 }
 
 export function LinkPreview({ target }: { target: SubjectLinkTarget }) {
@@ -85,7 +94,7 @@ export function LinkPreview({ target }: { target: SubjectLinkTarget }) {
         </div>
         <div>
           <dt>Рейтинг</dt>
-          <dd>{link.score > 0 ? `+${link.score}` : link.score}</dd>
+          <dd>{scoreText(link.score)}</dd>
         </div>
         {hidden && (
           <div>
@@ -165,7 +174,92 @@ export function ChangesSection({ target }: { target: SubjectLinkTarget }) {
   );
 }
 
-function groupLine(groups: SubjectLinkTarget['author']['groups']): string | null {
+export function ReviewPreview({ target }: { target: TeacherReviewTarget }) {
+  const { revision, review } = target;
+  const verification = VERIFICATION[review.verification];
+  return (
+    <section className={styles.preview} aria-label="Отзыв">
+      <div className={styles.previewBadges}>
+        <Badge icon={review.anonymous ? 'visibility_off' : 'person'}>
+          {review.anonymous ? 'Анонимно' : 'С именем'}
+        </Badge>
+        <Badge
+          tone={verification.tone}
+          icon={review.verification === 'VERIFIED' ? 'verified' : undefined}
+        >
+          {verification.label}
+        </Badge>
+        {review.hidden && (
+          <Badge tone="warning" icon="visibility_off">
+            Скрыт
+          </Badge>
+        )}
+      </div>
+      <dl className={styles.facts}>
+        <div>
+          <dt>Предмет</dt>
+          <dd>{revision.subjectTitle ?? 'Не указан'}</dd>
+        </div>
+        <div>
+          <dt>Версия</dt>
+          <dd>
+            № {revision.number} · {formatRelative(revision.submittedAt)}
+          </dd>
+        </div>
+        <div>
+          <dt>Рейтинг</dt>
+          <dd>{scoreText(review.score)}</dd>
+        </div>
+      </dl>
+      <p className={styles.reviewText}>{revision.text}</p>
+    </section>
+  );
+}
+
+/** `review.shown` is what others see now; without it the review was never approved. */
+export function ReviewChangesSection({ target }: { target: TeacherReviewTarget }) {
+  const { revision, review } = target;
+  const shown = review.shown;
+  if (!shown) {
+    return (
+      <p className={styles.note}>
+        <Icon name="new_releases" size={18} />
+        Новый отзыв, одобренных версий ещё нет
+      </p>
+    );
+  }
+  const subjectChanged = (shown.subjectTitle ?? '') !== (revision.subjectTitle ?? '');
+  const textChanged = shown.text !== revision.text;
+  if (!subjectChanged && !textChanged) return null;
+  return (
+    <section className={styles.section} aria-labelledby="case-changes">
+      <h3 id="case-changes" className={styles.sectionTitle}>
+        Изменения
+      </h3>
+      <DiffView
+        caption="Изменения относительно одобренной версии"
+        rows={[
+          {
+            key: 'subject',
+            label: 'Предмет',
+            before: shown.subjectTitle ?? '—',
+            after: revision.subjectTitle ?? '—',
+            changed: subjectChanged,
+          },
+        ]}
+        beforeLabel="Одобрено"
+        afterLabel={revision.status === 'PENDING' ? 'На проверке' : 'В заявке'}
+      />
+      <h4 className={styles.subsectionTitle}>
+        Текст
+        {textChanged ? <Badge tone="warning">изменено</Badge> : <span>не изменён</span>}
+      </h4>
+      {textChanged && <TextDiff before={shown.text} after={revision.text} />}
+    </section>
+  );
+}
+
+function groupLine(groups: UserData['groups']): string | null {
   const group = groups[0];
   if (!group) return null;
   return [group.name, group.course > 0 ? `${group.course} курс` : null, group.facultyShortName]
@@ -188,13 +282,14 @@ export function RestrictionLine({ restriction }: { restriction: UserRestriction 
 }
 
 export function AuthorSection({
-  target,
+  author,
+  submitterHistory: history,
   canOpenProfile,
 }: {
-  target: SubjectLinkTarget;
+  author: UserData;
+  submitterHistory: SubmitterHistory;
   canOpenProfile: boolean;
 }) {
-  const { author, submitterHistory: history } = target;
   const group = groupLine(author.groups);
   return (
     <section className={styles.section} aria-labelledby="case-author">

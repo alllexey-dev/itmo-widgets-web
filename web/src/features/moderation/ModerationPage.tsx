@@ -90,7 +90,7 @@ export function ModerationPage() {
     <>
       <PageHeader
         title="Модерация"
-        description="Новые ссылки, жалобы и ссылки с низким рейтингом"
+        description="Новые ссылки и отзывы, жалобы и низкий рейтинг"
         actions={wide ? <ShortcutHint /> : undefined}
       />
       <div className={styles.toolbar}>

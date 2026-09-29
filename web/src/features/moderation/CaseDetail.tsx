@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { RestrictionCapability } from '../../api/admin';
 import { ApiError } from '../../api/client';
 import { errorText } from '../../api/errors';
 import {
@@ -21,14 +22,60 @@ import {
   DecisionsTimeline,
   LinkPreview,
   ReportsSection,
+  ReviewChangesSection,
+  ReviewPreview,
 } from './CaseSections';
 import { HideAllDialog, RejectDialog, RestrictDialog } from './DecisionDialogs';
-import { ACTIONS, CASE_STATUSES, periodLabel, REASONS } from './labels';
+import {
+  CASE_STATUSES,
+  doneText,
+  LINK_REJECT_PRESETS,
+  periodLabel,
+  REASONS,
+  REVIEW_REJECT_PRESETS,
+} from './labels';
 import styles from './CaseDetail.module.css';
-import type { DecisionRequest, ModerationCase, SubjectLinkTarget } from './types';
+import type { CaseTarget, DecisionRequest, ModerationCase, TargetType } from './types';
 import { useShortcuts } from './useShortcuts';
 
 type OpenDialog = 'reject' | 'restrict' | 'hideAll' | null;
+
+interface TargetTexts {
+  deleted: string;
+  deletedNote: string;
+  rejectTitle: string;
+  rejectPresets: readonly string[];
+  restriction: RestrictionCapability;
+}
+
+const TARGET_TEXTS: Record<TargetType, TargetTexts> = {
+  SUBJECT_RESOURCE: {
+    deleted: 'Ссылка удалена',
+    deletedNote: 'Автор удалил ссылку; остались только решения.',
+    rejectTitle: 'Отклонить ссылку',
+    rejectPresets: LINK_REJECT_PRESETS,
+    restriction: 'SUBMIT_RESOURCES',
+  },
+  TEACHER_REVIEW: {
+    deleted: 'Отзыв удалён',
+    deletedNote: 'Автор удалил отзыв; остались только решения.',
+    rejectTitle: 'Отклонить отзыв',
+    rejectPresets: REVIEW_REJECT_PRESETS,
+    restriction: 'WRITE_REVIEWS',
+  },
+};
+
+function targetTitle(target: CaseTarget): string {
+  if (target.targetType === 'SUBJECT_RESOURCE') return target.link.subjectName;
+  const { teacherName, teacherIsu } = target.review;
+  return `${teacherName ?? 'Преподаватель'} · ИСУ ${teacherIsu}`;
+}
+
+function isHidden(target: CaseTarget): boolean {
+  return target.targetType === 'SUBJECT_RESOURCE'
+    ? target.link.status === 'HIDDEN'
+    : target.review.hidden;
+}
 
 export interface CaseDetailProps {
   caseId: string;
@@ -81,13 +128,14 @@ function CaseView({
   const decision = useDecision(data.id);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const target = data.target;
+  const texts = TARGET_TEXTS[data.targetType];
   const open = data.status === 'OPEN' && target !== null;
 
   const decide = (request: DecisionRequest) => {
     decision.mutate(request, {
       onSuccess: (updated) => {
         setDialog(null);
-        toast.show({ message: ACTIONS[request.action].done, tone: 'success' });
+        toast.show({ message: doneText(request.action, data.targetType), tone: 'success' });
         onDecided(updated);
       },
       onError: (error) =>
@@ -124,9 +172,11 @@ function CaseView({
             <span className={styles.muted}>с {formatDateTime(data.openedAt)}</span>
           </div>
           <h2 id="case-title" className={styles.title}>
-            {target ? target.link.subjectName : 'Ссылка удалена'}
+            {target ? targetTitle(target) : texts.deleted}
           </h2>
-          {target && <p className={styles.muted}>{periodLabel(target.link.periodKey)}</p>}
+          {target?.targetType === 'SUBJECT_RESOURCE' && (
+            <p className={styles.muted}>{periodLabel(target.link.periodKey)}</p>
+          )}
         </div>
       </header>
 
@@ -140,13 +190,26 @@ function CaseView({
             onDecide={decide}
             onOpenDialog={setDialog}
           />
-          <LinkPreview target={target} />
-          <ChangesSection target={target} />
-          <AuthorSection target={target} canOpenProfile={canOpenProfile} />
+          {target.targetType === 'SUBJECT_RESOURCE' ? (
+            <>
+              <LinkPreview target={target} />
+              <ChangesSection target={target} />
+            </>
+          ) : (
+            <>
+              <ReviewPreview target={target} />
+              <ReviewChangesSection target={target} />
+            </>
+          )}
+          <AuthorSection
+            author={target.author}
+            submitterHistory={target.submitterHistory}
+            canOpenProfile={canOpenProfile}
+          />
           <ReportsSection reports={target.reports} />
         </>
       ) : (
-        <p className={styles.note}>Автор удалил ссылку; остались только решения.</p>
+        <p className={styles.note}>{texts.deletedNote}</p>
       )}
       <DecisionsTimeline decisions={data.decisions} />
 
@@ -156,6 +219,8 @@ function CaseView({
           onClose={() => setDialog(null)}
           onSubmit={decide}
           saving={decision.isPending}
+          title={texts.rejectTitle}
+          presets={texts.rejectPresets}
         />
       )}
       {target && dialog === 'restrict' && (
@@ -165,6 +230,7 @@ function CaseView({
           onSubmit={decide}
           saving={decision.isPending}
           authorName={target.author.name}
+          defaultCapability={texts.restriction}
         />
       )}
       {target && dialog === 'hideAll' && (
@@ -174,6 +240,7 @@ function CaseView({
           onSubmit={decide}
           saving={decision.isPending}
           authorName={target.author.name}
+          targetType={data.targetType}
         />
       )}
     </article>
@@ -189,13 +256,13 @@ function CaseActions({
   onOpenDialog,
 }: {
   open: boolean;
-  target: SubjectLinkTarget;
+  target: CaseTarget;
   saving: boolean;
   pendingAction: DecisionRequest['action'] | null;
   onDecide: (request: DecisionRequest) => void;
   onOpenDialog: (dialog: OpenDialog) => void;
 }) {
-  const hidden = target.link.status === 'HIDDEN';
+  const hidden = isHidden(target);
   const restore = (
     <Button
       variant={open ? 'text' : 'tonal'}

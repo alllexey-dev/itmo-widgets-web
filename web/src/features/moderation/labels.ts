@@ -7,6 +7,8 @@ import type {
   LinkVisibility,
   ModerationAction,
   ReportReason,
+  ReviewVerification,
+  TargetType,
 } from './types';
 
 interface Labelled {
@@ -44,6 +46,15 @@ export const REPORT_REASONS: Record<ReportReason, string> = {
   WRONG_SUBJECT: 'Другой предмет',
   SPAM: 'Спам',
   OTHER: 'Другое',
+  OFFENSIVE: 'Оскорбления',
+  WRONG_TEACHER: 'Не тот преподаватель',
+};
+
+/** The ISU check: `PENDING` and `UNVERIFIED` look the same to users, not to moderators. */
+export const VERIFICATION: Record<ReviewVerification, { label: string; tone: BadgeTone }> = {
+  VERIFIED: { label: 'Вёл у автора', tone: 'success' },
+  UNVERIFIED: { label: 'Не подтверждён', tone: 'neutral' },
+  PENDING: { label: 'Проверяется', tone: 'neutral' },
 };
 
 export const ACTIONS: Record<ModerationAction, Labelled & { done: string }> = {
@@ -59,6 +70,36 @@ export const ACTIONS: Record<ModerationAction, Labelled & { done: string }> = {
     done: 'Ссылки автора скрыты',
   },
 };
+
+const REVIEW_DONE: Partial<Record<ModerationAction, string>> = {
+  APPROVE: 'Отзыв одобрен',
+  REJECT: 'Отзыв отклонён',
+  HIDE: 'Отзыв скрыт',
+  RESTORE: 'Отзыв снова виден',
+  HIDE_ALL_BY_USER: 'Отзывы автора скрыты',
+};
+
+/** The toast after a decision names what it was about. */
+export function doneText(action: ModerationAction, targetType: TargetType): string {
+  return (
+    (targetType === 'TEACHER_REVIEW' ? REVIEW_DONE[action] : undefined) ?? ACTIONS[action].done
+  );
+}
+
+/** Frequent reject reasons offered as chips; the author sees the chosen one. */
+export const LINK_REJECT_PRESETS = [
+  'Не открывается',
+  'Не относится к предмету',
+  'Уже есть такая ссылка',
+  'Спам',
+] as const;
+
+export const REVIEW_REJECT_PRESETS = [
+  'Оскорбления',
+  'Личные данные',
+  'Не о преподавателе',
+  'Не по существу',
+] as const;
 
 export const CAPABILITIES: Record<RestrictionCapability, string> = {
   SUBMIT_RESOURCES: 'Публикация ссылок',

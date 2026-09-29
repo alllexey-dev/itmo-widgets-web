@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { minutesAgo } from '../../test/admin';
 import { renderApp } from '../../test/render';
 import { fail, mockSession, ok, server, sessionOf } from '../../test/server';
-import type { ReviewsSyncStatus } from './types';
+import type { ReviewsSyncStatus, ReviewVerification } from './types';
 
 function statusOf(overrides: Partial<ReviewsSyncStatus> = {}): ReviewsSyncStatus {
   return {
@@ -30,11 +30,14 @@ function statusOf(overrides: Partial<ReviewsSyncStatus> = {}): ReviewsSyncStatus
   };
 }
 
+const verification: ReviewVerification = { pending: 4, verified: 1250, unverified: 37 };
+
 /** Serves the sync state from memory; a start is refused like the backend does. */
 function mockReviews(initial: ReviewsSyncStatus = statusOf()) {
   let current = initial;
   const starts: { csrf: string | null }[] = [];
   server.use(
+    http.get('*/api/admin/reviews/verification', () => ok(verification)),
     http.get('*/api/admin/reviews/sync', () => ok(current)),
     http.post('*/api/admin/reviews/sync', ({ request }) => {
       starts.push({ csrf: request.headers.get('X-Web-Request') });
@@ -48,6 +51,10 @@ function mockReviews(initial: ReviewsSyncStatus = statusOf()) {
 
 function syncCard() {
   return screen.findByRole('region', { name: 'Синхронизация' });
+}
+
+function verificationCard() {
+  return screen.findByRole('region', { name: 'Проверка по ИСУ' });
 }
 
 describe('ReviewsPage', () => {
@@ -151,5 +158,36 @@ describe('ReviewsPage', () => {
     await userEvent.click(within(card).getByRole('button', { name: 'Повторить' }));
 
     expect(await within(card).findByText('Обновлено')).toBeInTheDocument();
+  });
+
+  it('counts own reviews by the ISU check', async () => {
+    mockSession(sessionOf(['ADMIN']));
+    mockReviews();
+
+    renderApp('/admin/reviews');
+
+    const card = await verificationCard();
+    expect(await within(card).findByRole('group', { name: 'На проверке' })).toHaveTextContent('4');
+    expect(within(card).getByRole('group', { name: 'Подтверждено' })).toHaveTextContent(/1\s250/);
+    expect(within(card).getByRole('group', { name: 'Не подтверждено' })).toHaveTextContent('37');
+  });
+
+  it('retries failed ISU check counters', async () => {
+    mockSession(sessionOf(['ADMIN']));
+    mockReviews();
+    let attempts = 0;
+    server.use(
+      http.get('*/api/admin/reviews/verification', () => {
+        attempts += 1;
+        return attempts === 1 ? fail(404, 'not_found') : ok(verification);
+      }),
+    );
+    renderApp('/admin/reviews');
+    const card = await verificationCard();
+    expect(await within(card).findByText('Не удалось загрузить проверку')).toBeInTheDocument();
+
+    await userEvent.click(within(card).getByRole('button', { name: 'Повторить' }));
+
+    expect(await within(card).findByRole('group', { name: 'Подтверждено' })).toBeInTheDocument();
   });
 });

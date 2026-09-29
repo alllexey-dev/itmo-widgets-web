@@ -12,7 +12,7 @@ import {
   Stat,
   useToast,
 } from '../../ui';
-import { useReviewsSync, useStartReviewsSync } from './api';
+import { useReviewsSync, useReviewVerification, useStartReviewsSync } from './api';
 import { OUTCOMES } from './labels';
 import styles from './ReviewsPage.module.css';
 import type { ReviewsSyncStatus } from './types';
@@ -20,8 +20,11 @@ import type { ReviewsSyncStatus } from './types';
 export function ReviewsPage() {
   return (
     <>
-      <PageHeader title="Отзывы" description="Отзывы из проекта Reviews" />
-      <SyncCard />
+      <PageHeader title="Отзывы" description="Отзывы из проекта Reviews и проверка своих отзывов" />
+      <div className={styles.cards}>
+        <SyncCard />
+        <VerificationCard />
+      </div>
     </>
   );
 }
@@ -117,5 +120,47 @@ function SyncView({ status }: { status: ReviewsSyncStatus }) {
         </p>
       )}
     </div>
+  );
+}
+
+function VerificationCard() {
+  const verification = useReviewVerification();
+  return (
+    <Card as="section" variant="outlined" padding="large" aria-label="Проверка по ИСУ">
+      <CardHeader title="Проверка по ИСУ" subtitle="Вёл ли преподаватель у автора отзыва" />
+      {verification.isPending ? (
+        <div className={styles.tiles} role="status" aria-label="Загружаем проверку">
+          {[0, 1, 2].map((index) => (
+            <Skeleton key={index} height={108} className={styles.skeleton} />
+          ))}
+        </div>
+      ) : verification.isError ? (
+        <ErrorState
+          compact
+          title="Не удалось загрузить проверку"
+          description={errorText(verification.error, 'Попробуйте ещё раз.')}
+          onRetry={() => void verification.refetch()}
+          retrying={verification.isFetching}
+        />
+      ) : (
+        <div className={styles.tiles}>
+          <Stat
+            icon="hourglass_top"
+            label="На проверке"
+            value={formatNumber(verification.data.pending)}
+          />
+          <Stat
+            icon="verified"
+            label="Подтверждено"
+            value={formatNumber(verification.data.verified)}
+          />
+          <Stat
+            icon="help"
+            label="Не подтверждено"
+            value={formatNumber(verification.data.unverified)}
+          />
+        </div>
+      )}
+    </Card>
   );
 }

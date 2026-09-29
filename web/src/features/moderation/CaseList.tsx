@@ -10,10 +10,38 @@ export interface CaseListProps {
   onSelect: (id: string) => void;
 }
 
-function caseTitle(item: Pick<AdminCaseItem, 'revision'>): string {
-  const revision = item.revision;
-  if (!revision) return 'Ссылка удалена';
-  return revision.title?.trim() || hostOf(revision.url) || revision.url;
+interface RowTexts {
+  icon: string;
+  title: string;
+  line: string;
+  hidden: string | null;
+}
+
+function linkRow(item: AdminCaseItem): RowTexts {
+  const { revision, link } = item;
+  if (!revision) {
+    return { icon: 'link_off', title: 'Ссылка удалена', line: 'Нет данных', hidden: null };
+  }
+  const host = hostOf(revision.url);
+  return {
+    icon: CATEGORIES[revision.category].icon,
+    title: revision.title?.trim() || host || revision.url,
+    line: [link?.subjectName, host].filter(Boolean).join(' · ') || 'Нет данных',
+    hidden: link?.hidden ? 'скрыта' : null,
+  };
+}
+
+function reviewRow(item: AdminCaseItem): RowTexts {
+  const review = item.review;
+  if (!review) {
+    return { icon: 'comments_disabled', title: 'Отзыв удалён', line: 'Нет данных', hidden: null };
+  }
+  return {
+    icon: 'rate_review',
+    title: [`ИСУ ${review.teacherIsu}`, review.subjectTitle].filter(Boolean).join(' · '),
+    line: review.excerpt,
+    hidden: review.hidden ? 'скрыт' : null,
+  };
 }
 
 export function CaseList({ items, selectedId, onSelect }: CaseListProps) {
@@ -49,9 +77,8 @@ function CaseRow({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const category = item.revision ? CATEGORIES[item.revision.category] : null;
+  const row = item.targetType === 'TEACHER_REVIEW' ? reviewRow(item) : linkRow(item);
   const reason = REASONS[item.reason];
-  const host = item.revision ? hostOf(item.revision.url) : null;
   const time = item.status === 'OPEN' ? item.openedAt : (item.resolvedAt ?? item.openedAt);
   return (
     <button
@@ -61,18 +88,16 @@ function CaseRow({
       onClick={onSelect}
     >
       <span className={styles.icon}>
-        <Icon name={category?.icon ?? 'link_off'} size={20} />
+        <Icon name={row.icon} size={20} />
       </span>
       <span className={styles.body}>
         <span className={styles.top}>
-          <span className={styles.title}>{caseTitle(item)}</span>
+          <span className={styles.title}>{row.title}</span>
           <Badge tone={reason.tone} className={styles.reason}>
             {reason.label}
           </Badge>
         </span>
-        <span className={styles.line}>
-          {[item.link?.subjectName, host].filter(Boolean).join(' · ') || 'Нет данных'}
-        </span>
+        <span className={styles.line}>{row.line}</span>
         <span className={styles.meta}>
           {item.author && <span className={styles.author}>{item.author.name}</span>}
           <span>{formatRelative(time)}</span>
@@ -83,7 +108,7 @@ function CaseRow({
               <span className="visually-hidden"> жалоб</span>
             </span>
           )}
-          {item.link?.hidden && <span className={styles.hidden}>скрыта</span>}
+          {row.hidden && <span className={styles.hidden}>{row.hidden}</span>}
         </span>
       </span>
     </button>

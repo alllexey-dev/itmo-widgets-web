@@ -3,16 +3,9 @@ import type { RestrictionCapability } from '../../api/admin';
 import { Button, Chip, ConfirmDialog, Dialog, Select, Textarea } from '../../ui';
 import { CAPABILITIES } from './labels';
 import styles from './CaseDetail.module.css';
-import type { DecisionRequest } from './types';
+import type { DecisionRequest, TargetType } from './types';
 
 export const NOTE_LIMIT = 500;
-
-const REJECT_PRESETS = [
-  'Не открывается',
-  'Не относится к предмету',
-  'Уже есть такая ссылка',
-  'Спам',
-];
 
 interface DecisionDialogProps {
   open: boolean;
@@ -22,7 +15,14 @@ interface DecisionDialogProps {
 }
 
 /** The reason is required: the author sees it in the app. */
-export function RejectDialog({ open, onClose, onSubmit, saving }: DecisionDialogProps) {
+export function RejectDialog({
+  open,
+  onClose,
+  onSubmit,
+  saving,
+  title,
+  presets,
+}: DecisionDialogProps & { title: string; presets: readonly string[] }) {
   const [note, setNote] = useState('');
   const noteRef = useRef<HTMLTextAreaElement>(null);
   const trimmed = note.trim();
@@ -34,7 +34,7 @@ export function RejectDialog({ open, onClose, onSubmit, saving }: DecisionDialog
     <Dialog
       open={open}
       onClose={onClose}
-      title="Отклонить ссылку"
+      title={title}
       description="Автор увидит причину в приложении."
       dismissible={!saving}
       initialFocusRef={noteRef}
@@ -52,7 +52,7 @@ export function RejectDialog({ open, onClose, onSubmit, saving }: DecisionDialog
     >
       <div className={styles.form}>
         <div className={styles.presets} role="group" aria-label="Частые причины">
-          {REJECT_PRESETS.map((preset) => (
+          {presets.map((preset) => (
             <Chip key={preset} selected={trimmed === preset} onClick={() => setNote(preset)}>
               {preset}
             </Chip>
@@ -95,8 +95,9 @@ export function RestrictDialog({
   onSubmit,
   saving,
   authorName,
-}: DecisionDialogProps & { authorName: string }) {
-  const [capability, setCapability] = useState<RestrictionCapability>('SUBMIT_RESOURCES');
+  defaultCapability,
+}: DecisionDialogProps & { authorName: string; defaultCapability: RestrictionCapability }) {
+  const [capability, setCapability] = useState<RestrictionCapability>(defaultCapability);
   const [term, setTerm] = useState<Term>('7');
   const [note, setNote] = useState('');
   const trimmed = note.trim();
@@ -150,20 +151,33 @@ export function RestrictDialog({
   );
 }
 
+const HIDE_ALL_TEXTS: Record<TargetType, (authorName: string) => [string, string]> = {
+  SUBJECT_RESOURCE: (name) => [
+    'Скрыть все ссылки автора?',
+    `Опубликованные ссылки ${name} скроются, ссылки на проверке будут отклонены. Личные ссылки останутся.`,
+  ],
+  TEACHER_REVIEW: (name) => [
+    'Скрыть все отзывы автора?',
+    `Опубликованные отзывы ${name} скроются, отзывы на проверке будут отклонены.`,
+  ],
+};
+
 export function HideAllDialog({
   open,
   onClose,
   onSubmit,
   saving,
   authorName,
-}: DecisionDialogProps & { authorName: string }) {
+  targetType,
+}: DecisionDialogProps & { authorName: string; targetType: TargetType }) {
+  const [title, description] = HIDE_ALL_TEXTS[targetType](authorName);
   return (
     <ConfirmDialog
       open={open}
       onClose={onClose}
       onConfirm={() => onSubmit({ action: 'HIDE_ALL_BY_USER' })}
-      title="Скрыть все ссылки автора?"
-      description={`Опубликованные ссылки ${authorName} скроются, ссылки на проверке будут отклонены. Личные ссылки останутся.`}
+      title={title}
+      description={description}
       confirmLabel="Скрыть всё"
       danger
       loading={saving}

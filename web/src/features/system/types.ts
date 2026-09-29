@@ -54,3 +54,35 @@ export interface ModerationSettings {
 }
 
 export const LINK_POLICY = 'SUBJECT_RESOURCE';
+export const REVIEW_POLICY = 'TEACHER_REVIEW';
+
+export type ServiceCredentialKey =
+  'MY_ITMO_REFRESH_TOKEN' | 'MY_ITMO_ACCESS_TOKEN' | 'MY_ITMO_ID_TOKEN' | 'ISU_KEYCLOAK_IDENTITY';
+export type ServiceCredentialKind = 'REFRESH_TOKEN' | 'ACCESS_TOKEN' | 'ID_TOKEN' | 'COOKIE';
+/** `MISSING` has no value; `UNKNOWN` is copied, seeded or replaced and not yet used. */
+export type ServiceCredentialStatus = 'MISSING' | 'UNKNOWN' | 'OK' | 'EXPIRED' | 'FAILED';
+export type CredentialSource = 'MIGRATION' | 'SEED' | 'ROTATION' | 'ADMIN';
+
+/** `AdminServiceCredential`: everything about a service secret except its value. */
+export interface ServiceCredential {
+  key: ServiceCredentialKey;
+  kind: ServiceCredentialKind;
+  replaceable: boolean;
+  present: boolean;
+  status: ServiceCredentialStatus;
+  expiresAt: string | null;
+  expiresSoon: boolean;
+  lastUsedAt: string | null;
+  lastRenewedAt: string | null;
+  lastErrorAt: string | null;
+  /** A short technical line such as `EXPIRED login` or `AUTH sport`. */
+  lastError: string | null;
+  updatedAt: string;
+  updatedSource: CredentialSource | null;
+  updatedByIsu: number | null;
+  updatedByName: string | null;
+}
+
+export interface ServiceCredentialRequest {
+  value: string;
+}

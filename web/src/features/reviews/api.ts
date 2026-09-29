@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
-import type { ReviewsSyncStatus } from './types';
+import type { ReviewsSyncStatus, ReviewVerification } from './types';
 
 const SYNC_PATH = '/api/admin/reviews/sync';
 const syncKey = ['admin', 'reviews', 'sync'] as const;
@@ -24,5 +24,13 @@ export function useStartReviewsSync() {
       await client.invalidateQueries({ queryKey: ['admin', 'audit'] });
     },
     onError: () => client.invalidateQueries({ queryKey: syncKey }),
+  });
+}
+
+export function useReviewVerification() {
+  return useQuery({
+    queryKey: ['admin', 'reviews', 'verification'],
+    queryFn: ({ signal }) =>
+      api.get<ReviewVerification>('/api/admin/reviews/verification', { signal }),
   });
 }

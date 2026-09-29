@@ -21,9 +21,11 @@ import {
   useSaveAppVersion,
   useSaveModerationSettings,
 } from './api';
+import { CredentialsCard } from './CredentialsCard';
 import styles from './SystemPages.module.css';
 import {
   LINK_POLICY,
+  REVIEW_POLICY,
   type AppVersion,
   type ModerationPolicy,
   type ModerationSettings,
@@ -33,10 +35,24 @@ import { compareVersions, isVersion, NOTE_LIMIT } from './version';
 export function SystemPage() {
   return (
     <>
-      <PageHeader title="Система" description="Версия приложения и правила модерации" />
+      <PageHeader title="Система" description="Версия приложения, модерация и учётные данные" />
       <div className={styles.cards}>
         <AppVersionCard />
-        <ModerationSettingsCard />
+        <ModerationSettingsCard
+          policy={LINK_POLICY}
+          title="Модерация ссылок"
+          subtitle="Премодерация и пороги для ссылок предметов"
+          submissionLabel="Ссылок в сутки"
+          premoderationEditable
+        />
+        <ModerationSettingsCard
+          policy={REVIEW_POLICY}
+          title="Модерация отзывов"
+          subtitle="Пороги для отзывов о преподавателях"
+          submissionLabel="Отзывов в сутки"
+          premoderationEditable={false}
+        />
+        <CredentialsCard />
       </div>
     </>
   );
@@ -176,15 +192,27 @@ function AppVersionForm({ saved }: { saved: AppVersion }) {
   );
 }
 
-function ModerationSettingsCard() {
+interface PolicyOptions {
+  /** The target type the policy is keyed by. */
+  policy: string;
+  submissionLabel: string;
+  /** Reviews are always premoderated: the backend refuses to turn it off. */
+  premoderationEditable: boolean;
+}
+
+function ModerationSettingsCard({
+  title,
+  subtitle,
+  ...options
+}: PolicyOptions & { title: string; subtitle: string }) {
   const settings = useModerationSettings();
-  const policy = settings.data?.policies[LINK_POLICY];
+  const saved = settings.data?.policies[options.policy];
   return (
-    <Card as="section" padding="large" aria-label="Модерация ссылок">
-      <CardHeader title="Модерация ссылок" subtitle="Премодерация и пороги для ссылок предметов" />
+    <Card as="section" padding="large" aria-label={title}>
+      <CardHeader title={title} subtitle={subtitle} />
       {settings.isPending ? (
         <CardSkeleton label="Загружаем правила модерации" />
-      ) : settings.isError || !policy ? (
+      ) : settings.isError || !saved ? (
         <ErrorState
           compact
           title="Не удалось загрузить правила"
@@ -194,9 +222,10 @@ function ModerationSettingsCard() {
         />
       ) : (
         <ModerationSettingsForm
-          key={JSON.stringify(policy)}
+          key={JSON.stringify(saved)}
           settings={settings.data}
-          saved={policy}
+          saved={saved}
+          {...options}
         />
       )}
     </Card>
@@ -211,7 +240,7 @@ interface LimitField {
   error: string;
 }
 
-const LIMITS: LimitField[] = [
+const limitFields = (submissionLabel: string): LimitField[] => [
   {
     key: 'reportThreshold',
     label: 'Жалоб до проверки',
@@ -228,7 +257,7 @@ const LIMITS: LimitField[] = [
   },
   {
     key: 'dailySubmissionLimit',
-    label: 'Ссылок в сутки',
+    label: submissionLabel,
     hint: 'На одного автора',
     valid: (value) => value >= 1,
     error: 'Не меньше 1',
@@ -245,20 +274,21 @@ const LIMITS: LimitField[] = [
 function ModerationSettingsForm({
   settings,
   saved,
-}: {
-  settings: ModerationSettings;
-  saved: ModerationPolicy;
-}) {
+  policy,
+  submissionLabel,
+  premoderationEditable,
+}: PolicyOptions & { settings: ModerationSettings; saved: ModerationPolicy }) {
+  const fields = limitFields(submissionLabel);
   const toast = useToast();
   const save = useSaveModerationSettings();
   const [premoderation, setPremoderation] = useState(saved.premoderation);
   const [limits, setLimits] = useState(() =>
-    Object.fromEntries(LIMITS.map(({ key }) => [key, String(saved[key])])),
+    Object.fromEntries(fields.map(({ key }) => [key, String(saved[key])])),
   );
   const [confirming, setConfirming] = useState(false);
 
   const errors = Object.fromEntries(
-    LIMITS.map((field) => {
+    fields.map((field) => {
       const text = limits[field.key] ?? '';
       const value = Number(text);
       const ok = /^-?\d+$/.test(text.trim()) && field.valid(value);
@@ -274,11 +304,11 @@ function ModerationSettingsForm({
     dailyReportLimit: Number(limits.dailyReportLimit),
   };
   const dirty =
-    premoderation !== saved.premoderation || LIMITS.some(({ key }) => next[key] !== saved[key]);
+    premoderation !== saved.premoderation || fields.some(({ key }) => next[key] !== saved[key]);
 
   const submit = () => {
     save.mutate(
-      { policies: { ...settings.policies, [LINK_POLICY]: next } },
+      { policies: { ...settings.policies, [policy]: next } },
       {
         onSuccess: () => {
           setConfirming(false);
@@ -309,15 +339,19 @@ function ModerationSettingsForm({
         requestSave();
       }}
     >
-      <Switch
-        label="Премодерация"
-        description="Ссылки для всех видны только после проверки"
-        checked={premoderation}
-        onChange={setPremoderation}
-      />
-      <hr className={styles.divider} />
+      {premoderationEditable && (
+        <>
+          <Switch
+            label="Премодерация"
+            description="Ссылки для всех видны только после проверки"
+            checked={premoderation}
+            onChange={setPremoderation}
+          />
+          <hr className={styles.divider} />
+        </>
+      )}
       <div className={styles.limits}>
-        {LIMITS.map((field) => (
+        {fields.map((field) => (
           <TextField
             key={field.key}
             label={field.label}

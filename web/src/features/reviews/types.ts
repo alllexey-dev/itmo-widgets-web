@@ -23,3 +23,10 @@ export interface ReviewsSyncStatus {
   reviewsRemoved: number;
   teachersActive: number;
 }
+
+/** `AdminReviewVerification`: own reviews by the state of the ISU check. */
+export interface ReviewVerification {
+  pending: number;
+  verified: number;
+  unverified: number;
+}

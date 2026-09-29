@@ -1,7 +1,15 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { linkTarget, minutesAgo, mockModeration, moderationCase } from '../../test/admin';
+import {
+  linkTarget,
+  minutesAgo,
+  mockModeration,
+  moderationCase,
+  REVIEW_TEXT,
+  reviewCase,
+  reviewTarget,
+} from '../../test/admin';
 import { renderApp } from '../../test/render';
 import { mockSession, sessionOf } from '../../test/server';
 
@@ -248,6 +256,157 @@ describe('ModerationPage', () => {
 
     expect(await screen.findByText('Ссылка снова видна')).toBeInTheDocument();
     expect(decisions[0]?.body).toEqual({ action: 'RESTORE' });
+  });
+
+  describe('teacher reviews', () => {
+    const review = reviewCase({ id: 'review-1' });
+    const reviewTitle = 'Сергей Кузнецов · ИСУ 123456';
+
+    it('lists a review with the teacher ISU, the subject and the start of the text', async () => {
+      mockSession(sessionOf(['MODERATOR']));
+      mockModeration([review]);
+
+      renderApp('/admin/moderation');
+
+      const row = within(await queue()).getByRole('button');
+      expect(row).toHaveTextContent('ИСУ 123456 · Математический анализ');
+      expect(row).toHaveTextContent('Объясняет понятно, на консультациях');
+    });
+
+    it('shows the author of an anonymous review, the teacher and the ISU check', async () => {
+      mockSession(sessionOf(['MODERATOR']));
+      mockModeration([review]);
+
+      renderApp('/admin/moderation');
+
+      expect(await openedCase(reviewTitle)).toBeInTheDocument();
+      const preview = within(detail()).getByRole('region', { name: 'Отзыв' });
+      expect(preview).toHaveTextContent('Анонимно');
+      expect(preview).toHaveTextContent('Проверяется');
+      expect(preview).toHaveTextContent(REVIEW_TEXT);
+      const author = within(detail()).getByRole('region', { name: 'Автор' });
+      expect(author).toHaveTextContent('Иван Петров');
+      expect(author).toHaveTextContent('ИСУ 311111');
+    });
+
+    it('shows the edited words and subject against the approved version', async () => {
+      mockSession(sessionOf(['MODERATOR']));
+      const target = reviewTarget({
+        id: 'review-1',
+        subjectTitle: 'Дискретная математика',
+        text: 'Объясняет понятно и быстро, но спрашивает строго.',
+      });
+      target.revision.number = 2;
+      target.review.status = 'PUBLISHED';
+      target.review.shown = {
+        ...target.revision,
+        id: 'rev-approved',
+        number: 1,
+        subjectTitle: 'Математический анализ',
+        text: 'Объясняет понятно и медленно, но спрашивает строго.',
+        status: 'APPROVED',
+      };
+      mockModeration([reviewCase({ id: 'review-1' }, {}, target)]);
+
+      renderApp('/admin/moderation');
+
+      const diff = await screen.findByRole('table', {
+        name: 'Изменения относительно одобренной версии',
+      });
+      const subject = within(diff).getByRole('row', { name: /Предмет/ });
+      expect(subject).toHaveTextContent('Математический анализ');
+      expect(subject).toHaveTextContent('Дискретная математика');
+      expect(subject).toHaveTextContent('изменено');
+      expect(screen.getByRole('deletion')).toHaveTextContent('медленно');
+      expect(screen.getByRole('insertion')).toHaveTextContent('быстро');
+    });
+
+    it('says when a review has no approved version yet', async () => {
+      mockSession(sessionOf(['MODERATOR']));
+      mockModeration([review]);
+
+      renderApp('/admin/moderation');
+
+      expect(await screen.findByText('Новый отзыв, одобренных версий ещё нет')).toBeInTheDocument();
+      expect(screen.queryByRole('deletion')).not.toBeInTheDocument();
+    });
+
+    it('rejects a review with a preset reason', async () => {
+      mockSession(sessionOf(['MODERATOR']));
+      const { decisions } = mockModeration([review]);
+      renderApp('/admin/moderation');
+      await openedCase(reviewTitle);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Отклонить' }));
+      const dialog = screen.getByRole('dialog', { name: 'Отклонить отзыв' });
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Личные данные' }));
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Отклонить' }));
+
+      expect(await screen.findByText('Отзыв отклонён')).toBeInTheDocument();
+      expect(decisions[0]?.body).toEqual({ action: 'REJECT', note: 'Личные данные' });
+    });
+
+    it('restricts writing reviews by default', async () => {
+      mockSession(sessionOf(['MODERATOR']));
+      const { decisions } = mockModeration([review]);
+      renderApp('/admin/moderation');
+      await openedCase(reviewTitle);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Ограничить' }));
+      const dialog = screen.getByRole('dialog', { name: 'Ограничить автора' });
+      expect(within(dialog).getByRole('combobox', { name: 'Что запретить' })).toHaveDisplayValue(
+        'Отзывы',
+      );
+      await userEvent.type(within(dialog).getByRole('textbox', { name: 'Причина' }), 'Оскорбления');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Ограничить' }));
+
+      expect(await screen.findByText('Автор ограничен')).toBeInTheDocument();
+      expect(decisions[0]?.body).toEqual({
+        action: 'RESTRICT_USER',
+        note: 'Оскорбления',
+        restriction: { capability: 'WRITE_REVIEWS', days: 7 },
+      });
+    });
+
+    it('hides every review by the author after confirmation', async () => {
+      mockSession(sessionOf(['MODERATOR']));
+      const { decisions } = mockModeration([review]);
+      renderApp('/admin/moderation');
+      await openedCase(reviewTitle);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Скрыть всё у автора' }));
+      const dialog = screen.getByRole('dialog', { name: 'Скрыть все отзывы автора?' });
+      expect(dialog).toHaveTextContent(
+        'Опубликованные отзывы Иван Петров скроются, отзывы на проверке будут отклонены.',
+      );
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Скрыть всё' }));
+
+      expect(await screen.findByText('Отзывы автора скрыты')).toBeInTheDocument();
+      expect(decisions[0]?.body).toEqual({ action: 'HIDE_ALL_BY_USER' });
+    });
+
+    it('says the review was deleted', async () => {
+      mockSession(sessionOf(['MODERATOR']));
+      mockModeration([reviewCase({ id: 'review-1' }, { status: 'RESOLVED' }, null)]);
+
+      renderApp('/admin/moderation?status=RESOLVED');
+
+      expect(within(await queue()).getByRole('button')).toHaveTextContent('Отзыв удалён');
+      expect(await openedCase('Отзыв удалён')).toBeInTheDocument();
+      expect(detail()).toHaveTextContent('Автор удалил отзыв; остались только решения.');
+    });
+
+    it('names a wrong-teacher report', async () => {
+      mockSession(sessionOf(['MODERATOR']));
+      const target = reviewTarget({ id: 'review-1', reason: 'REPORTS' });
+      target.reports = [{ reason: 'WRONG_TEACHER', comment: null, createdAt: minutesAgo(5) }];
+      mockModeration([reviewCase({ id: 'review-1', reason: 'REPORTS' }, {}, target)]);
+
+      renderApp('/admin/moderation');
+
+      const reports = await screen.findByRole('region', { name: /Жалобы/ });
+      expect(reports).toHaveTextContent('Не тот преподаватель');
+    });
   });
 
   it('says so when the queue is empty', async () => {

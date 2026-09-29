@@ -6,6 +6,7 @@ import type {
   DecisionRequest,
   ModerationCase,
   SubjectLinkTarget,
+  TeacherReviewTarget,
 } from '../features/moderation/types';
 import { fail, ok, server } from './server';
 
@@ -106,7 +107,8 @@ export function moderationCase(
 }
 
 export function caseItemOf(detail: ModerationCase): AdminCaseItem {
-  const target = detail.target;
+  if (detail.targetType === 'TEACHER_REVIEW') return reviewCaseItemOf(detail);
+  const target = detail.target?.targetType === 'SUBJECT_RESOURCE' ? detail.target : null;
   return {
     id: detail.id,
     targetType: 'SUBJECT_RESOURCE',
@@ -123,6 +125,104 @@ export function caseItemOf(detail: ModerationCase): AdminCaseItem {
           periodKey: target.link.periodKey,
           score: target.link.score,
           hidden: target.link.status === 'HIDDEN',
+        }
+      : null,
+    review: null,
+    author: target ? { ...target.author } : null,
+    reportCount: target?.reports.length ?? 0,
+  };
+}
+
+interface ReviewSeed {
+  id: string;
+  teacherIsu?: number;
+  teacherName?: string | null;
+  subjectTitle?: string | null;
+  text?: string;
+  reason?: CaseReason;
+  authorName?: string;
+}
+
+export const REVIEW_TEXT =
+  'Объясняет понятно, на консультациях разбирает каждую задачу и отвечает на вопросы.';
+
+/** A first revision of an anonymous review waiting for the ISU check. */
+export function reviewTarget(
+  seed: ReviewSeed,
+  overrides: Partial<TeacherReviewTarget> = {},
+): TeacherReviewTarget {
+  const reviewId = `review-${seed.id}`;
+  return {
+    targetType: 'TEACHER_REVIEW',
+    revision: {
+      id: `rev-${seed.id}`,
+      reviewId,
+      number: 1,
+      subjectTitle: seed.subjectTitle === undefined ? 'Математический анализ' : seed.subjectTitle,
+      text: seed.text ?? REVIEW_TEXT,
+      status: 'PENDING',
+      submittedAt: minutesAgo(30),
+      decidedAt: null,
+      note: null,
+    },
+    review: {
+      id: reviewId,
+      teacherIsu: seed.teacherIsu ?? 123456,
+      teacherName: seed.teacherName === undefined ? 'Сергей Кузнецов' : seed.teacherName,
+      anonymous: true,
+      status: 'PENDING',
+      reviewNote: null,
+      shown: null,
+      score: 0,
+      hidden: false,
+      verification: 'PENDING',
+      verifiedFlowId: null,
+    },
+    author: { ...userSummary({ name: seed.authorName ?? 'Иван Петров' }) },
+    reports: [],
+    submitterHistory: { approved: 2, rejected: 0, dismissedReports: 0, activeRestrictions: [] },
+    ...overrides,
+  };
+}
+
+export function reviewCase(
+  seed: ReviewSeed,
+  overrides: Partial<ModerationCase> = {},
+  target: TeacherReviewTarget | null = reviewTarget(seed),
+): ModerationCase {
+  return {
+    id: seed.id,
+    targetType: 'TEACHER_REVIEW',
+    status: 'OPEN',
+    reason: seed.reason ?? 'SUBMISSION',
+    openedAt: minutesAgo(30),
+    target,
+    decisions: [],
+    ...overrides,
+  };
+}
+
+/** The backend cuts the excerpt to one short line. */
+export function reviewCaseItemOf(detail: ModerationCase): AdminCaseItem {
+  const target = detail.target?.targetType === 'TEACHER_REVIEW' ? detail.target : null;
+  return {
+    id: detail.id,
+    targetType: 'TEACHER_REVIEW',
+    status: detail.status,
+    reason: detail.reason,
+    openedAt: detail.openedAt,
+    resolvedAt: detail.status === 'OPEN' ? null : minutesAgo(1),
+    revision: null,
+    link: null,
+    review: target
+      ? {
+          id: target.review.id,
+          teacherIsu: target.review.teacherIsu,
+          subjectTitle: target.revision.subjectTitle,
+          excerpt: target.revision.text.slice(0, 160),
+          score: target.review.score,
+          hidden: target.review.hidden,
+          anonymous: target.review.anonymous,
         }
       : null,
     author: target ? { ...target.author } : null,

@@ -88,3 +88,23 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.cell {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
