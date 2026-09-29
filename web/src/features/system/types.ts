@@ -57,8 +57,13 @@ export const LINK_POLICY = 'SUBJECT_RESOURCE';
 export const REVIEW_POLICY = 'TEACHER_REVIEW';
 
 export type ServiceCredentialKey =
-  'MY_ITMO_REFRESH_TOKEN' | 'MY_ITMO_ACCESS_TOKEN' | 'MY_ITMO_ID_TOKEN' | 'ISU_KEYCLOAK_IDENTITY';
-export type ServiceCredentialKind = 'REFRESH_TOKEN' | 'ACCESS_TOKEN' | 'ID_TOKEN' | 'COOKIE';
+  | 'MY_ITMO_REFRESH_TOKEN'
+  | 'MY_ITMO_ACCESS_TOKEN'
+  | 'MY_ITMO_ID_TOKEN'
+  | 'ISU_KEYCLOAK_IDENTITY'
+  | 'GEMINI_API_KEY';
+export type ServiceCredentialKind =
+  'REFRESH_TOKEN' | 'ACCESS_TOKEN' | 'ID_TOKEN' | 'COOKIE' | 'API_KEY';
 /** `MISSING` has no value; `UNKNOWN` is copied, seeded or replaced and not yet used. */
 export type ServiceCredentialStatus = 'MISSING' | 'UNKNOWN' | 'OK' | 'EXPIRED' | 'FAILED';
 export type CredentialSource = 'MIGRATION' | 'SEED' | 'ROTATION' | 'ADMIN';

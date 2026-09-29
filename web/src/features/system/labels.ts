@@ -27,6 +27,7 @@ export const CREDENTIALS: Record<ServiceCredentialKey, string> = {
   MY_ITMO_ACCESS_TOKEN: 'My ITMO · access-токен',
   MY_ITMO_ID_TOKEN: 'My ITMO · ID-токен',
   ISU_KEYCLOAK_IDENTITY: 'ИСУ · cookie KEYCLOAK_IDENTITY',
+  GEMINI_API_KEY: 'Gemini · API-ключ',
 };
 
 export const CREDENTIAL_STATUSES: Record<

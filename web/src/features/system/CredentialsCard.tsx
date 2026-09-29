@@ -23,6 +23,7 @@ import type { ServiceCredential, ServiceCredentialKey } from './types';
 const REPLACE_HINTS: Partial<Record<ServiceCredentialKey, string>> = {
   ISU_KEYCLOAK_IDENTITY: 'Cookie KEYCLOAK_IDENTITY с id.itmo.ru',
   MY_ITMO_REFRESH_TOKEN: 'Refresh-токен технического аккаунта; access- и ID-токен обновятся сами',
+  GEMINI_API_KEY: 'Ключ из Google AI Studio',
 };
 
 function Time({ value }: { value: string | null }) {

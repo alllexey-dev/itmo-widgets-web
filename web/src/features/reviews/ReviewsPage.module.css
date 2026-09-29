@@ -37,3 +37,85 @@
   color: var(--on-surface-variant);
   font-size: var(--text-body-s);
 }
+
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-m);
+  background: var(--warning-container);
+  color: var(--on-warning-container);
+  font-size: var(--text-body-m);
+}
+
+.notice a {
+  color: inherit;
+  font-weight: 600;
+}
+
+.filters {
+  margin-bottom: var(--space-3);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.summary {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.text {
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.points {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.points ul {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.pointsTitle {
+  font-size: var(--text-title-s);
+  font-weight: 600;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scales {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.scales > div {
+  display: grid;
+  grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.scales dt {
+  color: var(--on-surface-variant);
+}
+
+.scales dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

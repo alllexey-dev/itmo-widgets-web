@@ -85,6 +85,42 @@ describe('AuditPage', () => {
     expect(row).toHaveTextContent('ИСУ · cookie KEYCLOAK_IDENTITY');
   });
 
+  it.each([
+    ['AI_SUMMARIES_RUN_STARTED', 'ai-summaries', 'Пересчёт ИИ-сводок', 'ИИ-сводки'],
+    ['AI_SUMMARY_HIDDEN', 'teacher:123456', 'Сводка скрыта', 'Преподаватель · ИСУ 123456'],
+    ['AI_SUMMARY_SHOWN', 'teacher:123456', 'Сводка показана', 'Преподаватель · ИСУ 123456'],
+    [
+      'AI_SUMMARY_REGENERATION_REQUESTED',
+      'teacher:123456',
+      'Пересчёт сводки',
+      'Преподаватель · ИСУ 123456',
+    ],
+    [
+      'SERVICE_CREDENTIAL_REPLACED',
+      'credential:GEMINI_API_KEY',
+      'Замена учётных данных',
+      'Gemini · API-ключ',
+    ],
+  ])('names %s on %s', async (action, target, actionLabel, targetLabel) => {
+    mockSession(sessionOf(['ADMIN']));
+    const entry: AuditEntry = {
+      id: `entry-${action}`,
+      action,
+      target,
+      details: null,
+      createdAt: minutesAgo(5),
+      actorIsu: 400001,
+      actorName: 'Анна Смирнова',
+    };
+    server.use(http.get('*/api/admin/audit', ({ request }) => ok(pageOf([entry], request))));
+
+    renderApp('/admin/audit');
+
+    const table = await screen.findByRole('table', { name: 'Журнал' });
+    const row = await within(table).findByRole('row', { name: new RegExp(actionLabel) });
+    expect(row).toHaveTextContent(targetLabel);
+  });
+
   it('pages through older entries', async () => {
     mockSession(sessionOf(['ADMIN']));
     const pages = mockAudit();

@@ -91,10 +91,21 @@ const credentials: ServiceCredential[] = [
     updatedByIsu: 400001,
     updatedByName: 'Анна Смирнова',
   }),
+  credentialOf('GEMINI_API_KEY', {
+    kind: 'API_KEY',
+    replaceable: true,
+    status: 'UNKNOWN',
+    lastUsedAt: null,
+    lastRenewedAt: null,
+    updatedAt: minutesAgo(60 * 24),
+    updatedSource: 'SEED',
+  }),
 ];
 
 /** Synthetic; it must never show up on the page. */
 const COOKIE_VALUE = 'synthetic-keycloak-identity-0123456789';
+/** Assembled from parts, so a search for leaked keys finds nothing. */
+const GEMINI_KEY = 'AIza' + '0'.repeat(35);
 
 function mockSystem() {
   const versionSaves: { body: AppVersionRequest; csrf: string | null }[] = [];
@@ -285,7 +296,7 @@ describe('SystemPage', () => {
 
       const refresh = await credentialRow('refresh-токен');
       const table = await credentialsTable();
-      expect(within(table).getAllByRole('row')).toHaveLength(5);
+      expect(within(table).getAllByRole('row')).toHaveLength(6);
       expect(refresh).toHaveTextContent('Работает');
       expect(refresh).toHaveTextContent('1 окт.');
       expect(refresh).toHaveTextContent('Скоро');
@@ -298,8 +309,34 @@ describe('SystemPage', () => {
         '/admin/users/400001',
       );
       expect(await credentialRow('ID-токен')).toHaveTextContent('Нет значения');
-      expect(within(table).getAllByRole('button', { name: 'Заменить' })).toHaveLength(2);
+      expect(within(table).getAllByRole('button', { name: 'Заменить' })).toHaveLength(3);
       expect(within(await credentialRow('access-токен')).queryByRole('button')).toBeNull();
+      const gemini = await credentialRow('Gemini · API-ключ');
+      expect(gemini).toHaveTextContent('Не проверено');
+      expect(gemini).toHaveTextContent('из окружения');
+    });
+
+    it('replaces the Gemini key and forgets the value', async () => {
+      mockSession(sessionOf(['ADMIN']));
+      const { replacements } = mockSystem();
+      renderApp('/admin/system');
+      const gemini = await credentialRow('Gemini · API-ключ');
+
+      await userEvent.click(within(gemini).getByRole('button', { name: 'Заменить' }));
+      const dialog = screen.getByRole('dialog', { name: 'Заменить значение' });
+      expect(dialog).toHaveTextContent('Gemini · API-ключ');
+      expect(within(dialog).getByLabelText('Новое значение')).toHaveAccessibleDescription(
+        'Ключ из Google AI Studio',
+      );
+      await userEvent.type(within(dialog).getByLabelText('Новое значение'), GEMINI_KEY);
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Заменить' }));
+
+      expect(await screen.findByText('Значение заменено')).toBeInTheDocument();
+      expect(replacements).toEqual([
+        { key: 'GEMINI_API_KEY', body: { value: GEMINI_KEY }, csrf: '1' },
+      ]);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(document.body.innerHTML).not.toContain(GEMINI_KEY);
     });
 
     it('replaces the ISU cookie and forgets the value', async () => {

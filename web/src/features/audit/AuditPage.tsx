@@ -32,6 +32,10 @@ const ACTIONS: Record<string, { label: string; icon: string }> = {
   APP_VERSION_CHANGED: { label: 'Версия приложения', icon: 'system_update' },
   REVIEWS_SYNC_STARTED: { label: 'Синхронизация отзывов', icon: 'sync' },
   SERVICE_CREDENTIAL_REPLACED: { label: 'Замена учётных данных', icon: 'key' },
+  AI_SUMMARIES_RUN_STARTED: { label: 'Пересчёт ИИ-сводок', icon: 'auto_awesome' },
+  AI_SUMMARY_HIDDEN: { label: 'Сводка скрыта', icon: 'visibility_off' },
+  AI_SUMMARY_SHOWN: { label: 'Сводка показана', icon: 'visibility' },
+  AI_SUMMARY_REGENERATION_REQUESTED: { label: 'Пересчёт сводки', icon: 'refresh' },
 };
 
 const TARGETS: Record<string, string> = {
@@ -40,11 +44,15 @@ const TARGETS: Record<string, string> = {
   'reviews-sync': 'Отзывы',
   'credential:MY_ITMO_REFRESH_TOKEN': 'My ITMO · refresh-токен',
   'credential:ISU_KEYCLOAK_IDENTITY': 'ИСУ · cookie KEYCLOAK_IDENTITY',
+  'credential:GEMINI_API_KEY': 'Gemini · API-ключ',
+  'ai-summaries': 'ИИ-сводки',
 };
 
 function Target({ target }: { target: string }) {
   const user = /^user:(\d+)$/.exec(target);
   if (user) return <Link to={`/admin/users/${user[1]}`}>ИСУ {user[1]}</Link>;
+  const teacher = /^teacher:(\d+)$/.exec(target);
+  if (teacher) return <>Преподаватель · ИСУ {teacher[1]}</>;
   return <>{TARGETS[target] ?? target}</>;
 }
 
@@ -108,7 +116,7 @@ export function AuditPage() {
     <>
       <PageHeader
         title="Журнал"
-        description="Роли, правила модерации, версия приложения, синхронизация отзывов и учётные данные: кто и когда менял или запускал"
+        description="Роли, правила модерации, версия приложения, синхронизация отзывов, учётные данные и ИИ-сводки: кто и когда менял или запускал"
       />
       {audit.isError ? (
         <ErrorState

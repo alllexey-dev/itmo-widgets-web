@@ -64,8 +64,9 @@
   color: var(--on-surface-variant);
 }
 
+/* Tall content scrolls the whole panel instead of running under the actions. */
 .body {
-  min-height: 0;
+  flex-shrink: 0;
 }
 
 .actions {

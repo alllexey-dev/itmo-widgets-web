@@ -15,15 +15,22 @@ import {
 import { useReviewsSync, useReviewVerification, useStartReviewsSync } from './api';
 import { OUTCOMES } from './labels';
 import styles from './ReviewsPage.module.css';
+import { SummariesCard } from './SummariesCard';
+import { SummariesTable } from './SummariesTable';
 import type { ReviewsSyncStatus } from './types';
 
 export function ReviewsPage() {
   return (
     <>
-      <PageHeader title="Отзывы" description="Отзывы из проекта Reviews и проверка своих отзывов" />
+      <PageHeader
+        title="Отзывы"
+        description="Отзывы из проекта Reviews, проверка своих отзывов и ИИ-сводки"
+      />
       <div className={styles.cards}>
         <SyncCard />
         <VerificationCard />
+        <SummariesCard />
+        <SummariesTable />
       </div>
     </>
   );
