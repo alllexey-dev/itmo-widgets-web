@@ -138,11 +138,13 @@ src/
   features/
     auth/       login page, challenge hook, session, QR, countdown
     home/       HomePage
-    moderation/ queue, case detail, decision dialogs, shortcuts, restrictions
+    moderation/ queue, case detail for links and reviews, TextDiff and wordDiff,
+                decision dialogs, shortcuts, restrictions
     users/      users list, user page, moderator role switch
     dashboard/  DashboardPage, lazy TrendChart
-    system/     SportPage, SystemPage (app version, moderation settings)
-    reviews/    ReviewsPage (reviews sync state and start)
+    system/     SportPage, SystemPage (app version, moderation settings for links
+                and reviews), CredentialsCard with ReplaceCredentialDialog
+    reviews/    ReviewsPage (reviews sync state and start, VerificationCard)
     audit/      AuditPage
   ui/         design system (see design.md)
   test/       Vitest setup, MSW server and handlers, synthetic admin data, render helpers
@@ -160,10 +162,49 @@ Query keys start with the area (`['admin', 'moderation', …]`,
 whole area at once. A moderation decision writes the returned case into the
 cache and invalidates the rest of the area; a role change also invalidates the
 audit log. Paged lists keep the previous page on screen while the next loads.
-The next case in the queue is prefetched. The reviews sync state
+The next case in the queue is prefetched. The service credentials
+(`['admin', 'system', 'credentials']`) are polled every 3 s while a value that
+is still `UNKNOWN` was changed less than 2 minutes ago, so the result of its
+first use shows up by itself. The reviews sync state
 (`['admin', 'reviews', 'sync']`) is polled every 3 s while a run is in
 progress; a start writes the returned state into the cache and invalidates the
 audit log, and a rejected start (409) refetches the state.
+
+## Moderation targets
+
+A case targets a subject link (`SUBJECT_RESOURCE`) or a teacher review
+(`TEACHER_REVIEW`); `types.ts` models both targets as a union on `targetType`,
+and a queue row carries `link` or `review` accordingly. `CaseList` builds the
+row texts per type (a link's title and host, a review's teacher ISU, subject and
+excerpt). `CaseDetail` picks per type the title (for a review the teacher's
+name from the backend, else `Преподаватель`, and the ISU), the preview
+(`LinkPreview` or `ReviewPreview` with anonymity, the ISU check, subject,
+version and score), the changes (`ChangesSection` or `ReviewChangesSection`),
+the reject presets (`LINK_REJECT_PRESETS`, `REVIEW_REJECT_PRESETS` in
+`labels.ts`), the default restriction (`SUBMIT_RESOURCES` or `WRITE_REVIEWS`),
+the «hide all» dialog texts and the decision toasts (`doneText`).
+`ReviewChangesSection` compares the reviewed revision with `review.shown`, the
+approved content: the subject goes into the usual `DiffView` table and the text
+into `TextDiff`, which renders `wordDiff(before, after)`, a word-level longest
+common subsequence diff that keeps whitespace, as `<del>` and `<ins>` with
+hidden «удалено»/«добавлено» labels for screen readers. A review never approved
+shows «Новый отзыв, одобренных версий ещё нет» instead.
+
+## Service credentials
+
+`CredentialsCard` on the system page lists `GET /api/admin/system/credentials`
+in a table: the name, the status badge with the last error for `FAILED` and
+`EXPIRED`, the expiry with «Скоро», the last use and renewal, and who changed
+the value (a link to the admin's user page for `ADMIN`). Values never reach the
+browser. `ReplaceCredentialDialog` holds the new value only in a password field
+and the mutation body: it is never part of a query key, the mutation has
+`gcTime: 0` so the finished mutation and its variables leave the cache at once,
+and closing the dialog clears the field. A 400 marks the field «Проверьте
+значение»; the returned list replaces the cached one and the audit log is
+invalidated.
+
+`VerificationCard` on the reviews page shows the three counters of
+`GET /api/admin/reviews/verification` with a skeleton and a retryable error.
 
 ## Testing
 
