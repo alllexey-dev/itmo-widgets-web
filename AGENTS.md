@@ -6,6 +6,9 @@ app (`web/`), served by one nginx image behind the shared `nginx-hub`.
 ## Layout
 
 - `site/` — the landing, privacy policy and images; plain HTML and CSS, no build.
+  `site/.well-known/assetlinks.json` verifies the Android App Links on both hosts;
+  `site/link/` holds the pages nginx serves for `/u/*` and `/sport/*` when the app
+  is not installed.
 - `web/` — the web app: Vite, React 18, TypeScript strict, React Router
   (`basename="/app"`), TanStack Query v5, CSS Modules, Vitest + Testing Library + MSW.
 - `deploy/site.nginx.conf` — nginx inside the image: landing at `/`, the SPA at `/app/`.

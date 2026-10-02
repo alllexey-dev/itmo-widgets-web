@@ -20,6 +20,28 @@
 - `compose.yml` — прод (контейнер `itmowidgets-web`), `compose.dev.yml` — dev
   (контейнер `itmowidgets-web-dev`).
 
+## Ссылки на приложение
+
+Приложение для Android открывает ссылки `/u/{isu}` (профиль), `/sport/{id}` и
+`/sport/p/{id}` (занятие по спорту и прогноз занятия) как проверенные App Links
+на `widgets.alllexey.dev` и `dev.widgets.alllexey.dev`. Для этого сайт отдаёт:
+
+- `site/.well-known/assetlinks.json` — один файл на оба хоста: пакет
+  `dev.alllexey.itmowidgets`, отпечатки SHA-256 ключа выпуска и debug-ключа.
+  Отдаётся как `application/json` без перенаправлений (`deploy/site.nginx.conf`).
+- `/u/*` → `site/link/profile.html`, `/sport/*` → `site/link/sport.html` —
+  страницы для тех, у кого нет приложения: без запросов к API, без номера ИСУ
+  или занятия в тексте, `noindex`. `site/link/link.js` на Android превращает
+  «Открыть в приложении» в `intent://` с переходом на релизы, если приложения
+  нет; на других системах кнопка скрыта.
+
+Новый ключ подписи: добавить его отпечаток в `sha256_cert_fingerprints`
+(`keytool -list -v -keystore <ключ>` или `apksigner verify --print-certs <apk>`),
+выкатить сайт и повторить проверку на устройстве:
+`adb shell pm verify-app-links --re-verify dev.alllexey.itmowidgets`, затем
+`adb shell pm get-app-links dev.alllexey.itmowidgets`. Подробности — в
+`docs/features/app-links.md` репозитория приложения.
+
 ## Скриншоты лендинга
 
 Все скриншоты снимаются на эмуляторе классом `SiteScreenshotCapture` из
