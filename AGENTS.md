@@ -75,8 +75,12 @@ landing and `/app/` the SPA.
 
 ## Landing
 
-`site/` stays static; screenshots come from the Android project's
-`SiteScreenshotCapture` with synthetic data only (see `README.md`).
+`site/` stays static: one `style.css`, one header and footer on every page, JS only
+for the theme switch (`theme.js`) and the app link button (`link/link.js`).
+Screenshots come from the Android project's `StoreScreenshotCapture` (demo mode)
+and `WidgetPreviewImageCapture` with synthetic data only; file names in
+`site/img/{light,dark}/` stay stable so a refresh is a drop-in replacement (see
+`README.md`). `design/` holds drafts that are not part of the image.
 
 ## Version control
 

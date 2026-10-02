@@ -10,6 +10,7 @@
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="/img/favicon.png">
   <link rel="stylesheet" href="/style.css">
+  <script src="/theme.js"></script>
   <script src="/link/link.js" defer></script>
 </head>
 <body>
@@ -18,16 +19,20 @@
       <img src="/img/icon.webp" alt="" width="32" height="32">
       <span>ITMO.Widgets</span>
     </a>
+    <nav>
+      <button class="theme-toggle" type="button" aria-label="Сменить тему"><svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm40-83q119-15 199.5-104.5T800-480q0-123-80.5-212.5T520-797v634Z"/></svg></button>
+    </nav>
   </header>
 
   <main class="link-page">
-    <section class="card link-card">
+    <section class="link-card">
       <img class="link-icon" src="/img/icon.webp" alt="" width="64" height="64">
       <h1>Занятие по спорту в ITMO.Widgets</h1>
       <p class="muted">Ссылка открывается в приложении ITMO.Widgets для Android.</p>
       <div class="actions">
         <a class="button" id="open-app" href="">Открыть в приложении</a>
-        <a class="button button-tonal" href="https://github.com/alllexey-dev/ITMO.Widgets/releases/latest">Скачать</a>
+        <a class="button button-tonal" href="https://play.google.com/store/apps/details?id=dev.alllexey.itmowidgets" hidden>Google Play</a>
+        <a class="button button-tonal" href="https://github.com/alllexey-dev/ITMO.Widgets/releases/latest">Скачать APK</a>
       </div>
       <p class="note">Google Play — скоро</p>
     </section>
@@ -35,9 +40,12 @@
 
   <footer>
     <span>© 2026 alllexey</span>
-    <a href="/privacy.html">Конфиденциальность</a>
     <a href="https://t.me/itmowidgets">Telegram</a>
     <a href="https://github.com/alllexey-dev/ITMO.Widgets">GitHub</a>
+    <a href="https://github.com/alllexey-dev/ITMO.Widgets/issues">Сообщить о проблеме</a>
+    <a href="/privacy.html">Политика конфиденциальности</a>
+    <a href="/delete-account">Удаление аккаунта</a>
+    <span class="unofficial">Неофициальное приложение. Не связано с Университетом ИТМО.</span>
   </footer>
 </body>
 </html>

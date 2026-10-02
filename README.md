@@ -2,16 +2,26 @@
 
 Всё, что отдаётся на `https://widgets.alllexey.dev`, кроме API:
 
-- лендинг и политика конфиденциальности Android-приложения
-  [ITMO.Widgets](https://github.com/alllexey-dev/ITMO.Widgets) — на `/`;
+- лендинг, политика конфиденциальности и страница удаления аккаунта
+  Android-приложения [ITMO.Widgets](https://github.com/alllexey-dev/ITMO.Widgets)
+  — на `/`, `/privacy.html` и `/delete-account`;
 - веб-версия с админкой для модераторов и администратора — на `/app/`; вход
   подтверждается в приложении (Профиль → «Вход на сайт»).
 
 ## Структура
 
-- `site/` — лендинг: `index.html`, `privacy.html`, `style.css`, `img/`.
-  Скриншоты лежат в `site/img/light` и `site/img/night`, страница выбирает их
-  через `<picture>` и `prefers-color-scheme`.
+- `site/` — лендинг «История дня» (`index.html`: возможности как моменты
+  учебного дня на линии времени), `privacy.html`, `delete-account.html`,
+  страницы ссылок `link/` и `.well-known/assetlinks.json`. У всех страниц общие
+  `style.css` (токены Material 3, как в `web/src/ui/tokens.css`), шапка, подвал
+  с политикой, удалением аккаунта и отметкой «неофициальное приложение» и
+  переключатель темы `theme.js` (выбор хранится в `localStorage` как
+  `iw-theme`, как в веб-версии). Снимки лежат в `site/img/light` и
+  `site/img/dark`, страница выбирает их через `<picture>` и
+  `prefers-color-scheme`. Кнопка Google Play на лендинге и страницах ссылок
+  стоит с атрибутом `hidden` до публикации в Play.
+- `design/` — черновики: варианты лендинга (`design/landing/{a,b,c}`, выбран
+  `c`) и графика карточки Play (`design/store/`); в образ не попадают.
 - `web/` — веб-версия (Vite, React, TypeScript): разделы, роли, вход и запуск
   описаны в [`web/README.md`](web/README.md), устройство и дизайн — в
   [`web/docs/`](web/docs/architecture.md).
@@ -42,27 +52,47 @@
 `adb shell pm get-app-links dev.alllexey.itmowidgets`. Подробности — в
 `docs/features/app-links.md` репозитория приложения.
 
+## Политика и удаление аккаунта
+
+`site/privacy.html` описывает фактические потоки данных приложения, сайта и
+сервера; при изменении политики меняется дата «Действует с». Приложение
+открывает её из «Настройки → Обслуживание → Политика конфиденциальности», а
+карточка Google Play ссылается на `https://widgets.alllexey.dev/privacy.html`.
+
+`/delete-account` (`site/delete-account.html`, `location = /delete-account` в
+`deploy/site.nginx.conf`) объясняет, как попросить удалить аккаунт: запрос в
+Telegram или на почту, подтверждение входом в веб-версию через «Профиль → Вход
+на сайт», выключение «Подключения к ITMO.Widgets», срок 30 дней и что остаётся
+после удаления. Отдельной формы и запросов к API у страницы нет; удаление
+выполняет владелец по регламенту бэкенда `docs/ops/account-deletion.md`.
+Приложение открывает страницу из «Настройки → Подключение к ITMO.Widgets →
+Удалить аккаунт ITMO.Widgets», карточка Google Play ссылается на неё в разделе
+удаления данных. Подтверждение входом работает на хосте, где отдаётся `/app/`.
+
 ## Скриншоты лендинга
 
-Все скриншоты снимаются на эмуляторе классом `SiteScreenshotCapture` из
-Android-проекта на выдуманных данных; реальных аккаунтов там нет. В репозитории
-приложения:
+Снимки экранов — те же кадры демо-режима, что и для карточки Google Play: их
+снимает `StoreScreenshotCapture` из Android-проекта на вымышленных данных
+(1080 × 1920, светлая и тёмная тема, в `vibe/store-screenshots/{light,dark}/`
+репозитория приложения). Картинки виджетов снимает `WidgetPreviewImageCapture`
+(`vibe/store-screenshots/widgets/{light,night}/`). Реальных аккаунтов в кадрах
+нет.
+
+Имена файлов в `site/img/{light,dark}/` постоянные, поэтому обновлённые снимки
+просто заменяют старые:
+
+| Кадр | Файл |
+|---|---|
+| `01-home`, `02-schedule`, `03-lesson`, `04-recordbook`, `05-subject` | `home`, `schedule`, `lesson`, `recordbook`, `subject` |
+| `06-sport`, `07-sport-mine`, `08-teacher`, `09-friends`, `11-qr` | `sport`, `sport-mine`, `teacher`, `friends`, `qr` |
+| `widget_*_preview` | то же имя; QR-виджет — только светлый |
 
 ```bash
-adb shell cmd uimode night no
-adb shell am instrument -w -e captureScreenshots true -e siteTheme light \
-  -e class dev.alllexey.itmowidgets.site.SiteScreenshotCapture \
-  dev.alllexey.itmowidgets.test/androidx.test.runner.AndroidJUnitRunner
-adb shell cmd uimode night yes
-adb shell am instrument -w -e captureScreenshots true -e siteTheme night \
-  -e class dev.alllexey.itmowidgets.site.SiteScreenshotCapture \
-  dev.alllexey.itmowidgets.test/androidx.test.runner.AndroidJUnitRunner
-adb pull /sdcard/Android/data/dev.alllexey.itmowidgets/cache/site-screenshots-light
-adb pull /sdcard/Android/data/dev.alllexey.itmowidgets/cache/site-screenshots-night
+magick 01-home.png -resize 540x960 -quality 82 site/img/light/home.webp
+magick widget_lesson_list_preview.png -resize 600x -quality 82 site/img/dark/widget_lesson_list_preview.webp
 ```
 
-Затем перевести в WebP: `cwebp -q 82 -resize 720 0 in.png -o out.webp`.
-Картинки виджетов так же снимает `WidgetPreviewImageCapture`.
+Тёмные кадры виджетов берутся из `widgets/night/`, QR-виджет — `-resize 300x`.
 
 ## Локальный просмотр
 
@@ -80,27 +110,32 @@ cd web && npm install && npm run dev
 
 ## Развёртывание
 
-Домены обслуживает общий `nginx-hub` на `alllexey.dev`, он проксирует только в
-контейнеры сети `web`.
+Домены обслуживает общий Caddy (`stacks/edge/Caddyfile` в `srvscripts`):
+`/api/*` уходит в бэкенд (`itmowidgets:8080` и `itmowidgets-dev:8080`), всё
+остальное — в контейнер сайта (`itmowidgets-web:80` и `itmowidgets-web-dev:80`)
+в сети `web`. На сервере лежат не клоны, а распакованный `git archive`
+коммита; `DEPLOYED_FROM` в каталоге хранит время и коммит.
 
-- Прод: клон в `/mnt/raid/srv/web/itmowidgets-web`, hub
-  (`conf.d/widgets.alllexey.dev.conf`) отправляет `/api/` в бэкенд, всё
-  остальное — в `itmowidgets-web:80` (`deploy/nginx-hub.widgets.snippet.conf`).
-- Dev: hub `dev.widgets.alllexey.dev` отправляет `/app/` в
-  `itmowidgets-web-dev:80`, остальное — в dev-бэкенд.
+- Dev — `/mnt/raid/srv/web/itmowidgets-web-dev`, образ из `Dockerfile` с
+  лендингом и веб-версией:
 
-Обновление — после `git pull` пересобрать образ, иначе изменения лендинга и
-веб-версии не попадут в контейнер:
+  ```bash
+  git archive <коммит> | ssh alllexey.dev 'tar -x -C /mnt/raid/srv/web/itmowidgets-web-dev'
+  ssh alllexey.dev 'cd /mnt/raid/srv/web/itmowidgets-web-dev && docker compose -f compose.dev.yml up -d --build'
+  ```
 
-```bash
-git pull && docker compose up -d --build
-```
+- Прод — `/mnt/raid/srv/web/itmowidgets-web`, контейнер `nginx:alpine`, в
+  который смонтированы `site/` и `deploy/site.nginx.conf` (свой `compose.yml`
+  на сервере, не тот, что в репозитории). Веб-версии `/app/` на проде пока
+  нет. Перед выкладкой — архив каталога:
 
-Dev:
+  ```bash
+  ssh alllexey.dev 'tar -czf /mnt/raid/backups/archive/itmowidgets-web-<YYYYMMDD>.tar.gz -C /mnt/raid/srv/web itmowidgets-web'
+  git archive <коммит> site deploy/site.nginx.conf | ssh alllexey.dev 'tar -x -C /mnt/raid/srv/web/itmowidgets-web'
+  ssh alllexey.dev 'docker exec itmowidgets-web nginx -t && docker restart itmowidgets-web'
+  ```
 
-```bash
-git pull && docker compose -f compose.dev.yml up -d --build
-```
+  Конфиг смонтирован файлом, а `tar` заменяет файл, поэтому нужен перезапуск,
+  а не `nginx -s reload`.
 
-Если меняется конфиг hub, перед перезагрузкой проверить его `nginx -t` внутри
-контейнера `nginx-hub`.
+Выкладка на dev и прод — только с согласия владельца.
