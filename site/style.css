@@ -149,7 +149,8 @@ details p, details ul { color: var(--on-surface-variant); margin: 8px 0 0; }
 .button[hidden] { display: none; }
 
 .doc h2 { margin-top: 32px; }
-.doc ul { padding-left: 20px; }
+.doc ul, .doc ol { padding-left: 20px; }
+.doc li { margin-bottom: 6px; }
 .doc table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 15px; }
 .doc th, .doc td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--outline); vertical-align: top; }
 .doc th { color: var(--on-surface-variant); font-weight: 600; }
