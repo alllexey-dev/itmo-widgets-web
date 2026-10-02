@@ -140,6 +140,14 @@ summary { cursor: pointer; font-weight: 600; }
 details p, details ul { color: var(--on-surface-variant); margin: 8px 0 0; }
 .changelog { margin-top: 12px; }
 
+.link-page { max-width: 560px; padding-top: 24px; }
+.link-card { text-align: center; padding: 40px 32px 28px; }
+.link-card h1 { font-size: clamp(26px, 4vw, 34px); }
+.link-card .actions { justify-content: center; margin: 24px 0 12px; }
+.link-card .note { margin: 0 auto; }
+.link-icon { display: block; margin: 0 auto 20px; border-radius: 16px; }
+.button[hidden] { display: none; }
+
 .doc h2 { margin-top: 32px; }
 .doc ul { padding-left: 20px; }
 .doc table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 15px; }

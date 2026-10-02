@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "dev.alllexey.itmowidgets",
+      "sha256_cert_fingerprints": [
+        "93:9E:9B:D5:2C:89:FB:B7:A9:B3:C6:B8:D0:F0:88:3E:E2:C9:C1:2C:6D:8F:ED:92:22:51:E2:BD:FB:C1:F0:71",
+        "68:5B:19:14:1A:6A:1D:52:2B:ED:6F:9D:57:65:D0:B0:F8:04:E4:F7:78:4C:84:DC:D8:3E:42:A0:2B:AD:88:B7"
+      ]
+    }
+  }
+]
