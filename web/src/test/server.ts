@@ -1,5 +1,8 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import type { ApiEnvelope } from '../api/client';
+import type { AdminPage } from '../api/admin';
+import type { components } from '../api/schema';
 import type { LoginChallenge, LoginStatus } from '../features/auth/login';
 import type { Session } from '../features/auth/session';
 
@@ -7,11 +10,14 @@ export const server = setupServer();
 
 /** Wraps data the way the backend `ApiResponse` does. */
 export function ok<T>(data: T) {
-  return HttpResponse.json({ success: true, data, error: null });
+  return HttpResponse.json({ success: true, data, error: null } satisfies ApiEnvelope<T>);
 }
 
 export function fail(status: number, code: string, message = 'Ошибка') {
-  return HttpResponse.json({ success: false, data: null, error: { message, code } }, { status });
+  return HttpResponse.json(
+    { success: false, data: null, error: { message, code } } satisfies ApiEnvelope<never>,
+    { status },
+  );
 }
 
 export function sessionOf(roles: Session['roles'], overrides: Partial<Session> = {}): Session {
@@ -22,7 +28,7 @@ export function sessionOf(roles: Session['roles'], overrides: Partial<Session> =
     groups: [{ name: 'P3212', course: 2, facultyShortName: 'ФПИиКТ' }],
     roles,
     ...overrides,
-  };
+  } satisfies Session;
 }
 
 export function mockSession(session: Session) {
@@ -41,7 +47,7 @@ export function challengeOf(code: string): LoginChallenge {
     code,
     pollSecret: `secret-${code}`,
     expiresAt: new Date(Date.now() + 120_000).toISOString(),
-  };
+  } satisfies LoginChallenge;
 }
 
 /** Each POST hands out the next code; the last one repeats. */
@@ -62,7 +68,7 @@ export function mockPoll(status: (code: string) => LoginStatus = () => 'PENDING'
     http.get('*/api/web/auth/challenges/:id', ({ params, request }) => {
       const code = String(params.id).replace('challenge-', '');
       if (request.headers.get('X-Poll-Secret') !== `secret-${code}`) return fail(404, 'not_found');
-      return ok({ status: status(code) });
+      return ok({ status: status(code) } satisfies components['schemas']['WebLoginPoll']);
     }),
   );
 }
@@ -71,7 +77,7 @@ export function mockPoll(status: (code: string) => LoginStatus = () => 'PENDING'
 export function mockOpenCases(count: number) {
   server.use(
     http.get('*/api/admin/moderation/cases', () =>
-      ok({ items: [], page: 0, size: 1, total: count }),
+      ok({ items: [], page: 0, size: 1, total: count } satisfies AdminPage<never>),
     ),
   );
 }

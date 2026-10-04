@@ -78,6 +78,11 @@ export default defineConfig(
       '@typescript-eslint/consistent-type-imports': 'error',
     },
   },
+  // The immutable generator output uses index signatures instead of Record.
+  {
+    files: ['src/api/schema.ts'],
+    rules: { '@typescript-eslint/consistent-indexed-object-style': 'off' },
+  },
   ...featureBoundaries(),
   {
     files: ['src/{ui,api,shared}/**/*.{ts,tsx}'],

@@ -1,15 +1,11 @@
+import type { components } from '../../api/schema';
 import { api } from '../../api/client';
 
 /** `CreatedChallenge`: the poll secret is returned only to the browser that asked. */
-export interface LoginChallenge {
-  id: string;
-  code: string;
-  pollSecret: string;
-  expiresAt: string;
-}
+export type LoginChallenge = components['schemas']['CreatedChallenge'];
 
 /** `WebLoginPollStatus`; `APPROVED` comes once, together with the session cookie. */
-export type LoginStatus = 'PENDING' | 'APPROVED' | 'EXPIRED';
+export type LoginStatus = components['schemas']['WebLoginPoll']['status'];
 
 const CHALLENGES_PATH = '/api/web/auth/challenges';
 const POLL_SECRET_HEADER = 'X-Poll-Secret';

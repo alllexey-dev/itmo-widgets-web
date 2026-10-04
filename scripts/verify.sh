@@ -8,6 +8,7 @@ quick() {
     if ! cmp -s package-lock.json node_modules/.package-lock.json; then
         npm ci --no-audit --no-fund
     fi
+    npm run gen:api -- --check
     npm run lint
     npm run typecheck
     npm test

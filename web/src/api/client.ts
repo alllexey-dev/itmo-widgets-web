@@ -1,3 +1,4 @@
+import type { components } from './schema';
 /**
  * Thin `fetch` wrapper for our `/api/**`. The browser is authenticated by the
  * httpOnly `iw_session` cookie on the same origin; changing requests carry
@@ -6,11 +7,11 @@
  */
 
 /** `dev.alllexey.itmowidgets.core.model.ApiResponse` from itmo-widgets-core. */
-export interface ApiEnvelope<T> {
-  success: boolean;
+export type ApiEnvelope<T> = Omit<components['schemas']['ApiResponseWebMe'], 'data' | 'error'> & {
   data: T | null;
-  error: { message: string; code: string | null } | null;
-}
+  // Older releases and non-Backend errors can use codes outside this snapshot.
+  error: (Omit<components['schemas']['ErrorDetails'], 'code'> & { code: string | null }) | null;
+};
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 

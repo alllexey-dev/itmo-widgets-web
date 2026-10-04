@@ -1,16 +1,10 @@
-import type { GroupData } from '../../api/admin';
+import type { components } from '../../api/schema';
 import { api, SESSION_PATH } from '../../api/client';
 
 export type Role = 'MODERATOR' | 'ADMIN';
 
 /** `GET /api/web/auth/me`. */
-export interface Session {
-  isu: number;
-  name: string;
-  pictureUrl: string | null;
-  groups: GroupData[];
-  roles: Role[];
-}
+export type Session = Omit<components['schemas']['WebMe'], 'roles'> & { roles: Role[] };
 
 /** What a section requires: any signed-in user, a moderator or the admin. */
 export type Access = 'user' | 'moderator' | 'admin';

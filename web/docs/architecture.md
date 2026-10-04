@@ -101,6 +101,52 @@ alphabet.
 
 ## API client
 
+`src/api/openapi.json` is the byte-identical Backend `docs/openapi.json` snapshot
+at the full commit recorded in `src/api/openapi.source` (including its SHA-256).
+Refresh only from a commit on Backend `v2.3/next` with
+`scripts/sync-openapi.sh <full-sha>` at the repository root, then run
+`cd web && npm run gen:api`. The script reads a local Backend checkout when
+available (`BACKEND_REPO` overrides its path), otherwise GitHub's commit-pinned
+contents API; it never calls a running Backend. Never hand-edit the snapshot or
+`schema.ts`, including during a rebase: refresh and regenerate them instead.
+
+`openapi-typescript` is pinned to **7.13.0**, as validated by SP-18, with
+TypeScript **6.0.3**. Its published TypeScript peer range still says `^5.x`;
+`package.json` overrides that peer only for this generator to the application's
+exact TypeScript pin. Normal `npm ci` works without global peer flags. The
+aliases, discriminants, generation and drift checks verify this combination.
+`npm run gen:api -- --check` rejects stale or hand-edited generated types;
+`scripts/verify.sh quick` runs it before lint, typecheck, MSW tests and build.
+A test also checks the snapshot against its recorded digest. Only the generated
+`src/api/schema.ts` is exempt from the index-signature style preference; semantic
+lint, layer boundaries and typechecking still apply.
+
+Wire declarations are aliases of `components['schemas']`; generic pages and
+envelopes replace only their payload types. Label unions remain closed and
+`Record` maps exhaustive. Until Backend's annotation follow-up, the Web aliases
+retain these existing narrower contracts:
+
+- `WebMe.roles`, `AdminUserItem.roles`, `AdminUserDetail.roles`: keep
+  `'MODERATOR' | 'ADMIN'`, while the snapshot says `string`; L21 should annotate
+  the role items with those enum values.
+- `AdminDashboardTotals.links`, `AdminSportStatus.outcomes7d` and `errors7d`:
+  keep complete enum-keyed `Record` maps, while the snapshot has only
+  `additionalProperties`; L21 should describe all enum keys as required.
+- `AdminAppVersionRequest.note`: Web still sends a required string even though
+  Backend accepts its omission. Decision request `note` and `days` remain
+  optional but non-null when sent, unlike the looser nullable request schema;
+  `DecisionRestriction.days` is required and nullable in the response.
+
+The snapshot can lead production. No deployment is inferred from its commit:
+new `UserData.capabilities` is optional on moderation authors until that release
+is confirmed on both hosts. The Web's existing moderation link projection also
+allows omission of `author`, `isMine`, `myVote`, and `reportedByMe` (none is read
+by the moderator UI). Required existing view fields do not become optional.
+Summary tags and envelope error codes keep their existing open string contracts
+for unknown catalog entries and older-release error codes; unknown values keep
+the same display/fallback behavior. No UI, runtime validation or session logic
+changes in this migration.
+
 All HTTP goes through `src/api/client.ts`:
 
 - `api.get/post/put/patch/delete<T>(path, …)` over `apiRequest`, with

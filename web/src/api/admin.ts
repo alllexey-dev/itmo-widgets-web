@@ -1,52 +1,14 @@
-/**
- * Shapes shared by the admin API (`/api/admin/**`, backend `docs/contracts/admin.md`).
- * Section-specific shapes live next to their feature.
- */
+import type { components } from './schema';
 
-/** `AdminPage<T>`: [page] is zero-based, [total] counts every matching item. */
-export interface AdminPage<T> {
-  items: T[];
-  page: number;
-  size: number;
-  total: number;
-}
+type Schemas = components['schemas'];
+
+export type AdminPage<T> = Omit<Schemas['AdminPageAdminUserItem'], 'items'> & { items: T[] };
 
 export const DEFAULT_PAGE_SIZE = 20;
 
-/** `GroupData` from itmo-widgets-core. */
-export interface GroupData {
-  name: string;
-  course: number;
-  facultyShortName: string;
-}
-
-/** `AdminUserSummary`: stored identity; list groups come from the ID token. */
-export interface AdminUserSummary {
-  isu: number;
-  name: string;
-  pictureUrl: string | null;
-  groups: GroupData[];
-}
-
-export type RestrictionCapability =
-  'SUBMIT_RESOURCES' | 'VOTE' | 'REPORT' | 'WRITE_REVIEWS' | 'ALL';
-
-/** `AdminRestriction`. */
-export interface AdminRestriction {
-  id: string;
-  user: AdminUserSummary;
-  capability: RestrictionCapability;
-  reason: string;
-  startsAt: string;
-  expiresAt: string | null;
-  revokedAt: string | null;
-  revokedByIsu: number | null;
-  active: boolean;
-  /** The case whose `RESTRICT_USER` decision created the restriction. */
-  caseId: string;
-}
-
-export type LinkStatus = 'PRIVATE' | 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'HIDDEN';
-
-/** `MISSING` has no value; `UNKNOWN` is copied, seeded or replaced and not yet used. */
-export type ServiceCredentialStatus = 'MISSING' | 'UNKNOWN' | 'OK' | 'EXPIRED' | 'FAILED';
+export type GroupData = Schemas['GroupData'];
+export type AdminUserSummary = Schemas['AdminUserSummary'];
+export type AdminRestriction = Schemas['AdminRestriction'];
+export type RestrictionCapability = Schemas['AdminRestriction']['capability'];
+export type LinkStatus = Schemas['SubjectLink']['status'];
+export type ServiceCredentialStatus = Schemas['AdminServiceCredential']['status'];
