@@ -1,10 +1,11 @@
+import type { IconName } from './icons';
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import styles from './IconButton.module.css';
 import { cx } from './cx';
 import { Icon } from './Icon';
 
 export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
-  icon: string;
+  icon: IconName;
   /** Accessible name, also shown as a tooltip. */
   label: string;
   selected?: boolean;

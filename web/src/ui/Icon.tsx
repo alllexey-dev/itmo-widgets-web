@@ -1,9 +1,10 @@
+import type { IconName } from './icons';
 import styles from './Icon.module.css';
 import { cx } from './cx';
 
 export interface IconProps {
   /** Material Symbols Rounded ligature, e.g. `home`. */
-  name: string;
+  name: IconName;
   /** Filled variant, only for a selected or active state. */
   filled?: boolean;
   size?: 18 | 20 | 24 | 32 | 40;

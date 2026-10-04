@@ -1,3 +1,4 @@
+import type { IconName } from '../../ui/icons';
 import type { BadgeTone } from '../../ui';
 import type {
   CredentialSource,
@@ -7,7 +8,7 @@ import type {
   SportOutcome,
 } from './types';
 
-export const OUTCOMES: Record<SportOutcome, { label: string; tone: BadgeTone; icon: string }> = {
+export const OUTCOMES: Record<SportOutcome, { label: string; tone: BadgeTone; icon: IconName }> = {
   SUCCESS: { label: 'Успешно', tone: 'success', icon: 'check_circle' },
   PARTIAL: { label: 'Частично', tone: 'warning', icon: 'warning' },
   FAILED: { label: 'Сбой', tone: 'error', icon: 'error' },

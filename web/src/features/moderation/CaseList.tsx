@@ -1,3 +1,4 @@
+import type { IconName } from '../../ui/icons';
 import { useEffect, useRef } from 'react';
 import { Badge, cx, Icon, Skeleton, formatRelative } from '../../ui';
 import { CATEGORIES, hostOf, REASONS } from './labels';
@@ -11,7 +12,7 @@ export interface CaseListProps {
 }
 
 interface RowTexts {
-  icon: string;
+  icon: IconName;
   title: string;
   line: string;
   hidden: string | null;

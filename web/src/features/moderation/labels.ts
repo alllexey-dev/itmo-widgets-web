@@ -1,3 +1,4 @@
+import type { IconName } from '../../ui/icons';
 import type { BadgeTone } from '../../ui';
 import type {
   CaseReason,
@@ -14,7 +15,7 @@ export { CAPABILITIES } from '../../shared/restrictionLabels';
 
 interface Labelled {
   label: string;
-  icon: string;
+  icon: IconName;
 }
 
 /** Names and Material Symbols as in the Android app (`SubjectLinkTexts.kt`). */

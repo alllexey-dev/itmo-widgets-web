@@ -92,9 +92,18 @@ Helpers: `formatDate`, `formatDateTime`, `formatRelative`, `formatDuration`,
 `formatNumber`, `plural` (Russian plural forms), `useMediaQuery`,
 `useDebouncedValue`, `focusableIn` and `trapTab`.
 
-Icons come from Material Symbols Rounded (Google Fonts, `display=block`), one
-meaning per symbol, filled only for the selected state such as the active
-sidebar item.
+Icons use a self-hosted Material Symbols Rounded subset (`font-display: block`),
+one meaning per symbol, filled only for the selected state such as the active
+sidebar item. `ui/icons.ts` defines all 84 names and the `IconName` prop type.
+`public/fonts/names.txt` and the verified font manifest are checked by Vitest.
+
+Regenerate with `PYTHON=/path/to/isolated/python node scripts/subset-icons.mjs`
+from the repository root. The Python environment needs `fonttools[woff]==4.60.1`
+and `brotli==1.1.0`. The script fetches checksum-pinned source files from
+`google/material-design-icons` at `737e3324305806514d7909874fa1818ae1808232`,
+subsets exactly the named ligatures, fixes opsz 24, wght 400 and GRAD 0, and verifies
+the actual GSUB sequences and the remaining FILL 0..1 axis. The committed Apache
+2.0 license text is copied from that revision with a final newline. No runtime font service is used.
 
 ## Layout
 
@@ -141,3 +150,15 @@ sidebar item.
   restriction) is written by the moderator and is required.
 - Empty states use a title alone when it is enough; a description only adds what
   the title cannot.
+
+For isolated CSP/layout QA after `npm run build`, run
+`node web/src/test/csp-preview.mjs` from the repository root. Port 18404 serves
+a synthetic administrator/dashboard; port 18405 serves a synthetic signed-out
+login challenge. Every API response is local; unknown APIs return 404, no proxy
+or external avatar is configured. `?qa-theme=light` or `?qa-theme=dark` selects
+the fixture theme. Never use Vite's live development proxy for this check.
+
+The preview resolves static files beneath the canonical public roots and refuses
+symlink escapes or non-public file types. With the fixture running, execute
+`bash web/src/test/csp-preview-isolation.sh` to check absolute-path and symlink
+escapes using a disposable, nonsecret outside canary.
