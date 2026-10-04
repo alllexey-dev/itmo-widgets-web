@@ -1,5 +1,5 @@
-# Development container for dev.widgets.alllexey.dev, which routes only /app/ here.
-# `docker compose -f compose.dev.yml up -d --build` in the server checkout.
+# Caddy sends everything except /api/* on dev.widgets.alllexey.dev here.
+# See README.md for deployment from a git archive, not a server checkout.
 name: itmowidgets-web-dev
 
 services:
