@@ -1,3 +1,4 @@
+import type { IconName } from './icons';
 import type { ReactNode } from 'react';
 import styles from './Chip.module.css';
 import { cx } from './cx';
@@ -5,7 +6,7 @@ import { Icon } from './Icon';
 
 export interface ChipProps {
   children: ReactNode;
-  icon?: string;
+  icon?: IconName;
   /** Filter chips: shows a check and a selected container. */
   selected?: boolean;
   /** Makes the chip a toggle button; without it the chip is static text. */

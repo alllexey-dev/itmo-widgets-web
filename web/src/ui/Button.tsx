@@ -1,3 +1,4 @@
+import type { IconName } from './icons';
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import styles from './Button.module.css';
 import { buttonClasses, type ButtonSize, type ButtonVariant } from './buttonClasses';
@@ -11,7 +12,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   /** Leading Material Symbols icon. */
-  icon?: string;
+  icon?: IconName;
   /** Shows a spinner, keeps the width and blocks clicks. */
   loading?: boolean;
   fullWidth?: boolean;

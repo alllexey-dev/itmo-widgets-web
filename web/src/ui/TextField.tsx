@@ -1,3 +1,4 @@
+import type { IconName } from './icons';
 import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react';
 import styles from './Field.module.css';
 import { FieldFrame } from './FieldFrame';
@@ -11,7 +12,7 @@ export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   /** Replaces the hint and marks the field invalid. */
   error?: ReactNode;
   /** Leading Material Symbols icon, e.g. `search`. */
-  icon?: string;
+  icon?: IconName;
   /** Inside the field on the right, e.g. a clear button. */
   trailing?: ReactNode;
   className?: string;

@@ -366,5 +366,12 @@ matched; common page dependencies are shared chunks. `DashboardPage` also loads
 `TrendChart` with `React.lazy` inside `Suspense`, keeping recharts in its own
 chunk. Compare entry bytes using production builds with the same Node version,
 Vite base and environment, and inspect `ls -l web/dist/assets` before and after.
-Material Symbols Rounded comes from Google Fonts; `public/theme-init.js` runs
+Material Symbols Rounded is a preloaded, self-hosted WOFF2 subset with 84 typed
+ligatures and a FILL axis; `public/theme-init.js` runs
 before the bundle to apply a saved theme without a flash.
+
+The nginx image sends the same CSP and Permissions-Policy in every location,
+including cached assets and app-link pages. Scripts, styles, fonts and API
+connections are same-origin. Images allow data URLs and HTTPS avatar hosts.
+Objects and framing are forbidden; camera, microphone and geolocation are disabled.
+`scripts/check-site.sh` asserts both headers on the landing, SPA and app links.

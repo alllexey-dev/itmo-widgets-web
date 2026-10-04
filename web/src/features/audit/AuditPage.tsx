@@ -1,3 +1,4 @@
+import type { IconName } from '../../ui/icons';
 import type { components } from '../../api/schema';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router';
@@ -18,7 +19,7 @@ import styles from './AuditPage.module.css';
 /** `AdminAuditEntry`. */
 export type AuditEntry = components['schemas']['AdminAuditEntry'];
 
-const ACTIONS: Record<string, { label: string; icon: string }> = {
+const ACTIONS: Record<string, { label: string; icon: IconName }> = {
   ROLE_GRANTED: { label: 'Выдана роль', icon: 'person_add' },
   ROLE_REVOKED: { label: 'Снята роль', icon: 'person_remove' },
   MODERATION_SETTINGS_CHANGED: { label: 'Правила модерации', icon: 'tune' },

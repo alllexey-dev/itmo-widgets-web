@@ -1,3 +1,4 @@
+import type { IconName } from './icons';
 import { useId, type ReactNode } from 'react';
 import styles from './Stat.module.css';
 import { cx } from './cx';
@@ -8,7 +9,7 @@ export interface StatProps {
   value: ReactNode;
   /** Secondary line: a period, a delta or a hint. */
   caption?: ReactNode;
-  icon?: string;
+  icon?: IconName;
   className?: string;
 }
 

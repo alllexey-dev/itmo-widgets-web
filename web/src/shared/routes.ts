@@ -1,9 +1,10 @@
+import type { IconName } from '../ui/icons';
 import type { RouteObject } from 'react-router';
 
 export interface NavItem<TAccess extends string> {
   path: string;
   label: string;
-  icon: string;
+  icon: IconName;
   access: TAccess;
 }
 

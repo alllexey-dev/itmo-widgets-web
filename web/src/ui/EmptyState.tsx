@@ -1,3 +1,4 @@
+import type { IconName } from './icons';
 import type { ReactNode } from 'react';
 import styles from './EmptyState.module.css';
 import { cx } from './cx';
@@ -6,7 +7,7 @@ import { Icon } from './Icon';
 export interface EmptyStateProps {
   title: ReactNode;
   description?: ReactNode;
-  icon?: string;
+  icon?: IconName;
   action?: ReactNode;
   compact?: boolean;
   className?: string;

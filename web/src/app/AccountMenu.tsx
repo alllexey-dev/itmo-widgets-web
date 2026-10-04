@@ -1,10 +1,11 @@
+import type { IconName } from '../ui/icons';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { displayName, type Session } from '../features/auth/session';
 import { useLogout } from '../features/auth/useSession';
 import { Avatar, cx, Icon, useTheme, useToast, type ThemePreference } from '../ui';
 import styles from './AccountMenu.module.css';
 
-const THEMES: { value: ThemePreference; label: string; icon: string }[] = [
+const THEMES: { value: ThemePreference; label: string; icon: IconName }[] = [
   { value: 'system', label: 'Как в системе', icon: 'brightness_auto' },
   { value: 'light', label: 'Светлая', icon: 'light_mode' },
   { value: 'dark', label: 'Тёмная', icon: 'dark_mode' },

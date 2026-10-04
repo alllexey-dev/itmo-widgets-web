@@ -1,3 +1,4 @@
+import type { IconName } from './icons';
 import type { ReactNode } from 'react';
 import styles from './Badge.module.css';
 import { cx } from './cx';
@@ -9,7 +10,7 @@ export interface BadgeProps {
   /** Always a word or a number: a status is never shown by colour alone. */
   children: ReactNode;
   tone?: BadgeTone;
-  icon?: string;
+  icon?: IconName;
   className?: string;
 }
 

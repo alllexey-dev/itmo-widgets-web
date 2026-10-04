@@ -1,3 +1,4 @@
+import type { IconName } from './icons';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import styles from './Table.module.css';
 import { cx } from './cx';
@@ -20,7 +21,7 @@ export interface TableProps<Row> {
   rowKey: (row: Row) => string;
   loading?: boolean;
   /** Shown instead of rows when there are none. */
-  empty?: { title: ReactNode; description?: ReactNode; icon?: string };
+  empty?: { title: ReactNode; description?: ReactNode; icon?: IconName };
   onRowClick?: (row: Row) => void;
   selectedKey?: string | null;
   /** The table scrolls inside this height so the header stays visible. */

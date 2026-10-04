@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- WB-04: Self-host typed Material Symbols with a verified subset, add CSP and Permissions-Policy, and update the approved privacy wording and date.
+
 - WB-01: Correct Caddy routing and the temporary production /app/ procedure; remove the obsolete edge snippet and document all shared UI components.
 - CI-04: Add locked-dependency verification, local image smoke checks and pull request CI.
 - WB-03: Refresh React and pin container images and QR dependencies.
