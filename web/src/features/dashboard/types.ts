@@ -1,4 +1,4 @@
-import type { LinkStatus } from '../moderation/types';
+import type { LinkStatus } from '../../api/admin';
 
 /** `AdminDashboardTotals`: rolling windows end now. */
 export interface DashboardTotals {

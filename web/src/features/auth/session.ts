@@ -1,20 +1,14 @@
+import type { GroupData } from '../../api/admin';
 import { api, SESSION_PATH } from '../../api/client';
 
 export type Role = 'MODERATOR' | 'ADMIN';
-
-/** `GroupData` from itmo-widgets-core. */
-export interface SessionGroup {
-  name: string;
-  course: number;
-  facultyShortName: string;
-}
 
 /** `GET /api/web/auth/me`. */
 export interface Session {
   isu: number;
   name: string;
   pictureUrl: string | null;
-  groups: SessionGroup[];
+  groups: GroupData[];
   roles: Role[];
 }
 

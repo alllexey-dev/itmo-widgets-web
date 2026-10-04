@@ -2,10 +2,28 @@ import { screen, waitForElementToBeRemoved } from '@testing-library/react';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { renderApp } from '../../test/render';
-import { fail, mockOpenCases, mockSession, server, sessionOf } from '../../test/server';
+import { fail, mockOpenCases, mockSession, ok, server, sessionOf } from '../../test/server';
 import type { Role } from '../auth/session';
 
 describe('HomePage', () => {
+  it('reads the open-case total from a one-item page through the shared API', async () => {
+    mockSession(sessionOf(['MODERATOR']));
+    const queries: URLSearchParams[] = [];
+    server.use(
+      http.get('*/api/admin/moderation/cases', ({ request }) => {
+        queries.push(new URL(request.url).searchParams);
+        return ok({ items: [], page: 0, size: 1, total: 12 });
+      }),
+    );
+
+    renderApp('/');
+
+    expect(await screen.findByRole('link', { name: /Открытые заявки/ })).toHaveTextContent('12');
+    expect(queries.map((query) => Object.fromEntries(query))).toEqual([
+      { status: 'OPEN', page: '0', size: '1' },
+    ]);
+  });
+
   it('shows the profile of the signed-in user', async () => {
     mockSession(sessionOf([], { pictureUrl: null }));
 

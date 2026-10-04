@@ -23,7 +23,7 @@ import {
   Table,
   useToast,
 } from '../../ui';
-import { RestrictionsTable } from '../moderation/RestrictionsTable';
+import { RestrictionsTable } from '../../shared/RestrictionsTable';
 import { useModeratorRole, useUser } from './api';
 import { RoleBadges } from './roles';
 import type { AdminUserDetail } from './types';

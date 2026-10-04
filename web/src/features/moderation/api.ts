@@ -7,6 +7,8 @@ import {
 } from '@tanstack/react-query';
 import type { AdminPage, AdminRestriction } from '../../api/admin';
 import { api } from '../../api/client';
+import { moderationKey } from '../../api/moderation';
+
 import type {
   AdminCaseItem,
   CaseReason,
@@ -15,10 +17,10 @@ import type {
   ModerationCase,
 } from './types';
 
-const BASE = '/api/admin/moderation';
+export { moderationKey, useOpenCaseCount } from '../../api/moderation';
+export { useRevokeRestriction } from '../../api/restrictions';
 
-/** Every moderation query starts with this key, so one invalidation refreshes them all. */
-export const moderationKey = ['admin', 'moderation'] as const;
+const BASE = '/api/admin/moderation';
 
 export interface CaseFilter {
   status: CaseStatus;
@@ -50,17 +52,6 @@ export function useCases(filter: CaseFilter) {
         ? previous
         : undefined;
     },
-  });
-}
-
-/** Open cases for the home card: only `total` of a one-item page is read. */
-export function useOpenCaseCount() {
-  const filter: CaseFilter = { status: 'OPEN', reason: null, page: 0, size: 1 };
-  return useQuery({
-    queryKey: casesKey(filter),
-    queryFn: ({ signal }) => fetchCases(filter, signal),
-    select: (page) => page.total,
-    retry: false,
   });
 }
 
@@ -125,19 +116,5 @@ export function useRestrictions(filter: RestrictionFilter) {
         signal,
       }),
     placeholderData: keepPreviousData,
-  });
-}
-
-/** Revoking also refreshes user cards, which list restrictions too. */
-export function useRevokeRestriction() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      api.post<null>(`${BASE}/restrictions/${encodeURIComponent(id)}/revoke`),
-    onSuccess: () =>
-      Promise.all([
-        client.invalidateQueries({ queryKey: moderationKey }),
-        client.invalidateQueries({ queryKey: ['admin', 'users'] }),
-      ]),
   });
 }

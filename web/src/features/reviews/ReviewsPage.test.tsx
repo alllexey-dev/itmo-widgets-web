@@ -8,7 +8,7 @@ import { fail, mockSession, ok, server, sessionOf } from '../../test/server';
 import type {
   AiSummariesState,
   ReviewsSyncStatus,
-  ReviewVerification,
+  ReviewVerificationCounts,
   TeacherSummary,
   TeacherSummaryRow,
 } from './types';
@@ -36,7 +36,7 @@ function statusOf(overrides: Partial<ReviewsSyncStatus> = {}): ReviewsSyncStatus
   };
 }
 
-const verification: ReviewVerification = { pending: 4, verified: 1250, unverified: 37 };
+const verification: ReviewVerificationCounts = { pending: 4, verified: 1250, unverified: 37 };
 
 function summariesOf(overrides: Partial<AiSummariesState> = {}): AiSummariesState {
   return {

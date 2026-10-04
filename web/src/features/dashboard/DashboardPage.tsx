@@ -14,7 +14,7 @@ import {
   Stat,
   Table,
 } from '../../ui';
-import type { LinkStatus } from '../moderation/types';
+import type { LinkStatus } from '../../api/admin';
 import { useDashboard } from './api';
 import styles from './DashboardPage.module.css';
 import type { Dashboard, DashboardDay, DashboardTotals, DayMetric } from './types';

@@ -45,3 +45,8 @@ export interface AdminRestriction {
   /** The case whose `RESTRICT_USER` decision created the restriction. */
   caseId: string;
 }
+
+export type LinkStatus = 'PRIVATE' | 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'HIDDEN';
+
+/** `MISSING` has no value; `UNKNOWN` is copied, seeded or replaced and not yet used. */
+export type ServiceCredentialStatus = 'MISSING' | 'UNKNOWN' | 'OK' | 'EXPIRED' | 'FAILED';

@@ -1,4 +1,4 @@
-import type { AdminUserSummary, GroupData, RestrictionCapability } from '../../api/admin';
+import type { AdminUserSummary, LinkStatus, RestrictionCapability } from '../../api/admin';
 
 /** Moderation shapes from backend `docs/contracts/admin.md`, `subject-links.md` and `teacher-reviews.md`. */
 
@@ -9,7 +9,6 @@ export type LinkCategory =
   'SCORES' | 'QUEUE' | 'MATERIALS' | 'TASKS' | 'RECORDINGS' | 'NOTES' | 'EXAM' | 'CHAT' | 'OTHER';
 export type LinkVisibility = 'PRIVATE' | 'FLOW' | 'ALL';
 export type RevisionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
-export type LinkStatus = 'PRIVATE' | 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'HIDDEN';
 export type ReportReason =
   'BROKEN' | 'WRONG_SUBJECT' | 'SPAM' | 'OTHER' | 'OFFENSIVE' | 'WRONG_TEACHER';
 export type TeacherReviewStatus = 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'HIDDEN';
@@ -70,13 +69,6 @@ export interface AdminCaseItem {
   reportCount: number;
 }
 
-export interface UserData {
-  isu: number;
-  name: string;
-  pictureUrl: string | null;
-  groups: GroupData[];
-}
-
 /** The content other students currently see, with the owner-side status. */
 export interface SubjectLink {
   id: string;
@@ -121,7 +113,7 @@ export interface SubjectLinkTarget {
   targetType: 'SUBJECT_RESOURCE';
   revision: SubjectLinkRevision;
   link: SubjectLink;
-  author: UserData;
+  author: AdminUserSummary;
   reports: ModerationReport[];
   submitterHistory: SubmitterHistory;
 }
@@ -162,7 +154,7 @@ export interface TeacherReviewTarget {
   targetType: 'TEACHER_REVIEW';
   revision: TeacherReviewRevision;
   review: ModeratedTeacherReview;
-  author: UserData;
+  author: AdminUserSummary;
   reports: ModerationReport[];
   submitterHistory: SubmitterHistory;
 }

@@ -1,9 +1,10 @@
 import { useId } from 'react';
 import { Link } from 'react-router';
+import type { GroupData } from '../../api/admin';
+import { useOpenCaseCount } from '../../api/moderation';
 import { Avatar, Badge, Card, Icon, PageHeader, Skeleton } from '../../ui';
-import { displayName, hasAccess, type Session, type SessionGroup } from '../auth/session';
+import { displayName, hasAccess, type Session } from '../auth/session';
 import { useSession } from '../auth/useSession';
-import { useOpenCaseCount } from '../moderation/api';
 import styles from './HomePage.module.css';
 
 export function HomePage() {
@@ -19,7 +20,7 @@ export function HomePage() {
   );
 }
 
-function groupLine({ name, course, facultyShortName }: SessionGroup): string {
+function groupLine({ name, course, facultyShortName }: GroupData): string {
   return [name, course > 0 ? `${course} курс` : null, facultyShortName].filter(Boolean).join(' · ');
 }
 
