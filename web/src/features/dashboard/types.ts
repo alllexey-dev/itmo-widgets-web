@@ -1,31 +1,11 @@
 import type { LinkStatus } from '../../api/admin';
+import type { components } from '../../api/schema';
 
-/** `AdminDashboardTotals`: rolling windows end now. */
-export interface DashboardTotals {
-  users: number;
-  newUsers7d: number;
-  activeDevices7d: number;
-  activeDevices30d: number;
-  webSessions7d: number;
-  friendships: number;
+type Schemas = components['schemas'];
+
+export type DashboardTotals = Omit<Schemas['AdminDashboardTotals'], 'links'> & {
   links: Record<LinkStatus, number>;
-  openCases: number;
-  activeAutoSignEntries: number;
-  activeFreeSignEntries: number;
-}
-
-/** One Moscow day; `date` is `YYYY-MM-DD`. */
-export interface DashboardDay {
-  date: string;
-  newUsers: number;
-  activeDevices: number;
-  createdLinks: number;
-}
-
-/** `AdminDashboard`: [days] holds 30 zero-filled days, oldest first. */
-export interface Dashboard {
-  totals: DashboardTotals;
-  days: DashboardDay[];
-}
-
+};
+export type DashboardDay = Schemas['AdminDashboardDay'];
+export type Dashboard = Omit<Schemas['AdminDashboard'], 'totals'> & { totals: DashboardTotals };
 export type DayMetric = Exclude<keyof DashboardDay, 'date'>;

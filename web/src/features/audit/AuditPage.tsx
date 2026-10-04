@@ -1,3 +1,4 @@
+import type { components } from '../../api/schema';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router';
 import { DEFAULT_PAGE_SIZE, type AdminPage } from '../../api/admin';
@@ -15,15 +16,7 @@ import {
 import styles from './AuditPage.module.css';
 
 /** `AdminAuditEntry`. */
-export interface AuditEntry {
-  id: string;
-  action: string;
-  target: string;
-  details: string | null;
-  createdAt: string;
-  actorIsu: number;
-  actorName: string;
-}
+export type AuditEntry = components['schemas']['AdminAuditEntry'];
 
 const ACTIONS: Record<string, { label: string; icon: string }> = {
   ROLE_GRANTED: { label: 'Выдана роль', icon: 'person_add' },

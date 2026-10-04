@@ -25,14 +25,19 @@ export function userSummary(overrides: Partial<AdminUserSummary> = {}): AdminUse
     pictureUrl: null,
     groups: [{ name: 'M3205', course: 2, facultyShortName: 'ФИТиП' }],
     ...overrides,
-  };
+  } satisfies AdminUserSummary;
 }
 
 export function pageOf<T>(all: readonly T[], request: Request, defaultSize = 20): AdminPage<T> {
   const url = new URL(request.url);
   const page = Number(url.searchParams.get('page') ?? 0);
   const size = Number(url.searchParams.get('size') ?? defaultSize);
-  return { items: all.slice(page * size, (page + 1) * size), page, size, total: all.length };
+  return {
+    items: all.slice(page * size, (page + 1) * size),
+    page,
+    size,
+    total: all.length,
+  } satisfies AdminPage<T>;
 }
 
 interface CaseSeed {
@@ -86,7 +91,7 @@ export function linkTarget(
     reports: [],
     submitterHistory: { approved: 4, rejected: 1, dismissedReports: 0, activeRestrictions: [] },
     ...overrides,
-  };
+  } satisfies SubjectLinkTarget;
 }
 
 export function moderationCase(
@@ -103,7 +108,7 @@ export function moderationCase(
     target,
     decisions: [],
     ...overrides,
-  };
+  } satisfies ModerationCase;
 }
 
 export function caseItemOf(detail: ModerationCase): AdminCaseItem {
@@ -130,7 +135,7 @@ export function caseItemOf(detail: ModerationCase): AdminCaseItem {
     review: null,
     author: target ? { ...target.author } : null,
     reportCount: target?.reports.length ?? 0,
-  };
+  } satisfies AdminCaseItem;
 }
 
 interface ReviewSeed {
@@ -182,7 +187,7 @@ export function reviewTarget(
     reports: [],
     submitterHistory: { approved: 2, rejected: 0, dismissedReports: 0, activeRestrictions: [] },
     ...overrides,
-  };
+  } satisfies TeacherReviewTarget;
 }
 
 export function reviewCase(
@@ -199,7 +204,7 @@ export function reviewCase(
     target,
     decisions: [],
     ...overrides,
-  };
+  } satisfies ModerationCase;
 }
 
 /** The backend cuts the excerpt to one short line. */
@@ -227,7 +232,7 @@ export function reviewCaseItemOf(detail: ModerationCase): AdminCaseItem {
       : null,
     author: target ? { ...target.author } : null,
     reportCount: target?.reports.length ?? 0,
-  };
+  } satisfies AdminCaseItem;
 }
 
 /**
@@ -296,5 +301,5 @@ export function restriction(overrides: Partial<AdminRestriction> = {}): AdminRes
     active: true,
     caseId: 'case-1',
     ...overrides,
-  };
+  } satisfies AdminRestriction;
 }
