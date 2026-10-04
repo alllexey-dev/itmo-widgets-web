@@ -22,9 +22,11 @@
   стоит с атрибутом `hidden` до публикации в Play.
 - `design/` — черновики: варианты лендинга (`design/landing/{a,b,c}`, выбран
   `c`) и графика карточки Play (`design/store/`); в образ не попадают.
-- `web/` — веб-версия (Vite, React, TypeScript): разделы, роли, вход и запуск
-  описаны в [`web/README.md`](web/README.md), устройство и дизайн — в
-  [`web/docs/`](web/docs/architecture.md).
+- `web/` — веб-версия (Vite, React, TypeScript): запуск и команды
+  описаны в [`web/README.md`](web/README.md), разделы и роли - в
+  [документации разделов](web/README.md#документация), устройство - в
+  [архитектуре](web/docs/architecture.md), дизайн - в
+  [дизайне](web/docs/design.md).
 - `Dockerfile` — собирает `web/` и кладёт лендинг и веб-версию в один образ
   `nginx:alpine`; конфиг — `deploy/site.nginx.conf`.
 - `compose.yml` - только локальная сборка общего образа на `127.0.0.1:8080`.

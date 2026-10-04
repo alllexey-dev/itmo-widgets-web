@@ -29,22 +29,8 @@ existing group order by `src/app/navigation.ts`; shared manifest and navigation
 types live in `src/shared/routes.ts` (features never import the app layer).
 `SessionLostRedirect` is the root element and renders an outlet. `LoginPage`
 stays eager outside the shell; feature pages load through route `lazy` imports.
-Paths and access rules are unchanged:
-
-| Path                  | Page                            | Access      |
-| --------------------- | ------------------------------- | ----------- |
-| `/login`              | `LoginPage` (outside the shell) | anyone      |
-| `/`                   | `HomePage`                      | signed in   |
-| `/admin/moderation`   | `ModerationPage`                | `moderator` |
-| `/admin/restrictions` | `RestrictionsPage`              | `moderator` |
-| `/admin/dashboard`    | `DashboardPage`                 | `admin`     |
-| `/admin/users`        | `UsersPage`                     | `admin`     |
-| `/admin/users/:isu`   | `UserPage`                      | `admin`     |
-| `/admin/sport`        | `SportPage`                     | `admin`     |
-| `/admin/system`       | `SystemPage`                    | `admin`     |
-| `/admin/reviews`      | `ReviewsPage`                   | `admin`     |
-| `/admin/audit`        | `AuditPage`                     | `admin`     |
-| `*`                   | `NotFoundPage` (in the shell)   | signed in   |
+Section paths and roles are listed in the [section documentation](#section-documentation).
+The catch-all route renders `NotFoundPage` inside the signed-in shell.
 
 `Shell` is the layout route: sidebar, top bar with the account menu, and an
 `<Outlet>` rendered only after the session loads. Below 760 px the sidebar
@@ -57,10 +43,7 @@ page makes no requests. The sidebar comes from `NAV_GROUPS` in
 items is hidden.
 
 Page state that should survive a reload or a shared link lives in the query
-string through `useSearchParams`: moderation `status`, `reason`, `page`, `case`;
-restrictions `isu`, `all`, `page`; users `q`, `page`; audit `page`; the AI
-summaries table on the reviews page `status`, `page`. Selecting a
-case replaces the history entry instead of pushing one.
+string through `useSearchParams`. Section documents list their parameters.
 
 ## Session
 
@@ -77,28 +60,6 @@ case replaces the history entry instead of pushing one.
   session itself, so a failed check there is ignored.
 - `useLogout()` posts `/api/web/auth/logout`, clears the whole query cache and
   navigates to `/login`.
-
-### Phone sign-in
-
-`LoginPage` redirects to `/` when a session exists. Otherwise
-`useLoginChallenge` in `src/features/auth/`:
-
-1. creates a challenge once on mount (`POST /api/web/auth/challenges`);
-2. computes a local deadline from `expiresAt`, falling back to 2 minutes when
-   the browser clock disagrees with the server (lifetime not in 0–10 minutes);
-3. polls `GET /api/web/auth/challenges/{id}` with `X-Poll-Secret` every 2 s
-   while the tab is visible (`usePageVisible`) and the deadline has not passed;
-   returning to the tab polls at once;
-4. replaces a code that expired, answered `EXPIRED` or 404, at most 5 times in
-   a row (about 12 minutes, below the backend limit of 10 codes per address in
-   10 minutes), then shows `Код устарел` with `Показать новый код`;
-5. on `APPROVED` resets the session query and navigates to `/`.
-
-Polling stops on the local deadline; the backend's extra minute for claiming a
-late approval is not used. `?code=` on `/login` (a QR opened by a phone camera)
-shows the code with a hint to enter it in the app. The QR encodes
-`${origin}/app/login?code=<code>`; `parseLoginCode` accepts only the backend
-alphabet.
 
 ## API client
 
@@ -227,106 +188,8 @@ existing section-local imports without creating a cross-feature dependency.
 
 Query keys start with the area (`['admin', 'moderation', …]`,
 `['admin', 'users', …]`, `['admin', 'audit', …]`), so a mutation invalidates a
-whole area at once. A moderation decision writes the returned case into the
-cache and invalidates the rest of the area; a role change also invalidates the
-audit log. Paged lists keep the previous page on screen while the next loads.
-The next case in the queue is prefetched. The service credentials
-(`['admin', 'system', 'credentials']`) are polled every 3 s while a value that
-is still `UNKNOWN` was changed less than 2 minutes ago, so the result of its
-first use shows up by itself. The reviews sync state
-(`['admin', 'reviews', 'sync']`) is polled every 3 s while a run is in
-progress; a start writes the returned state into the cache and invalidates the
-audit log, and a rejected start (409) refetches the state. The AI summaries
-state (`['admin', 'reviews', 'summaries']`) is polled the same way, every 3 s
-while `running`, and its start behaves the same, except that a rejected start
-refetches only the state (`exact: true`). The summaries table lives under the
-same prefix (`['admin', 'reviews', 'summaries', 'teachers', status, page]`, a
-null status for every status) and keeps the previous page while the next
-loads. `useReloadTeachersAfterRun(running)` invalidates the table once the
-polled state turns from running to finished, since a run changes the statuses.
-Hiding, showing and regenerating one summary invalidate the whole summaries
-prefix (state and table) and the audit log, both on success and on failure.
-
-## Moderation targets
-
-A case targets a subject link (`SUBJECT_RESOURCE`) or a teacher review
-(`TEACHER_REVIEW`); `types.ts` models both targets as a union on `targetType`,
-and a queue row carries `link` or `review` accordingly. `CaseList` builds the
-row texts per type (a link's title and host, a review's teacher ISU, subject and
-excerpt). `CaseDetail` picks per type the title (for a review the teacher's
-name from the backend, else `Преподаватель`, and the ISU), the preview
-(`LinkPreview` or `ReviewPreview` with anonymity, the ISU check, subject,
-version and score), the changes (`ChangesSection` or `ReviewChangesSection`),
-the reject presets (`LINK_REJECT_PRESETS`, `REVIEW_REJECT_PRESETS` in
-`labels.ts`), the default restriction (`SUBMIT_RESOURCES` or `WRITE_REVIEWS`),
-the «hide all» dialog texts and the decision toasts (`doneText`).
-`ReviewChangesSection` compares the reviewed revision with `review.shown`, the
-approved content: the subject goes into the usual `DiffView` table and the text
-into `TextDiff`, which renders `wordDiff(before, after)`, a word-level longest
-common subsequence diff that keeps whitespace, as `<del>` and `<ins>` with
-hidden «удалено»/«добавлено» labels for screen readers. A review never approved
-shows «Новый отзыв, одобренных версий ещё нет» instead.
-
-## Service credentials
-
-`CredentialsCard` on the system page lists `GET /api/admin/system/credentials`
-in a table: the name, the status badge with the last error for `FAILED` and
-`EXPIRED`, the expiry with «Скоро», the last use and renewal, and who changed
-the value (a link to the admin's user page for `ADMIN`). Values never reach the
-browser. `ReplaceCredentialDialog` holds the new value only in a password field
-and the mutation body: it is never part of a query key, the mutation has
-`gcTime: 0` so the finished mutation and its variables leave the cache at once,
-and closing the dialog clears the field. A 400 marks the field «Проверьте
-значение»; the returned list replaces the cached one and the audit log is
-invalidated.
-
-`GEMINI_API_KEY` (kind `API_KEY`) is replaceable like the refresh token and
-the ISU cookie; the dialog hints «Ключ из Google AI Studio».
-
-`VerificationCard` on the reviews page shows the three counters of
-`GET /api/admin/reviews/verification` with a skeleton and a retryable error.
-
-## AI summaries
-
-The reviews page shows AI summaries of teacher reviews in two cards under the
-sync and verification cards. The hooks are in `reviews/api.ts`:
-`useAiSummaries` (`GET /api/admin/reviews/summaries`),
-`useStartAiSummaries` (`POST …/summaries/run`), `useSummaryTeachers(status,
-page)` (`GET …/summaries/teachers?status=&page=&size=`),
-`useSetSummaryHidden` (`PUT …/summaries/{isu}/hidden` with `{hidden}`) and
-`useRegenerateSummary` (`POST …/summaries/{isu}/regenerate`); both row
-mutations return the updated `AdminTeacherSummary`. `types.ts` mirrors
-`AdminAiSummaries`, `AdminTeacherSummary` and `TeacherSummary`; `labels.ts`
-holds the run outcomes, row statuses, tone and confidence words, scale names,
-scale values per scale kind, and `SUMMARY_TAGS`, a map of the 20 tag codes
-whose `summaryTagLabel(code)` returns an unknown code as is.
-
-- `SummariesCard` (`section` «ИИ-сводки», the model as the subtitle): the run
-  badge (disabled, running, never run or the last outcome), the start time and
-  trigger, the technical `lastError` in `<code>` after an unsuccessful run, a
-  notice with a link to `/admin/system` when the key is `MISSING`, `FAILED` or
-  `EXPIRED`, `Stat` tiles for the four statuses and today's requests
-  (`N из M`, the Pacific budget day as the caption), and the last run's
-  counters. «Пересчитать всё» is disabled when summaries are off or the key is
-  `MISSING`, spins while a run is going, and asks for confirmation with the
-  remaining requests; a 409 shows «Пересчёт уже идёт».
-- `SummariesTable` (`Card` «Сводки преподавателей»): `Tabs` by status and
-  `Pagination`, both kept in the query string (`status`, `page`); columns for
-  the teacher (`teacherLabel`), status, current review count, tone, build time
-  and the rejection code; a skeleton, a retryable error and «Сводок пока нет».
-  A row opens `SummaryDialog`.
-- `SummaryDialog` (a large `Dialog`) starts from the clicked row and replaces
-  it with the row each mutation returns. It shows the status, the current review
-  count, who hid the summary and when, the last error with attempts, and the
-  summary: the review count it was built from, tone and confidence,
-  description, pros, cons, tags as `Chip`s and the five scales with reasons, or
-  «Сводки ещё нет». Model texts are rendered as React text only, never as HTML
-  or links. «Скрыть»/«Показать» toggles `hidden`; «Пересчитать» is disabled for
-  a hidden summary, fewer than 3 current reviews or disabled summaries and
-  toasts «Пересчёт запрошен». Errors 404 and 409 toast «Сводка не найдена» and
-  «Сейчас пересчитать нельзя». A tall dialog scrolls as a whole panel because
-  `.body` in `ui/Dialog.module.css` does not shrink (`flex-shrink: 0`), so the
-  content never runs under the actions.
+whole area at once. Paged lists keep the previous page on screen while the next loads.
+Feature-specific cache updates and polling are documented with each section.
 
 ## Testing
 
@@ -362,9 +225,8 @@ npm run lint && npm run typecheck && npm test && npm run build
 `npm run build` type-checks and emits an entry chunk with React, React Router,
 TanStack Query, the shell and eager login (including `uqr`). Feature pages and
 CSS are split by the route manifests' dynamic imports and downloaded only when
-matched; common page dependencies are shared chunks. `DashboardPage` also loads
-`TrendChart` with `React.lazy` inside `Suspense`, keeping recharts in its own
-chunk. Compare entry bytes using production builds with the same Node version,
+matched; common page dependencies are shared chunks. The dashboard chart loads with `React.lazy` inside `Suspense`, keeping
+recharts in its own chunk. Compare entry bytes using production builds with the same Node version,
 Vite base and environment, and inspect `ls -l web/dist/assets` before and after.
 Material Symbols Rounded is a preloaded, self-hosted WOFF2 subset with 84 typed
 ligatures and a FILL axis; `public/theme-init.js` runs
@@ -375,3 +237,13 @@ including cached assets and app-link pages. Scripts, styles, fonts and API
 connections are same-origin. Images allow data URLs and HTTPS avatar hosts.
 Objects and framing are forbidden; camera, microphone and geolocation are disabled.
 `scripts/check-site.sh` asserts both headers on the landing, SPA and app links.
+
+## Section documentation
+
+- [Auth](features/auth.md)
+- [Moderation](features/moderation.md)
+- [Dashboard](features/dashboard.md)
+- [Users](features/users.md)
+- [System](features/system.md)
+- [Reviews](features/reviews.md)
+- [Audit](features/audit.md)
