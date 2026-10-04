@@ -191,11 +191,13 @@ QR, открытый камерой телефона, ведёт на `/app/logi
 
 ## Запуск
 
-Нужен Node.js 22.12 или новее.
+Для разработки и CI используется Node.js 22.23.3 (`.nvmrc`), как в сборочном
+образе Docker. Оба базовых образа закреплены по версии и digest: Node.js
+22.23.3-alpine и nginx 1.31.6-alpine.
 
 ```bash
 cd web
-npm install
+npm ci
 npm run dev
 ```
 
