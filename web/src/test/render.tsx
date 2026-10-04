@@ -1,9 +1,9 @@
 import { render } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { MemoryRouter } from 'react-router';
+import { createMemoryRouter, MemoryRouter, RouterProvider } from 'react-router';
 import { AppProviders } from '../app/AppProviders';
 import { createQueryClient } from '../app/queryClient';
-import { AppRoutes } from '../app/routes';
+import { routes } from '../app/routes';
 
 export function renderWithProviders(ui: ReactElement, { route = '/' } = {}) {
   const client = createQueryClient();
@@ -15,5 +15,11 @@ export function renderWithProviders(ui: ReactElement, { route = '/' } = {}) {
 }
 
 export function renderApp(route = '/') {
-  return renderWithProviders(<AppRoutes />, { route });
+  const client = createQueryClient();
+  const router = createMemoryRouter(routes, { initialEntries: [route] });
+  return render(
+    <AppProviders client={client}>
+      <RouterProvider router={router} />
+    </AppProviders>,
+  );
 }

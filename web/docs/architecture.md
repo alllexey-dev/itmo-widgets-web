@@ -21,8 +21,14 @@ In development Vite serves `http://localhost:5173/app/` and proxies `/api` to
 ## Routing
 
 `App` wraps everything in `AppProviders` (theme, TanStack Query, toasts) and a
-`BrowserRouter` whose `basename` is `import.meta.env.BASE_URL` without the
-trailing slash. Routes live in `src/app/routes.tsx`:
+`RouterProvider` with a `createBrowserRouter` whose `basename` is `import.meta.env.BASE_URL` without the
+trailing slash. `src/app/routes.tsx` composes route objects from each feature's
+`routes.ts` manifest. Manifests also provide sidebar items, assembled in the
+existing group order by `src/app/navigation.ts`; shared manifest and navigation
+types live in `src/shared/routes.ts` (features never import the app layer).
+`SessionLostRedirect` is the root element and renders an outlet. `LoginPage`
+stays eager outside the shell; feature pages load through route `lazy` imports.
+Paths and access rules are unchanged:
 
 | Path                  | Page                            | Access      |
 | --------------------- | ------------------------------- | ----------- |
@@ -290,8 +296,10 @@ Vitest runs in jsdom with `src/test/setup.ts`:
 - `src/test/admin.ts` holds synthetic admin data and handlers that filter and
   page like the backend (`pageOf`). No real accounts.
 - `renderApp(route)` renders the real routes inside `AppProviders` and a
-  `MemoryRouter`, so tests go through the shell, the session and access checks;
-  `renderWithProviders(ui)` renders one component.
+  `createMemoryRouter(routes, { initialEntries: [route] })`, so tests go through
+  lazy routes, the shell, the session and access checks;
+  `renderWithProviders(ui)` keeps `MemoryRouter` for isolated components.
+  Await `findBy*` queries after navigation to lazy pages.
 - CSS Modules use non-scoped class names in tests.
 - Queries go by role and accessible name; one concept per test,
   Arrange-Act-Assert; private helpers are not tested.
@@ -304,10 +312,12 @@ npm run lint && npm run typecheck && npm test && npm run build
 
 ## Bundle
 
-`npm run build` type-checks and emits one entry chunk with React, React Router,
-TanStack Query, `qrcode` and every page, plus one CSS file. recharts is about as
-large as the rest of the app together, so `DashboardPage` loads `TrendChart`
-with `React.lazy` inside `Suspense` (a skeleton while it loads) and recharts
-lands in its own chunk that only the dashboard downloads. Other pages are not
-split. Material Symbols Rounded comes from Google Fonts; `public/theme-init.js`
-runs before the bundle to apply a saved theme without a flash.
+`npm run build` type-checks and emits an entry chunk with React, React Router,
+TanStack Query, the shell and eager login (including `uqr`). Feature pages and
+CSS are split by the route manifests' dynamic imports and downloaded only when
+matched; common page dependencies are shared chunks. `DashboardPage` also loads
+`TrendChart` with `React.lazy` inside `Suspense`, keeping recharts in its own
+chunk. Compare entry bytes using production builds with the same Node version,
+Vite base and environment, and inspect `ls -l web/dist/assets` before and after.
+Material Symbols Rounded comes from Google Fonts; `public/theme-init.js` runs
+before the bundle to apply a saved theme without a flash.

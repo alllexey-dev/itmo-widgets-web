@@ -1,22 +1,20 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
-import { Route, Routes, useLocation, useNavigate } from 'react-router';
+import { Outlet, type RouteObject, useLocation, useNavigate } from 'react-router';
 import { onSessionLost } from '../api/client';
-import { LoginPage } from '../features/auth/LoginPage';
 import { sessionQueryKey } from '../features/auth/session';
-import { AuditPage } from '../features/audit/AuditPage';
-import { DashboardPage } from '../features/dashboard/DashboardPage';
-import { HomePage } from '../features/home/HomePage';
-import { ModerationPage } from '../features/moderation/ModerationPage';
-import { RestrictionsPage } from '../features/moderation/RestrictionsPage';
-import { ReviewsPage } from '../features/reviews/ReviewsPage';
-import { SportPage } from '../features/system/SportPage';
-import { SystemPage } from '../features/system/SystemPage';
-import { UserPage } from '../features/users/UserPage';
-import { UsersPage } from '../features/users/UsersPage';
 import { NotFoundPage } from './NotFoundPage';
 import { RequireAccess } from './RequireAccess';
 import { Shell } from './Shell';
+
+import { authRoutes } from '../features/auth/routes';
+import { homeRoutes } from '../features/home/routes';
+import { moderationRoutes } from '../features/moderation/routes';
+import { dashboardRoutes } from '../features/dashboard/routes';
+import { usersRoutes } from '../features/users/routes';
+import { systemRoutes } from '../features/system/routes';
+import { reviewsRoutes } from '../features/reviews/routes';
+import { auditRoutes } from '../features/audit/routes';
 
 const LOGIN_PATH = '/login';
 
@@ -41,33 +39,32 @@ function SessionLostRedirect() {
       }),
     [navigate, queryClient],
   );
-  return null;
+  return <Outlet />;
 }
 
-export function AppRoutes() {
-  return (
-    <>
-      <SessionLostRedirect />
-      <Routes>
-        <Route path={LOGIN_PATH} element={<LoginPage />} />
-        <Route element={<Shell />}>
-          <Route index element={<HomePage />} />
-          <Route element={<RequireAccess access="moderator" />}>
-            <Route path="admin/moderation" element={<ModerationPage />} />
-            <Route path="admin/restrictions" element={<RestrictionsPage />} />
-          </Route>
-          <Route element={<RequireAccess access="admin" />}>
-            <Route path="admin/dashboard" element={<DashboardPage />} />
-            <Route path="admin/users" element={<UsersPage />} />
-            <Route path="admin/users/:isu" element={<UserPage />} />
-            <Route path="admin/sport" element={<SportPage />} />
-            <Route path="admin/system" element={<SystemPage />} />
-            <Route path="admin/reviews" element={<ReviewsPage />} />
-            <Route path="admin/audit" element={<AuditPage />} />
-          </Route>
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
-      </Routes>
-    </>
-  );
-}
+export const routes: RouteObject[] = [
+  {
+    Component: SessionLostRedirect,
+    children: [
+      ...authRoutes.routes,
+      {
+        Component: Shell,
+        children: [
+          ...homeRoutes.routes,
+          { element: <RequireAccess access="moderator" />, children: moderationRoutes.routes },
+          {
+            element: <RequireAccess access="admin" />,
+            children: [
+              ...dashboardRoutes.routes,
+              ...usersRoutes.routes,
+              ...systemRoutes.routes,
+              ...reviewsRoutes.routes,
+              ...auditRoutes.routes,
+            ],
+          },
+          { path: '*', Component: NotFoundPage },
+        ],
+      },
+    ],
+  },
+];
