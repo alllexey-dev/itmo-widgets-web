@@ -22,7 +22,7 @@ app (`web/`), served by one nginx image behind the shared `nginx-hub`.
 Run from `web/`:
 
 ```bash
-npm install
+npm ci
 npm run dev          # http://localhost:5173/app/, /api proxied to dev.widgets.alllexey.dev
 npm run lint
 npm run typecheck
@@ -31,10 +31,13 @@ npm run build
 npm run format
 ```
 
-Before calling web work done: `npm run lint && npm run typecheck && npm test && npm run build`.
-For deployment changes also `docker build .` at the root (locally through colima:
-`DOCKER_HOST=unix://$HOME/.colima/default/docker.sock`) and check that `/` serves the
-landing and `/app/` the SPA.
+Before calling web work done, run `scripts/verify.sh` from the repository root
+(default `quick`: install locked dependencies when needed, lint, typecheck, test,
+build). Use Node 22 (`web/.nvmrc`, also used by the Dockerfile and CI).
+For changes to `site/`, `deploy/` or `Dockerfile`, also run `scripts/verify.sh site`:
+it builds and checks a temporary container, then removes it. `full` runs both modes.
+Locally, site mode defaults to `DOCKER_HOST=unix://$HOME/.colima/default/docker.sock`;
+exit 2 means Docker is unavailable. It never starts colima. CI runs `full`.
 
 ## Web conventions
 
