@@ -27,8 +27,8 @@
   [`web/docs/`](web/docs/architecture.md).
 - `Dockerfile` — собирает `web/` и кладёт лендинг и веб-версию в один образ
   `nginx:alpine`; конфиг — `deploy/site.nginx.conf`.
-- `compose.yml` — прод (контейнер `itmowidgets-web`), `compose.dev.yml` — dev
-  (контейнер `itmowidgets-web-dev`).
+- `compose.yml` - только локальная сборка общего образа на `127.0.0.1:8080`.
+  Серверные compose-файлы принадлежат `srvscripts`.
 
 ## Ссылки на приложение
 
@@ -112,35 +112,43 @@ cd web && npm install && npm run dev
 
 Домены обслуживает общий Caddy (`stacks/edge/Caddyfile` в `srvscripts`):
 `/api/*` уходит в бэкенд (`itmowidgets:8080` и `itmowidgets-dev:8080`), всё
-остальное — в контейнер сайта (`itmowidgets-web:80` и `itmowidgets-web-dev:80`)
-в сети `web`. На сервере лежат не клоны, а распакованный `git archive`
-коммита; `DEPLOYED_FROM` в каталоге хранит время и коммит.
+остальное - в контейнер сайта (`itmowidgets-web:80` и `itmowidgets-web-dev:80`)
+в сети `web`. После подключения доставки серверные compose-файлы и
+`deploy.conf` будут в `srvscripts/stacks/itmowidgets-web{,-dev}/`,
+а не в этом репозитории.
 
-- Dev — `/mnt/raid/srv/web/itmowidgets-web-dev`, образ из `Dockerfile` с
-  лендингом и веб-версией:
+Подготовлены workflows по образцу Backend:
 
-  ```bash
-  git archive <коммит> | ssh alllexey.dev 'tar -x -C /mnt/raid/srv/web/itmowidgets-web-dev'
-  ssh alllexey.dev 'cd /mnt/raid/srv/web/itmowidgets-web-dev && docker compose -f compose.dev.yml up -d --build'
-  ```
+- `deliver.yml`: push в `dev` запускает `ci.yml` через `workflow_call`
+  (`scripts/verify.sh full`), затем публикует
+  `ghcr.io/alllexey-dev/itmo-widgets-web:sha-<12 символов коммита>`.
+  Существующий тег не пересобирается: проверяются OCI source и полный revision.
+  После выкладки в `itmowidgets-web-dev` через `platform ssh-gate` (окружение
+  `development`) workflow fast-forward-ит `main`. Неуспешная проверка, сборка
+  или выкладка не двигает `main`; разошедшаяся история отклоняется.
+- `release.yml`: ручной `workflow_dispatch` только с `main`, для коммита с
+  успешным `deliver` и историей в `main` и `dev`. Использует тот же `sha-` образ
+  с проверкой OCI source/revision, без новой сборки, git-тега и GitHub release.
+  Выкладка в `itmowidgets-web` требует одобрения окружения `production`.
+- `ci.yml` сам запускается для PR и push в `v2.3/next`/`main`, но не для `dev`.
+  Push от `GITHUB_TOKEN` после dev-выкладки не запускает новый CI; ruleset `main`
+  должен требовать успешный `deploy-dev`, а не `verify`.
 
-- Прод — `/mnt/raid/srv/web/itmowidgets-web`, контейнер `nginx:alpine`, в
-  который смонтированы `site/` и `deploy/site.nginx.conf` (свой `compose.yml`
-  на сервере, не тот, что в репозитории). С 2026-10-03 (srvscripts `794f073`,
-  web `e8c6f36`) `/app/` тоже доступен: сборка `web/dist` скопирована в
-  `site/app`. До WB-06 сохраняется этот ручной порядок. Перед выкладкой -
-  архив каталога:
+Эта подготовка не меняет живой сервер и не включает доставку. На 2026-10-03
+(srvscripts `794f073`, web `e8c6f36`) prod использует `nginx:alpine` с
+смонтированным `site/` и вручную скопированным `web/dist` в `site/app`, dev -
+сборку из `git archive`. До отдельного согласования владельцем подключения
+обоих стеков этот порядок остаётся текущим. Переход на GHCR, первая выкладка
+на dev и каждая выкладка на prod - только с отдельного согласия владельца.
+Процедура подключения находится в `srvscripts/docs/architecture.md`
+(`platform deploy`, `ssh-gate`, `link-repo`); необходимые шаги владельца
+зафиксированы в PR WB-06. Ветка `dev` и окружения не создаются этим PR.
 
-  ```bash
-  ssh alllexey.dev 'tar -czf /mnt/raid/backups/archive/itmowidgets-web-<YYYYMMDD>.tar.gz -C /mnt/raid/srv/web itmowidgets-web'
-  git archive <коммит> site deploy/site.nginx.conf | ssh alllexey.dev 'tar -x -C /mnt/raid/srv/web/itmowidgets-web'
-  # Run in the local checkout of <коммит>.
-  (cd web && npm ci && npm run build)
-  tar -C web/dist -cf - . | ssh alllexey.dev 'mkdir -p /mnt/raid/srv/web/itmowidgets-web/site/app && tar -x -C /mnt/raid/srv/web/itmowidgets-web/site/app'
-  ssh alllexey.dev 'docker exec itmowidgets-web nginx -t && docker restart itmowidgets-web'
-  ```
+Для локального образа без API и серверной сети:
 
-  Конфиг смонтирован файлом, а `tar` заменяет файл, поэтому нужен перезапуск,
-  а не `nginx -s reload`.
+```bash
+docker compose up --build
+```
 
-Выкладка на dev и прод — только с согласия владельца.
+Лендинг доступен на `http://127.0.0.1:8080/`, веб-версия - на `/app/`.
+`compose.dev.yml` удалён: этот репозиторий больше не описывает серверные стеки.

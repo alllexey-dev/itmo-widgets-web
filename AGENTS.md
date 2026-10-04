@@ -15,8 +15,14 @@ app (`web/`), served by one nginx image behind the shared Caddy edge.
 - Caddy routing lives in `srvscripts/stacks/edge/Caddyfile`: `/api/*` goes to
   Backend; all other paths go to `itmowidgets-web{,-dev}:80` on both hosts.
 - `Dockerfile` — builds `web/` on `node:22-alpine`, serves both from `nginx:alpine`.
-- `compose.yml` (production) and `compose.dev.yml` (`itmowidgets-web-dev`), both on
-  the external `web` network.
+- `compose.yml` builds the combined image locally on `127.0.0.1:8080`; it is not
+  a server stack. Server compose files and `deploy.conf` belong to `srvscripts`.
+- `.github/workflows/deliver.yml` verifies pushes to `dev`, publishes an immutable
+  GHCR `sha-<12>` image, deploys `itmowidgets-web-dev` through the restricted
+  SSH action, then fast-forwards `main`. `release.yml` dispatches from `main`
+  and deploys that tested image to `itmowidgets-web` with production approval.
+  This repository prepares delivery only; the owner must enable the server stacks,
+  branch, environments, credentials and ruleset before the first deployment.
 
 ## Commands
 
