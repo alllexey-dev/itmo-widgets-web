@@ -1,30 +1,28 @@
 import { hasAccess, type Access, type Session } from '../features/auth/session';
 
-export interface NavItem {
-  path: string;
-  label: string;
-  icon: string;
-  access: Access;
-}
+import type { NavItem } from '../shared/routes';
+import { homeRoutes } from '../features/home/routes';
+import { moderationRoutes } from '../features/moderation/routes';
+import { dashboardRoutes } from '../features/dashboard/routes';
+import { usersRoutes } from '../features/users/routes';
+import { systemRoutes } from '../features/system/routes';
+import { reviewsRoutes } from '../features/reviews/routes';
+import { auditRoutes } from '../features/audit/routes';
 
 /** Sidebar groups, top to bottom; a group without visible items is hidden. */
-export const NAV_GROUPS: readonly (readonly NavItem[])[] = [
-  [{ path: '/', label: 'Главная', icon: 'home', access: 'user' }],
+export const NAV_GROUPS: readonly (readonly NavItem<Access>[])[] = [
+  homeRoutes.navItems,
+  moderationRoutes.navItems,
   [
-    { path: '/admin/moderation', label: 'Модерация', icon: 'gavel', access: 'moderator' },
-    { path: '/admin/restrictions', label: 'Ограничения', icon: 'block', access: 'moderator' },
-  ],
-  [
-    { path: '/admin/dashboard', label: 'Дашборд', icon: 'monitoring', access: 'admin' },
-    { path: '/admin/users', label: 'Пользователи', icon: 'group', access: 'admin' },
-    { path: '/admin/sport', label: 'Спорт', icon: 'fitness_center', access: 'admin' },
-    { path: '/admin/system', label: 'Система', icon: 'settings', access: 'admin' },
-    { path: '/admin/reviews', label: 'Отзывы', icon: 'reviews', access: 'admin' },
-    { path: '/admin/audit', label: 'Журнал', icon: 'history', access: 'admin' },
+    ...dashboardRoutes.navItems,
+    ...usersRoutes.navItems,
+    ...systemRoutes.navItems,
+    ...reviewsRoutes.navItems,
+    ...auditRoutes.navItems,
   ],
 ];
 
-export function visibleNavGroups(session: Session): NavItem[][] {
+export function visibleNavGroups(session: Session): NavItem<Access>[][] {
   return NAV_GROUPS.map((group) => group.filter((item) => hasAccess(session, item.access))).filter(
     (group) => group.length > 0,
   );
