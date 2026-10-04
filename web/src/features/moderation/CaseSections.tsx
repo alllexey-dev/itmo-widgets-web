@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import type { AdminUserSummary } from '../../api/admin';
 import {
   Avatar,
   Badge,
@@ -29,7 +30,6 @@ import type {
   SubjectLinkTarget,
   SubmitterHistory,
   TeacherReviewTarget,
-  UserData,
   UserRestriction,
 } from './types';
 
@@ -259,7 +259,7 @@ export function ReviewChangesSection({ target }: { target: TeacherReviewTarget }
   );
 }
 
-function groupLine(groups: UserData['groups']): string | null {
+function groupLine(groups: AdminUserSummary['groups']): string | null {
   const group = groups[0];
   if (!group) return null;
   return [group.name, group.course > 0 ? `${group.course} курс` : null, group.facultyShortName]
@@ -286,7 +286,7 @@ export function AuthorSection({
   submitterHistory: history,
   canOpenProfile,
 }: {
-  author: UserData;
+  author: AdminUserSummary;
   submitterHistory: SubmitterHistory;
   canOpenProfile: boolean;
 }) {

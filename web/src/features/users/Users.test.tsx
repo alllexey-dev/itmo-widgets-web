@@ -69,7 +69,7 @@ function mockUsers(
       roleCalls.push({ method: request.method, isu, csrf: request.headers.get('X-Web-Request') });
       const detail = state.get(isu);
       if (!detail) return fail(404, 'not_found');
-      const roles = request.method === 'PUT' ? ['MODERATOR'] : [];
+      const roles: AdminUserDetail['roles'] = request.method === 'PUT' ? ['MODERATOR'] : [];
       state.set(isu, { ...detail, roles });
       return ok(roles);
     }),

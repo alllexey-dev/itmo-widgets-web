@@ -1,3 +1,7 @@
+import type { ServiceCredentialStatus } from '../../api/admin';
+
+export type { ServiceCredentialStatus } from '../../api/admin';
+
 export type SportOutcome = 'SUCCESS' | 'PARTIAL' | 'FAILED';
 export type SportErrorCategory =
   'AUTH' | 'NETWORK' | 'HTTP' | 'MAPPING' | 'PERSISTENCE' | 'INTERNAL';
@@ -64,8 +68,6 @@ export type ServiceCredentialKey =
   | 'GEMINI_API_KEY';
 export type ServiceCredentialKind =
   'REFRESH_TOKEN' | 'ACCESS_TOKEN' | 'ID_TOKEN' | 'COOKIE' | 'API_KEY';
-/** `MISSING` has no value; `UNKNOWN` is copied, seeded or replaced and not yet used. */
-export type ServiceCredentialStatus = 'MISSING' | 'UNKNOWN' | 'OK' | 'EXPIRED' | 'FAILED';
 export type CredentialSource = 'MIGRATION' | 'SEED' | 'ROTATION' | 'ADMIN';
 
 /** `AdminServiceCredential`: everything about a service secret except its value. */

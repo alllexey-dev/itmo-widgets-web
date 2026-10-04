@@ -1,4 +1,3 @@
-import type { RestrictionCapability } from '../../api/admin';
 import type { BadgeTone } from '../../ui';
 import type {
   CaseReason,
@@ -10,6 +9,8 @@ import type {
   ReviewVerification,
   TargetType,
 } from './types';
+
+export { CAPABILITIES } from '../../shared/restrictionLabels';
 
 interface Labelled {
   label: string;
@@ -100,14 +101,6 @@ export const REVIEW_REJECT_PRESETS = [
   'Не о преподавателе',
   'Не по существу',
 ] as const;
-
-export const CAPABILITIES: Record<RestrictionCapability, string> = {
-  SUBMIT_RESOURCES: 'Публикация ссылок',
-  VOTE: 'Голосование',
-  REPORT: 'Жалобы',
-  WRITE_REVIEWS: 'Отзывы',
-  ALL: 'Все действия',
-};
 
 export function visibilityLabel(visibility: LinkVisibility, audienceLabel: string | null): string {
   switch (visibility) {

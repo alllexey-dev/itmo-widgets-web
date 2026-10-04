@@ -1,4 +1,4 @@
-import type { ServiceCredentialStatus } from '../system/types';
+import type { ServiceCredentialStatus } from '../../api/admin';
 
 export type ReviewsSyncOutcome = 'UNCHANGED' | 'UPDATED' | 'FAILED';
 
@@ -27,7 +27,7 @@ export interface ReviewsSyncStatus {
 }
 
 /** `AdminReviewVerification`: own reviews by the state of the ISU check. */
-export interface ReviewVerification {
+export interface ReviewVerificationCounts {
   pending: number;
   verified: number;
   unverified: number;

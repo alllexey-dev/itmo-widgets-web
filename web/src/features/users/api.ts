@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AdminPage } from '../../api/admin';
 import { api } from '../../api/client';
+import type { Role } from '../auth/session';
 import type { AdminUserDetail, AdminUserItem } from './types';
 
 const BASE = '/api/admin/users';
@@ -40,7 +41,7 @@ export function useModeratorRole(isu: number) {
   return useMutation({
     mutationFn: (moderator: boolean) => {
       const path = `${BASE}/${isu}/roles/MODERATOR`;
-      return moderator ? api.put<string[]>(path) : api.delete<string[]>(path);
+      return moderator ? api.put<Role[]>(path) : api.delete<Role[]>(path);
     },
     onSuccess: async (roles) => {
       client.setQueryData<AdminUserDetail>(userKey(isu), (current) =>

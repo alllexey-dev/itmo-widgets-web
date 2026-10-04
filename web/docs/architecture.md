@@ -135,7 +135,8 @@ src/
   app/        App, providers, routes, Shell, AccountMenu, navigation, RequireAccess,
               ForbiddenPage, NotFoundPage, queryClient
   api/        client.ts, errors.ts, admin.ts (AdminPage {items, page, size, total},
-              shared admin shapes)
+              shared admin shapes), moderation.ts (open-case count and shared key),
+              restrictions.ts (revoke and cache invalidation)
   features/
     auth/       login page, challenge hook, session, QR, countdown
     home/       HomePage
@@ -148,6 +149,7 @@ src/
     reviews/    ReviewsPage (reviews sync state and start, VerificationCard),
                 SummariesCard, SummariesTable, SummaryDialog
     audit/      AuditPage
+  shared/     RestrictionsTable and restriction labels (Backend-aware shared UI)
   ui/         design system (see design.md)
   test/       Vitest setup, MSW server and handlers, synthetic admin data, render helpers
 ```
@@ -155,9 +157,20 @@ src/
 A feature keeps its pages, `api.ts` (query keys, `useQuery`/`useMutation`
 hooks), `types.ts` (wire shapes from the backend contract), `labels.ts`
 (Russian names, icons, badge tones) and CSS Modules together; tests sit next to
-the code as `*.test.tsx`. Features import from `src/ui`, `src/api` and
-`features/auth` for the session; `home` reads the open-case count from
-`moderation`.
+the code as `*.test.tsx`. ESLint `no-restricted-imports` permits a feature to
+import only its own files, `src/ui`, `src/api`, `src/shared` and
+`features/auth/{session,useSession}` for the session. The shell in `src/app`
+may compose features; `src/ui`, `src/api` and `src/shared` never import a
+feature or the app. Tests are exempt from these boundary restrictions.
+
+Shared wire shapes (`LinkStatus`, `ServiceCredentialStatus`, `GroupData`,
+`AdminUserSummary`) live in `src/api/admin.ts`. Session and user roles use
+`Role[]`; the reviews counters are `ReviewVerificationCounts`, distinct from
+the moderation verification state. `home` and the queue share the open-case
+count through `src/api/moderation.ts`. `RestrictionsTable` lives in
+`src/shared` because it knows Backend restrictions and the revoke operation,
+not in the generic design system. The moderation forwarding exports preserve
+existing section-local imports without creating a cross-feature dependency.
 
 Query keys start with the area (`['admin', 'moderation', …]`,
 `['admin', 'users', …]`, `['admin', 'audit', …]`), so a mutation invalidates a

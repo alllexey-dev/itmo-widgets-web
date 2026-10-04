@@ -1,5 +1,4 @@
 export { Avatar } from './Avatar';
-export { initialsOf } from './initials';
 export type { AvatarProps } from './Avatar';
 export { Badge } from './Badge';
 export type { BadgeProps, BadgeTone } from './Badge';
@@ -16,7 +15,7 @@ export { Dialog } from './Dialog';
 export type { DialogProps } from './Dialog';
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
-export { focusableIn, trapTab } from './focus';
+export { trapTab } from './focus';
 export { Icon } from './Icon';
 export type { IconProps } from './Icon';
 export { IconButton } from './IconButton';

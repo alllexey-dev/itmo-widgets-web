@@ -6,7 +6,7 @@ import type {
   AdminSummaryStatus,
   AiSummariesState,
   ReviewsSyncStatus,
-  ReviewVerification,
+  ReviewVerificationCounts,
   TeacherSummaryRow,
 } from './types';
 
@@ -39,7 +39,7 @@ export function useReviewVerification() {
   return useQuery({
     queryKey: ['admin', 'reviews', 'verification'],
     queryFn: ({ signal }) =>
-      api.get<ReviewVerification>('/api/admin/reviews/verification', { signal }),
+      api.get<ReviewVerificationCounts>('/api/admin/reviews/verification', { signal }),
   });
 }
 
