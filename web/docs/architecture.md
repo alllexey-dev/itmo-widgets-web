@@ -12,8 +12,9 @@ The app is a single-page app built by Vite with `base: '/app/'`. The root
 `/usr/share/nginx/html/app` of the landing's `nginx:alpine` image.
 `deploy/site.nginx.conf` falls back to `/app/index.html` for any `/app/*` path
 without a file (`Cache-Control: no-cache`) and caches the hashed
-`/app/assets/` for a year. `nginx-hub` routes `/api/` of the same domain to
-Backend, so the app and the API share one origin: no CORS and a same-site cookie.
+`/app/assets/` for a year. Caddy (`srvscripts/stacks/edge/Caddyfile`) routes
+`/api/*` to Backend and all other paths to `itmowidgets-web{,-dev}:80` on both
+hosts, so the app and the API share one origin: no CORS and a same-site cookie.
 
 In development Vite serves `http://localhost:5173/app/` and proxies `/api` to
 `https://dev.widgets.alllexey.dev` (`vite.config.ts`).

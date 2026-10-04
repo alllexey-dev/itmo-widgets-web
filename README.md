@@ -126,12 +126,17 @@ cd web && npm install && npm run dev
 
 - Прод — `/mnt/raid/srv/web/itmowidgets-web`, контейнер `nginx:alpine`, в
   который смонтированы `site/` и `deploy/site.nginx.conf` (свой `compose.yml`
-  на сервере, не тот, что в репозитории). Веб-версии `/app/` на проде пока
-  нет. Перед выкладкой — архив каталога:
+  на сервере, не тот, что в репозитории). С 2026-10-03 (srvscripts `794f073`,
+  web `e8c6f36`) `/app/` тоже доступен: сборка `web/dist` скопирована в
+  `site/app`. До WB-06 сохраняется этот ручной порядок. Перед выкладкой -
+  архив каталога:
 
   ```bash
   ssh alllexey.dev 'tar -czf /mnt/raid/backups/archive/itmowidgets-web-<YYYYMMDD>.tar.gz -C /mnt/raid/srv/web itmowidgets-web'
   git archive <коммит> site deploy/site.nginx.conf | ssh alllexey.dev 'tar -x -C /mnt/raid/srv/web/itmowidgets-web'
+  # Run in the local checkout of <коммит>.
+  (cd web && npm ci && npm run build)
+  tar -C web/dist -cf - . | ssh alllexey.dev 'mkdir -p /mnt/raid/srv/web/itmowidgets-web/site/app && tar -x -C /mnt/raid/srv/web/itmowidgets-web/site/app'
   ssh alllexey.dev 'docker exec itmowidgets-web nginx -t && docker restart itmowidgets-web'
   ```
 

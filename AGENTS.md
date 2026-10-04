@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Repository of `widgets.alllexey.dev`: the static landing (`site/`) and the web
-app (`web/`), served by one nginx image behind the shared `nginx-hub`.
+app (`web/`), served by one nginx image behind the shared Caddy edge.
 
 ## Layout
 
@@ -9,10 +9,11 @@ app (`web/`), served by one nginx image behind the shared `nginx-hub`.
   `site/.well-known/assetlinks.json` verifies the Android App Links on both hosts;
   `site/link/` holds the pages nginx serves for `/u/*` and `/sport/*` when the app
   is not installed.
-- `web/` — the web app: Vite, React 18, TypeScript strict, React Router
+- `web/` - the web app: Vite, React 19, TypeScript strict, React Router
   (`basename="/app"`), TanStack Query v5, CSS Modules, Vitest + Testing Library + MSW.
 - `deploy/site.nginx.conf` — nginx inside the image: landing at `/`, the SPA at `/app/`.
-- `deploy/nginx-hub.widgets.snippet.conf` — the hub's routing for the domain.
+- Caddy routing lives in `srvscripts/stacks/edge/Caddyfile`: `/api/*` goes to
+  Backend; all other paths go to `itmowidgets-web{,-dev}:80` on both hosts.
 - `Dockerfile` — builds `web/` on `node:22-alpine`, serves both from `nginx:alpine`.
 - `compose.yml` (production) and `compose.dev.yml` (`itmowidgets-web-dev`), both on
   the external `web` network.
@@ -64,9 +65,12 @@ exit 2 means Docker is unavailable. It never starts colima. CI runs `full`.
   pill buttons 48 px high, 4 px grid, Roboto stack. Light and dark palettes; dark by
   `prefers-color-scheme` or the manual toggle (`data-theme` on `<html>`, stored in
   `localStorage` as `iw-theme`).
-- Use components from `web/src/ui/` (Button, IconButton, Card, Chip, Badge, Table,
-  Tabs, Dialog, Toast, Skeleton, EmptyState, Avatar, Stat, PageHeader, Icon); no UI
-  frameworks. New styling goes in CSS Modules with tokens, no hard-coded colours.
+- Use the shared components from `web/src/ui/`: Avatar, Badge, Button, Card,
+  Chip, ConfirmDialog, Dialog, DiffView, EmptyState, ErrorState, FieldFrame,
+  Icon, IconButton, Kbd, PageHeader, Pagination, Select, Skeleton, Spinner,
+  Stat, Switch, Table, Tabs, TextField and Textarea; ThemeProvider and
+  ToastProvider provide shared theme and toast behaviour. No UI frameworks.
+  New styling goes in CSS Modules with tokens, no hard-coded colours.
 - Icons: Material Symbols Rounded only, one meaning per symbol; filled only for the
   selected state.
 - Filled button for the main action, tonal for ordinary prominent ones, text for
@@ -84,6 +88,12 @@ Screenshots come from the Android project's `StoreScreenshotCapture` (demo mode)
 and `WidgetPreviewImageCapture` with synthetic data only; file names in
 `site/img/{light,dark}/` stay stable so a refresh is a drop-in replacement (see
 `README.md`). `design/` holds drafts that are not part of the image.
+
+## Changelog
+
+For changes to user-visible behaviour, deployment or a documented rule, add one
+English line under `## Unreleased` in `CHANGELOG.md`. The integrator dates those
+entries at a production deploy.
 
 ## Version control
 

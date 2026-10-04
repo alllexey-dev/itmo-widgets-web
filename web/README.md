@@ -257,12 +257,6 @@ npm run dev
 
 ## Развёртывание
 
-Образ собирается из корневого `Dockerfile`: `web/` собирается в `node:22-alpine`,
-результат копируется в `nginx:alpine` в `/usr/share/nginx/html/app` рядом с
-лендингом. Конфигурация nginx — `deploy/site.nginx.conf`: `/app/*` без файла
-отдаёт `/app/index.html` (без кеша), `/app/assets/` кешируется навсегда.
-
-```bash
-docker compose up -d --build                      # прод
-docker compose -f compose.dev.yml up -d --build   # dev, контейнер itmowidgets-web-dev
-```
+Текущий порядок для dev и prod описан в разделе
+["Развёртывание" корневого README](../README.md#развёртывание).
+Выкладка выполняется только с согласия владельца.
