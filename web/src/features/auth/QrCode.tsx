@@ -1,5 +1,5 @@
-import { create } from 'qrcode';
 import { useMemo } from 'react';
+import { encode } from 'uqr';
 import styles from './QrCode.module.css';
 
 /** The quiet zone scanners need around the symbol, in modules. */
@@ -7,12 +7,12 @@ const MARGIN = 2;
 
 /** One SVG path with a horizontal run per row of dark modules. */
 function modulePath(value: string): { size: number; path: string } {
-  const { modules } = create(value, { errorCorrectionLevel: 'M' });
+  const { size, data } = encode(value, { ecc: 'M', border: 0 });
   const runs: string[] = [];
-  for (let row = 0; row < modules.size; row += 1) {
+  for (let row = 0; row < size; row += 1) {
     let start = -1;
-    for (let col = 0; col <= modules.size; col += 1) {
-      const dark = col < modules.size && modules.data[row * modules.size + col] === 1;
+    for (let col = 0; col <= size; col += 1) {
+      const dark = col < size && data[row]?.[col] === true;
       if (dark && start < 0) start = col;
       if (!dark && start >= 0) {
         runs.push(`M${start + MARGIN} ${row + MARGIN}h${col - start}v1h${start - col}z`);
@@ -20,7 +20,7 @@ function modulePath(value: string): { size: number; path: string } {
       }
     }
   }
-  return { size: modules.size + MARGIN * 2, path: runs.join('') };
+  return { size: size + MARGIN * 2, path: runs.join('') };
 }
 
 export interface QrCodeProps {

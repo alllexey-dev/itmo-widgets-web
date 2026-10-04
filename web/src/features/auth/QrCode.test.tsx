@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import jsQR from 'jsqr';
 import { describe, expect, it } from 'vitest';
 import { QrCode } from './QrCode';
 
@@ -39,7 +40,9 @@ const LEGACY_GRID = `
 101110101100101001000100001101000
 100000100111111010110110011011100
 111111101100000001010011111100010
-`.trim().split('\n');
+`
+  .trim()
+  .split('\n');
 
 function renderedGrid(): string[] {
   const svg = screen.getByRole('img', { name: 'Вход на сайт' });
@@ -53,10 +56,43 @@ function renderedGrid(): string[] {
   return rows.map((row) => row.join(''));
 }
 
-describe('QrCode', () => {
-  it('draws the fixed module grid of the login URL at error correction M', () => {
-    render(<QrCode value={LOGIN_URL} label="Вход на сайт" />);
+/** Rasterizes the SVG's modules and its existing two-module quiet zone, without canvas. */
+function decodeGrid(grid: string[]) {
+  const scale = 8;
+  const size = (grid.length + 4) * scale;
+  const pixels = new Uint8ClampedArray(size * size * 4);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const dark = grid[Math.floor(y / scale) - 2]?.[Math.floor(x / scale) - 2] === '1';
+      const color = dark ? 0 : 255;
+      pixels.set([color, color, color, 255], (y * size + x) * 4);
+    }
+  }
+  return jsQR(pixels, size, size);
+}
 
-    expect(renderedGrid()).toEqual(LEGACY_GRID);
+describe('QrCode', () => {
+  it('decodes the pre-migration M/version-4/mask-2 grid to the login URL', () => {
+    expect(decodeGrid(LEGACY_GRID)?.data).toBe(LOGIN_URL);
+  });
+
+  // uqr selects mask 3 and uses one byte segment; qrcode used mask 2 and a final
+  // alphanumeric segment. Verify the scanner result rather than forcing its grid.
+  it.each([LOGIN_URL, 'https://dev.widgets.alllexey.dev/app/login?code=HJKLMNPQ'])(
+    'draws a scanner-readable QR for %s',
+    (value) => {
+      render(<QrCode value={value} label="Вход на сайт" />);
+
+      expect(decodeGrid(renderedGrid())?.data).toBe(value);
+    },
+  );
+
+  it('replaces the QR modules when the login code changes', () => {
+    const { rerender } = render(<QrCode value={LOGIN_URL} label="Вход на сайт" />);
+    const refreshed = 'https://widgets.alllexey.dev/app/login?code=HJKLMNPQ';
+
+    rerender(<QrCode value={refreshed} label="Вход на сайт" />);
+
+    expect(decodeGrid(renderedGrid())?.data).toBe(refreshed);
   });
 });
