@@ -1,0 +1,110 @@
+# Every push to `dev`: test, publish the image, deploy it to development and,
+# once development is healthy, move `main` to the same commit.
+name: deliver
+
+on:
+  push:
+    branches: [dev]
+
+concurrency:
+  group: deliver
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/alllexey-dev/itmo-widgets-web
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - id: tag
+        run: echo "tag=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Image tags are immutable: a re-run reuses the image that was already tested and deployed.
+      - name: Check whether the image exists
+        id: existing
+        run: |
+          if docker buildx imagetools inspect "$IMAGE:${{ steps.tag.outputs.tag }}" > /dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$IMAGE:${{ steps.tag.outputs.tag }} already exists, skipping the build"
+          fi
+
+      - name: Verify the reused image identity
+        if: steps.existing.outputs.found == 'true'
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          docker pull "$IMAGE:$TAG"
+          source=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.source"}}' "$IMAGE:$TAG")
+          revision=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$IMAGE:$TAG")
+          test "$source" = "https://github.com/$GITHUB_REPOSITORY"
+          test "$revision" = "$GITHUB_SHA"
+
+      - if: steps.existing.outputs.found != 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}
+          build-args: REVISION=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: development
+      url: https://dev.widgets.alllexey.dev
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/deploy
+        with:
+          stack: itmowidgets-web-dev
+          tag: ${{ needs.build.outputs.tag }}
+          ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          known-hosts: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+
+  # The main ruleset accepts only commits whose deploy-dev check succeeded.
+  promote:
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Fast-forward main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor origin/main "$GITHUB_SHA"
+          git push origin "${GITHUB_SHA}:refs/heads/main"

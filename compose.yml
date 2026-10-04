@@ -1,16 +1,7 @@
-# Landing (/) and web app (/app/) behind Caddy; /api/* goes to Backend.
-# This builds the combined image locally. Current production uses mounted files;
-# see README.md for the owner-approved deployment procedure until WB-06.
+# Local combined image only. Server stacks are owned by srvscripts.
 services:
   itmowidgets-web:
     build: .
     image: itmowidgets-web:local
-    container_name: itmowidgets-web
-    restart: unless-stopped
-    networks:
-      - web
-
-networks:
-  web:
-    external: true
-    name: web
+    ports:
+      - "127.0.0.1:8080:80"

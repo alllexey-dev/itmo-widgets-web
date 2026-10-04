@@ -1,0 +1,94 @@
+# Manual production delivery from main uses the immutable image already delivered to dev.
+# No rebuild, version tag, git tag or GitHub release is created.
+name: release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/alllexey-dev/itmo-widgets-web
+
+jobs:
+  # Re-runs retain github.sha even if main has moved since dispatch.
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    outputs:
+      source: ${{ steps.source.outputs.tag }}
+    steps:
+      - name: Require main
+        run: |
+          if [[ $GITHUB_REF != refs/heads/main ]]; then
+            echo "::error::run the release from main"
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require delivered ancestry and a successful exact-commit delivery
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/dev
+          delivered=$(gh api --paginate -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/deliver.yml/runs" \
+            -f branch=dev -f event=push -f status=success -f head_sha="$GITHUB_SHA" -f per_page=100 \
+            --jq '.workflow_runs[] | select(.head_sha == env.GITHUB_SHA and .conclusion == "success") | .id')
+          if [[ -z $delivered ]]; then
+            echo "::error::this commit has no successful dev delivery"
+            exit 1
+          fi
+
+      - name: Resolve the tested image
+        id: source
+        run: echo "tag=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Require the tested image identity
+        env:
+          TAG: ${{ steps.source.outputs.tag }}
+        run: |
+          docker pull "$IMAGE:$TAG"
+          source=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.source"}}' "$IMAGE:$TAG")
+          revision=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$IMAGE:$TAG")
+          test "$source" = "https://github.com/$GITHUB_REPOSITORY"
+          test "$revision" = "$GITHUB_SHA"
+
+  deploy:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://widgets.alllexey.dev
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/deploy
+        with:
+          stack: itmowidgets-web
+          tag: ${{ needs.prepare.outputs.source }}
+          ssh-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          known-hosts: ${{ vars.DEPLOY_KNOWN_HOSTS }}
