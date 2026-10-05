@@ -2,8 +2,38 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+if [ "$#" -eq 1 ] && [ "$1" = --unreferenced ]; then
+    node - "$ROOT/site" <<'NODE'
+const fs = require('node:fs');
+const path = require('node:path');
+const root = process.argv[2];
+function files(directory) {
+    return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+        const filename = path.join(directory, entry.name);
+        return entry.isDirectory() ? files(filename) : [filename];
+    });
+}
+const referenced = new Set();
+for (const filename of files(root).filter(file => /\.(html|css|js)$/.test(file))) {
+    const source = fs.readFileSync(filename, 'utf8');
+    for (const match of source.matchAll(/[^\s"'<>(),`]+/g)) {
+        const token = match[0].replace(/[?#].*$/, '');
+        if (/^[a-z]+:/i.test(token)) continue;
+        const resolved = token.startsWith('/')
+            ? path.join(root, token)
+            : path.resolve(path.dirname(filename), token);
+        referenced.add(resolved);
+    }
+}
+const missing = files(path.join(root, 'img')).filter(file => !referenced.has(file)).sort();
+for (const filename of missing) console.error(path.relative(path.dirname(root), filename));
+if (missing.length) process.exit(1);
+console.log('All site images are referenced.');
+NODE
+    exit
+fi
 if [ "$#" -ne 1 ]; then
-    echo 'Usage: scripts/check-site.sh <base-url>' >&2
+    echo 'Usage: scripts/check-site.sh <base-url>|--unreferenced' >&2
     exit 2
 fi
 BASE=${1%/}
