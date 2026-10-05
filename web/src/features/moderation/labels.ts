@@ -18,7 +18,7 @@ interface Labelled {
   icon: IconName;
 }
 
-/** Names and Material Symbols as in the Android app (`SubjectLinkTexts.kt`). */
+/** App catalog labels and symbols are checked by src/test/labelsDrift.test.ts. */
 export const CATEGORIES: Record<LinkCategory, Labelled> = {
   SCORES: { label: 'Таблица баллов', icon: 'table' },
   QUEUE: { label: 'Очередь на сдачу', icon: 'format_list_numbered' },
