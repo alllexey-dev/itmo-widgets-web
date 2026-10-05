@@ -74,12 +74,14 @@ exit 2 means Docker is unavailable. It never starts colima. CI runs `full`.
 
 ## Design rules
 
-- Tokens in `web/src/ui/tokens.css` mirror `site/style.css` and the Android app's
-  Material 3 roles (`docs/design.md` in ITMO.Widgets): primary `#3a5488`, flat
-  surfaces (`--surface-low` cards, no shadows except overlays), radius 20 for cards,
-  pill buttons 48 px high, 4 px grid, Roboto stack. Light and dark palettes; dark by
-  `prefers-color-scheme` or the manual toggle (`data-theme` on `<html>`, stored in
-  `localStorage` as `iw-theme`).
+- `tokens/tokens.json` is the token source; run `npm run gen:tokens` from `web/`
+  after editing it. The generated app CSS and marked landing block retain the
+  web's blue primary `#3a5488`, not the Android app's palette. The schema follows
+  the app's Material 3 role export; values intentionally diverge until WB-11b.
+  Flat surfaces (`--surface-low` cards, no shadows except overlays), radius 20,
+  pill buttons 48 px high, a 4 px grid and the Roboto stack remain unchanged.
+  Dark follows `prefers-color-scheme` or the manual `data-theme` toggle on
+  `<html>` (`iw-theme` in localStorage). Never hand-edit generated token CSS.
 - Use the shared components from `web/src/ui/`: Avatar, Badge, Button, Card,
   Chip, ConfirmDialog, Dialog, DiffView, EmptyState, ErrorState, FieldFrame,
   Icon, IconButton, Kbd, PageHeader, Pagination, Select, Skeleton, Spinner,

@@ -7,8 +7,22 @@ is built from `src/ui/` and CSS Modules over the tokens below.
 
 ## Tokens
 
-All tokens are CSS custom properties in `src/ui/tokens.css`. Components never
-hard-code colours.
+`tokens/tokens.json` at the repository root is the source. Run `npm run gen:tokens`
+from `web/` to regenerate `src/ui/tokens.css` and the marked token block of
+`site/style.css`; `npm run gen:tokens -- --check` refuses drift without writing.
+Components never hard-code colours. The landing exposes its existing subset,
+with its old border `--outline` renamed to `--outline-variant`.
+
+Schema version 1 follows the app export at
+`shared/designsystem/tokens/itmo-tokens.json`: `color.scheme.light/dark` use
+Material 3 role names (`surfaceContainerLow` maps to `--surface-low`),
+`color.extended` holds status containers, fixed QR colours and landing phone
+colours; error containers remain Material 3 roles. Shape, spacing, type and
+motion retain today's web values, not unimplemented app roles. Web-only
+extensions record derived focus/shadow expressions, the monospace font and
+layout dimensions. `source: "web"` explicitly records divergence from the
+app's purple primary. WB-11b can adopt the app values separately; this change
+retains the web's blue palette and existing geometry.
 
 ### Colour
 
@@ -40,6 +54,28 @@ in the account menu (`Как в системе`, `Светлая`, `Тёмная
 `data-theme` on `<html>` and is stored in `localStorage` as `iw-theme`;
 `public/theme-init.js` applies it before the first paint. `color-scheme` follows
 the theme, so native controls and scrollbars match.
+
+Modern engines use one `light-dark()` definition per themed token, selected
+by `color-scheme`. Literal light values are the fallback; engines without
+`light-dark()` (including iOS Safari before 17.5) use the mechanically generated
+legacy media/manual dark blocks. Their necessary selector duplication is not
+a second token source. No helper custom properties are exposed. Raw computed
+custom-property strings in modern engines contain `light-dark()` expressions;
+compare their resolved colour/shadow values, not those strings, for visual
+regression checks.
+
+The test-only `web/src/test/visual/wb-11a/README.md` describes baseline compilation
+and Browser pane token evidence. `node web/src/test/tokens-preview.mjs` provides
+isolated synthetic app/landing QA: port 18411 uses the recorded pre-WB-11a
+landing literals and separately compiled original app CSS; port 18412 uses the
+generated tokens. Both use unchanged app markup/public assets, local-only
+synthetic APIs and a stricter preview CSP with no external images or forms. External
+links are disabled in the fixture. `?qa-theme=light|dark|system` selects the
+theme; the fixture captures raw and resolved inherited token values in
+`document.documentElement.dataset.tokenDump` for read-only Browser pane
+inspection at 375 and 1280 px. No live development proxy or real session is used.
+The legacy fallback assertions are structural/literal tests, not a claim of
+running an old Safari engine.
 
 ### Type, space, shape, motion
 

@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "format": "prettier --write .",
-    "gen:api": "openapi-typescript src/api/openapi.json -o src/api/schema.ts"
+    "gen:api": "openapi-typescript src/api/openapi.json -o src/api/schema.ts",
+    "gen:tokens": "node ../scripts/gen-tokens.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "5.103.2",
