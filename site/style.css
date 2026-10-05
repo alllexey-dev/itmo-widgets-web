@@ -1,8 +1,6 @@
-/*
- * The landing, the policy pages and the app link pages. Tokens mirror the Android app's
- * Material 3 roles and web/src/ui/tokens.css; the manual theme (`data-theme` on <html>,
- * `iw-theme` in localStorage, set by theme.js) matches the web app.
- */
+/* The landing, policy and app link pages share the web theme (iw-theme). */
+/* BEGIN GENERATED TOKENS */
+/* Generated from tokens/tokens.json by scripts/gen-tokens.mjs; do not edit. */
 :root {
   color-scheme: light;
   --surface: #f9f9fe;
@@ -10,7 +8,7 @@
   --surface-high: #e6e8ee;
   --on-surface: #1c1b1f;
   --on-surface-variant: #5c5f66;
-  --outline: #c6c8d1;
+  --outline-variant: #c6c8d1;
   --primary: #3a5488;
   --on-primary: #ffffff;
   --secondary-container: #dde3f1;
@@ -20,15 +18,59 @@
   --radius: 20px;
   --max: 1120px;
 }
+
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme='light']) {
     color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* One modern definition follows color-scheme for system and manual themes. */
+@supports (color: light-dark(white, black)) {
+  :root {
+    --surface: light-dark(#f9f9fe, #131316);
+    --surface-low: light-dark(#f1f2f8, #1c1c20);
+    --surface-high: light-dark(#e6e8ee, #26272c);
+    --on-surface: light-dark(#1c1b1f, #e6e1e5);
+    --on-surface-variant: light-dark(#5c5f66, #b3b6c0);
+    --outline-variant: light-dark(#c6c8d1, #46474f);
+    --primary: light-dark(#3a5488, #aec4ff);
+    --on-primary: light-dark(#ffffff, #0f2a5e);
+    --secondary-container: light-dark(#dde3f1, #2c3548);
+    --on-secondary-container: light-dark(#1f2a44, #dde3f1);
+    --phone: light-dark(#101114, #000000);
+    --phone-ring: light-dark(transparent, rgba(255, 255, 255, 0.14));
+  }
+}
+
+/* Safari < 17.5 and other legacy engines need literal selector/media fallbacks. */
+@supports not (color: light-dark(white, black)) {
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --surface: #131316;
+      --surface-low: #1c1c20;
+      --surface-high: #26272c;
+      --on-surface: #e6e1e5;
+      --on-surface-variant: #b3b6c0;
+      --outline-variant: #46474f;
+      --primary: #aec4ff;
+      --on-primary: #0f2a5e;
+      --secondary-container: #2c3548;
+      --on-secondary-container: #dde3f1;
+      --phone: #000000;
+      --phone-ring: rgba(255, 255, 255, 0.14);
+    }
+  }
+  :root[data-theme='dark'] {
     --surface: #131316;
     --surface-low: #1c1c20;
     --surface-high: #26272c;
     --on-surface: #e6e1e5;
     --on-surface-variant: #b3b6c0;
-    --outline: #46474f;
+    --outline-variant: #46474f;
     --primary: #aec4ff;
     --on-primary: #0f2a5e;
     --secondary-container: #2c3548;
@@ -37,21 +79,7 @@
     --phone-ring: rgba(255, 255, 255, 0.14);
   }
 }
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --surface: #131316;
-  --surface-low: #1c1c20;
-  --surface-high: #26272c;
-  --on-surface: #e6e1e5;
-  --on-surface-variant: #b3b6c0;
-  --outline: #46474f;
-  --primary: #aec4ff;
-  --on-primary: #0f2a5e;
-  --secondary-container: #2c3548;
-  --on-secondary-container: #dde3f1;
-  --phone: #000000;
-  --phone-ring: rgba(255, 255, 255, 0.14);
-}
+/* END GENERATED TOKENS */
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -133,7 +161,7 @@ main { max-width: var(--max); margin: 0 auto; padding: 0 24px 56px; }
 footer {
   max-width: var(--max); margin: 0 auto; padding: 24px;
   display: flex; gap: 12px 20px; flex-wrap: wrap; color: var(--on-surface-variant); font-size: 14px;
-  border-top: 1px solid var(--outline);
+  border-top: 1px solid var(--outline-variant);
 }
 footer .unofficial { flex-basis: 100%; }
 
@@ -155,7 +183,7 @@ footer .unofficial { flex-basis: 100%; }
 /* Calendar export, drawn as the phone calendar would list the demo week. */
 .calendar {
   align-self: center; width: min(420px, 100%); padding: 20px; border-radius: var(--radius);
-  background: var(--surface); border: 1px solid var(--outline);
+  background: var(--surface); border: 1px solid var(--outline-variant);
 }
 .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: 600; }
 .cal-chip {
@@ -173,7 +201,7 @@ footer .unofficial { flex-basis: 100%; }
 .cal-event span { font-size: 13px; color: var(--on-surface-variant); }
 .cal-file {
   margin-top: 14px; display: inline-block; padding: 6px 12px; border-radius: 16px;
-  font-size: 13px; font-weight: 500; border: 1px dashed var(--outline); color: var(--on-surface-variant);
+  font-size: 13px; font-weight: 500; border: 1px dashed var(--outline-variant); color: var(--on-surface-variant);
 }
 
 /* What happens to the data, in four short points. */
@@ -192,7 +220,7 @@ footer .unofficial { flex-basis: 100%; }
 .day {
   position: sticky; top: 0; z-index: 5; display: flex; gap: 8px; overflow-x: auto;
   margin: 16px -24px 0; padding: 12px 24px; background: var(--surface);
-  border-bottom: 1px solid var(--outline); scrollbar-width: none;
+  border-bottom: 1px solid var(--outline-variant); scrollbar-width: none;
 }
 .day a {
   display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0;
@@ -205,7 +233,7 @@ footer .unofficial { flex-basis: 100%; }
 
 .timeline { position: relative; margin-top: 40px; }
 .timeline::before {
-  content: ""; position: absolute; left: 59px; top: 8px; bottom: 8px; width: 2px; background: var(--outline);
+  content: ""; position: absolute; left: 59px; top: 8px; bottom: 8px; width: 2px; background: var(--outline-variant);
 }
 .step { display: grid; grid-template-columns: 120px 1fr; gap: 24px; margin-bottom: 32px; scroll-margin-top: 96px; }
 .step-time { position: relative; display: flex; flex-direction: column; align-items: center; padding-top: 28px; }
@@ -246,7 +274,7 @@ footer .unofficial { flex-basis: 100%; }
   border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 15px;
   border-radius: var(--radius); background: var(--surface-low); overflow: hidden;
 }
-.doc th, .doc td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--outline); vertical-align: top; }
+.doc th, .doc td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--outline-variant); vertical-align: top; }
 .doc tr:last-child td { border-bottom: 0; }
 .doc th { color: var(--on-surface-variant); font-weight: 600; }
 

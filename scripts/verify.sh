@@ -10,6 +10,7 @@ quick() {
         npm ci --no-audit --no-fund
     fi
     npm run gen:api -- --check
+    npm run gen:tokens -- --check
     npm run lint
     npm run typecheck
     npm test
