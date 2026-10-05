@@ -46,6 +46,13 @@ it builds and checks a temporary container, then removes it. `full` runs both mo
 Locally, site mode defaults to `DOCKER_HOST=unix://$HOME/.colima/default/docker.sock`;
 exit 2 means Docker is unavailable. It never starts colima. CI runs `full`.
 
+## Web documentation
+
+- [Run and commands](web/README.md)
+- [Section behaviour](web/README.md#документация)
+- [Cross-cutting architecture](web/docs/architecture.md)
+- [Design](web/docs/design.md)
+
 ## Web conventions
 
 - Features live in `web/src/features/<name>/` with tests next to the code
