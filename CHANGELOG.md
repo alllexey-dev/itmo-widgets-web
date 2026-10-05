@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- WB-02: Drop the untracked design drafts by owner decision, exclude design/ from the image context, and fail verification on unreferenced landing images.
 - WB-15: Guard moderation labels and icons against the recorded app catalog with explicit moderator wording exceptions.
 
 - WB-06: Prepare verified immutable GHCR delivery to dev and approved production delivery; keep server onboarding owner-only and compose local.

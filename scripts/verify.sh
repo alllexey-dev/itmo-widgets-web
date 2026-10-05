@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
 quick() {
+    "$ROOT/scripts/check-site.sh" --unreferenced
     cd "$ROOT/web"
     if ! cmp -s package-lock.json node_modules/.package-lock.json; then
         npm ci --no-audit --no-fund
