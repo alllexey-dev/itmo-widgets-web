@@ -58,6 +58,12 @@ string through `useSearchParams`. Section documents list their parameters.
   request answers 401, or `/api/web/auth/me` answers 403, it drops the session
   query and navigates to `/login` without a reload. The login page checks the
   session itself, so a failed check there is ignored.
+- Backend BK-15 uses `401 unauthorized` for a missing or expired cookie session.
+  Keep the `403` compatibility branch for `/api/web/auth/me` while production
+  may still run the older Backend. It may be removed only after Backend 1.8.0
+  reaches production (gate R), in a later 2.3.x change, not in this fixture update.
+  A `403 forbidden` or `403 restricted` from another endpoint keeps the session
+  and shows the page's access error; it is not a sign-in redirect.
 - `useLogout()` posts `/api/web/auth/logout`, clears the whole query cache and
   navigates to `/login`.
 
@@ -200,9 +206,12 @@ Vitest runs in jsdom with `src/test/setup.ts`:
   Handlers are reset, `localStorage` cleared and `data-theme` removed after each
   test. `fetch` is never stubbed directly.
 - Helpers: `ok(data)` and `fail(status, code)` build backend envelopes;
-  `sessionOf(roles)`, `mockSession`, `mockSignedOut` (403 on `/me`, like the
-  backend); `mockChallenges` and `mockPoll` for sign-in (a wrong poll secret is
+  `sessionOf(roles)`, `mockSession`, `mockSignedOut` (401 `unauthorized` on `/me`,
+  matching Backend BK-15); `mockChallenges` and `mockPoll` for sign-in (a wrong poll secret is
   404); `mockOpenCases`.
+- API and real-router tests also retain older `403` responses on `/me`, check
+  login after `401` on admin calls, and keep the signed-in page after `403`
+  `forbidden` or `restricted` elsewhere. Every response is synthetic MSW data.
 - `src/test/admin.ts` holds synthetic admin data and handlers that filter and
   page like the backend (`pageOf`). No real accounts.
 - `renderApp(route)` renders the real routes inside `AppProviders` and a

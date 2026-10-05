@@ -63,8 +63,11 @@ describe('Shell navigation', () => {
     expect(await screen.findByText('Страница не найдена')).toBeInTheDocument();
   });
 
-  it('sends a visitor without a session to the login page', async () => {
-    server.use(http.get('*/api/web/auth/me', () => fail(401, 'unauthorized')));
+  it.each([
+    [401, 'unauthorized'],
+    [403, 'forbidden'],
+  ] as const)('sends a visitor to login after /me returns %s %s', async (status, code) => {
+    server.use(http.get('*/api/web/auth/me', () => fail(status, code)));
     mockChallenges('ABCDEFGH');
     mockPoll();
 
@@ -73,6 +76,41 @@ describe('Shell navigation', () => {
     expect(await screen.findByRole('heading', { name: 'Вход' })).toBeInTheDocument();
     expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
   });
+
+  it('returns an authenticated admin to login after an admin request answers 401', async () => {
+    let sessionLost = false;
+    server.use(
+      http.get('*/api/web/auth/me', () =>
+        sessionLost ? fail(401, 'unauthorized') : ok(sessionOf(['ADMIN'])),
+      ),
+      http.get('*/api/admin/users', () => {
+        sessionLost = true;
+        return fail(401, 'unauthorized');
+      }),
+    );
+    mockChallenges('ABCDEFGH');
+    mockPoll();
+
+    renderApp('/admin/users');
+
+    expect(await screen.findByRole('heading', { name: 'Вход' })).toBeInTheDocument();
+    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Пользователи' })).not.toBeInTheDocument();
+  });
+
+  it.each(['forbidden', 'restricted'])(
+    'keeps the authenticated admin page on a 403 %s response',
+    async (code) => {
+      mockSession(sessionOf(['ADMIN']));
+      server.use(http.get('*/api/admin/users', () => fail(403, code, 'Synthetic access denial')));
+
+      renderApp('/admin/users');
+
+      expect(await screen.findByText('Не удалось загрузить пользователей')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Пользователи' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Вход' })).not.toBeInTheDocument();
+    },
+  );
 
   it('logs out from the account menu and returns to the login page', async () => {
     let loggedOut = false;

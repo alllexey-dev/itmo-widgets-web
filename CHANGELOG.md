@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- BK-15w: Match the signed-out fixture to Backend 401 responses and verify legacy session compatibility and access-error routing.
 - WB-11a: Generate landing and app tokens from one recorded web token source.
 
 - WB-02: Drop the untracked design drafts by owner decision, exclude design/ from the image context, and fail verification on unreferenced landing images.

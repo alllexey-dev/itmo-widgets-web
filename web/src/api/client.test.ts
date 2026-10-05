@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fail, ok, server } from '../test/server';
+import { fail, mockSignedOut, ok, server } from '../test/server';
 import { api, ApiError, onSessionLost } from './client';
 
 describe('api client', () => {
@@ -79,15 +79,44 @@ describe('api client', () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  it('keeps the session on 403 from other endpoints', async () => {
+  it('uses the Backend 401 unauthorized response for the signed-out fixture', async () => {
     const listener = vi.fn();
     unsubscribe = onSessionLost(listener);
-    server.use(http.get('*/api/admin/dashboard', () => fail(403, 'permission_denied')));
+    mockSignedOut();
 
-    await expect(api.get('/api/admin/dashboard')).rejects.toMatchObject({ status: 403 });
+    await expect(api.get('/api/web/auth/me')).rejects.toMatchObject({
+      status: 401,
+      code: 'unauthorized',
+    });
 
-    expect(listener).not.toHaveBeenCalled();
+    expect(listener).toHaveBeenCalledOnce();
   });
+
+  it.each(['/api/admin/users', '/api/admin/dashboard', '/api/admin/audit'])(
+    'reports a lost session on 401 from %s',
+    async (path) => {
+      const listener = vi.fn();
+      unsubscribe = onSessionLost(listener);
+      server.use(http.get(`*${path}`, () => fail(401, 'unauthorized')));
+
+      await expect(api.get(path)).rejects.toMatchObject({ status: 401, code: 'unauthorized' });
+
+      expect(listener).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(['forbidden', 'restricted', 'permission_denied'])(
+    'keeps the session on 403 %s from other endpoints',
+    async (code) => {
+      const listener = vi.fn();
+      unsubscribe = onSessionLost(listener);
+      server.use(http.get('*/api/admin/dashboard', () => fail(403, code)));
+
+      await expect(api.get('/api/admin/dashboard')).rejects.toMatchObject({ status: 403, code });
+
+      expect(listener).not.toHaveBeenCalled();
+    },
+  );
 
   it('turns a failed connection into a network ApiError', async () => {
     server.use(http.get('*/api/admin/audit', () => HttpResponse.error()));
