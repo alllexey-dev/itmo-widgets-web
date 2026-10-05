@@ -3,6 +3,8 @@
 Repository of `widgets.alllexey.dev`: the static landing (`site/`) and the web
 app (`web/`), served by one nginx image behind the shared Caddy edge.
 
+Ecosystem rules: `/Users/alllexey/proj/ITMO.Widgets/AGENTS.md` and its `docs/process/`.
+
 ## Layout
 
 - `site/` — the landing, privacy policy and images; plain HTML and CSS, no build.
