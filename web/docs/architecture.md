@@ -247,3 +247,21 @@ Objects and framing are forbidden; camera, microphone and geolocation are disabl
 - [System](features/system.md)
 - [Reviews](features/reviews.md)
 - [Audit](features/audit.md)
+
+## App label drift guard
+
+`src/test/labelsDrift.test.ts` compares moderation categories, report reasons and
+visibility labels with the recorded app catalog and icon registry. Its
+`INTENTIONAL` list explains moderator-only wording. Refresh the generated fixture
+from the repository root with Node 22 and Python 3:
+
+```bash
+node scripts/sync-app-labels.mjs --app ~/proj/.wt/android/next
+```
+
+`--app` defaults to that path. The app checkout must be clean, with its HEAD on
+the locally recorded `origin/v2.3/next` history. The script reads committed files
+at that immutable SHA, discovers `values/strings*.xml` across source layouts,
+excludes `build/`, and records the SHA alongside strings and icon symbols in
+`src/test/fixtures/app-labels.json`. Conflicting resource keys are refused.
+Run `scripts/verify.sh` after refreshing; review any drift rather than bypassing it.

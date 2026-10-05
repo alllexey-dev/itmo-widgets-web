@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- WB-15: Guard moderation labels and icons against the recorded app catalog with explicit moderator wording exceptions.
+
 - WB-06: Prepare verified immutable GHCR delivery to dev and approved production delivery; keep server onboarding owner-only and compose local.
 - WB-04: Self-host typed Material Symbols with a verified subset, add CSP and Permissions-Policy, and update the approved privacy wording and date.
 
