@@ -35,9 +35,9 @@ export function mockSession(session: Session) {
   server.use(http.get('*/api/web/auth/me', () => ok(session)));
 }
 
-/** A visitor without a session: `/me` answers 403 as the backend does. */
+/** A visitor without a session: `/me` answers 401 unauthorized after Backend BK-15. */
 export function mockSignedOut() {
-  server.use(http.get('*/api/web/auth/me', () => fail(403, 'forbidden')));
+  server.use(http.get('*/api/web/auth/me', () => fail(401, 'unauthorized')));
 }
 
 /** A code that lives 2 minutes from the moment the backend answers. */
