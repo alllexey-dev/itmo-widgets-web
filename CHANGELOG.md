@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- WV-04: Build Система and Отзывы in the web v3: per-platform app versions with the iOS editor only on a Backend that keeps platforms apart, credentials with replacement and polling, sport automation (also at /app/admin/sport), moderation rules, reviews sync, ISU check, AI summaries, the teachers table and the summary dialog.
 - WV-01: Start the Svelte web v3 in web-next/ with the role-based cabinet shell, history router keeping every /app/ URL, session and lost-session dialog, phone sign-in, CSP preview, and run both apps in scripts/verify.sh.
 - WB-16a: Rebuild the web app on the shared @alllexey/ui design system and its UX rules: navigation rail, shared alllexey.dev theme, package fonts and icons, four states per screen and typed confirmation for destructive actions.
 - BK-15w: Match the signed-out fixture to Backend 401 responses and verify legacy session compatibility and access-error routing.

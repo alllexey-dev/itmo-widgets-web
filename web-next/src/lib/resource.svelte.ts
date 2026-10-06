@@ -20,7 +20,7 @@ export class Resource<T> {
   }
 
   /** Switches to another request (a new filter or page); stale answers of the old one are dropped. */
-  load(key = this.#key, fetch = this.#fetch): Promise<void> {
+  load(key: string = this.#key, fetch: () => Promise<T> = this.#fetch): Promise<void> {
     this.#key = key;
     this.#fetch = fetch;
     const generation = ++this.#generation;

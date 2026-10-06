@@ -1,6 +1,6 @@
 import './browser-shims';
 import '@testing-library/jest-dom/vitest';
-import { forget } from '@alllexey/ui';
+import { forget, snackbars } from '@alllexey/ui';
 import { configure } from '@testing-library/svelte';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { router } from '../lib/router.svelte';
@@ -16,6 +16,8 @@ afterEach(() => {
   server.resetHandlers();
   session.reset();
   forget();
+  // The snackbar queue is app-wide; one test's results must not show up in the next.
+  snackbars.items.forEach((snack) => snackbars.dismiss(snack.id));
   history.replaceState(null, '', '/app/');
   router.refresh();
   localStorage.clear();
