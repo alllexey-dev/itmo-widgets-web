@@ -2,13 +2,12 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-1);
-  padding: var(--space-2) 0 0;
+  gap: 4px;
+  padding: 8px 8px 8px 16px;
 }
 
 .range {
-  margin-right: var(--space-2);
-  color: var(--on-surface-variant);
-  font-size: var(--text-body-s);
-  font-variant-numeric: tabular-nums;
+  margin-right: 8px;
+  font: var(--md-body-medium);
+  color: var(--md-on-surface-variant);
 }

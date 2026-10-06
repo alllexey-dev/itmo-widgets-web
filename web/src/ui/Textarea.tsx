@@ -41,7 +41,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         <textarea
           ref={ref}
           id={inputId}
-          className={styles.textarea}
+          className={cx('m3-field', styles.textarea)}
           rows={rows}
           value={value}
           disabled={disabled}

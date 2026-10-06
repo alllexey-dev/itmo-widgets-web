@@ -9,6 +9,7 @@ import {
   ErrorState,
   formatDateTime,
   formatNumber,
+  LoadingOverlay,
   Pagination,
   Table,
   Tabs,
@@ -35,11 +36,11 @@ function filterOf(value: string | null): Filter {
 }
 
 function Missing() {
-  return <span className={styles.muted}>—</span>;
+  return <span className="m3-muted">—</span>;
 }
 
 const COLUMNS: TableColumn<TeacherSummaryRow>[] = [
-  { key: 'teacher', header: 'Преподаватель', render: teacherLabel },
+  { key: 'teacher', header: 'Преподаватель', minWidth: 200, render: teacherLabel },
   {
     key: 'status',
     header: 'Статус',
@@ -97,7 +98,7 @@ export function SummariesTable() {
     );
 
   return (
-    <Card as="section" padding="large" aria-label="Сводки преподавателей">
+    <Card as="section" aria-label="Сводки преподавателей">
       <CardHeader title="Сводки преподавателей" />
       <Tabs<Filter>
         label="Статус сводки"
@@ -115,25 +116,23 @@ export function SummariesTable() {
           retrying={teachers.isFetching}
         />
       ) : teachers.isPending ? (
-        <div role="status" aria-label="Загружаем таблицу сводок">
-          <Table
-            caption="Сводки преподавателей"
-            columns={COLUMNS}
-            rows={[]}
-            rowKey={(row) => String(row.teacherIsu)}
-            loading
-            maxHeight="none"
-          />
-        </div>
+        <Table
+          caption="Сводки преподавателей"
+          columns={COLUMNS}
+          rows={[]}
+          rowKey={(row) => String(row.teacherIsu)}
+          loading
+          bleed
+        />
       ) : (
-        <>
+        <LoadingOverlay loading={teachers.isPlaceholderData}>
           <Table
             caption="Сводки преподавателей"
             columns={COLUMNS}
             rows={teachers.data.items}
             rowKey={(row) => String(row.teacherIsu)}
             onRowClick={setOpen}
-            maxHeight="none"
+            bleed
             empty={{ icon: 'auto_awesome', title: 'Сводок пока нет' }}
           />
           <Pagination
@@ -142,7 +141,7 @@ export function SummariesTable() {
             total={teachers.data.total}
             onChange={(next) => update({ page: next > 0 ? String(next) : null })}
           />
-        </>
+        </LoadingOverlay>
       )}
       {open && <SummaryDialog row={open} onClose={() => setOpen(null)} />}
     </Card>

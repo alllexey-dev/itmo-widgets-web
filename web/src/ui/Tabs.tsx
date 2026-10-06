@@ -60,7 +60,7 @@ export function Tabs<Value extends string>({
         ref={listRef}
         role="tablist"
         aria-label={label}
-        className={styles.list}
+        className={cx('m3-tabs', styles.list)}
         onKeyDown={handleKeyDown}
       >
         {tabs.map((tab) => {
@@ -74,11 +74,13 @@ export function Tabs<Value extends string>({
               aria-selected={selected}
               aria-controls={children === undefined ? undefined : panelId}
               tabIndex={selected ? 0 : -1}
-              className={cx(styles.tab, selected && styles.selected)}
+              className={cx(selected && 'active')}
               onClick={() => onChange(tab.value)}
             >
               <span>{tab.label}</span>
-              {tab.count !== undefined && <span className={styles.count}>{tab.count}</span>}
+              {tab.count !== undefined && (
+                <span className={cx('m3-num', styles.count)}>{tab.count}</span>
+              )}
             </button>
           );
         })}

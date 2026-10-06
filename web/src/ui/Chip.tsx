@@ -1,8 +1,7 @@
-import type { IconName } from './icons';
 import type { ReactNode } from 'react';
-import styles from './Chip.module.css';
 import { cx } from './cx';
 import { Icon } from './Icon';
+import type { IconName } from './icons';
 
 export interface ChipProps {
   children: ReactNode;
@@ -15,21 +14,21 @@ export interface ChipProps {
   className?: string;
 }
 
+/** An `m3-chip`: a filter when it has `onClick`, a static label otherwise. */
 export function Chip({ children, icon, selected, onClick, disabled, className }: ChipProps) {
   const leading = selected ? 'check' : icon;
   const content = (
     <>
       {leading && <Icon name={leading} size={18} />}
-      <span>{children}</span>
+      {children}
     </>
   );
-  const classes = cx(styles.chip, selected && styles.selected, className);
-
+  const classes = cx('m3-chip', selected && 'selected', className);
   if (!onClick) return <span className={classes}>{content}</span>;
   return (
     <button
       type="button"
-      className={cx(classes, styles.interactive)}
+      className={classes}
       aria-pressed={selected ?? undefined}
       onClick={onClick}
       disabled={disabled}

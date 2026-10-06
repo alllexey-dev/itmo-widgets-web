@@ -8,12 +8,12 @@ import {
   ConfirmDialog,
   ErrorState,
   formatDateTime,
+  LoadingIndicator,
   PageHeader,
-  Skeleton,
   Switch,
   Textarea,
   TextField,
-  useToast,
+  useSnackbars,
 } from '../../ui';
 import {
   useAppVersion,
@@ -58,26 +58,20 @@ export function SystemPage() {
   );
 }
 
-function CardSkeleton({ label }: { label: string }) {
-  return (
-    <div className={styles.form} role="status" aria-label={label}>
-      <Skeleton height={48} />
-      <Skeleton height={48} />
-      <Skeleton height={96} />
-    </div>
-  );
+function CardLoading({ label }: { label: string }) {
+  return <LoadingIndicator compact label={label} />;
 }
 
 function AppVersionCard() {
   const version = useAppVersion();
   return (
-    <Card as="section" padding="large" aria-label="Версия приложения">
+    <Card as="section" aria-label="Версия приложения">
       <CardHeader
         title="Версия приложения"
         subtitle="Приложение предлагает обновиться до последней и требует минимальную"
       />
       {version.isPending ? (
-        <CardSkeleton label="Загружаем версию" />
+        <CardLoading label="Загружаем версию" />
       ) : version.isError ? (
         <ErrorState
           compact
@@ -100,7 +94,7 @@ function versionError(value: string): string | undefined {
 }
 
 function AppVersionForm({ saved }: { saved: AppVersion }) {
-  const toast = useToast();
+  const snackbars = useSnackbars();
   const save = useSaveAppVersion();
   const [latest, setLatest] = useState(saved.latest);
   const [minimum, setMinimum] = useState(saved.minimum);
@@ -128,14 +122,13 @@ function AppVersionForm({ saved }: { saved: AppVersion }) {
     save.mutate(
       { latest: latest.trim(), minimum: minimum.trim(), note: note.trim() },
       {
-        onSuccess: () => toast.show({ message: 'Версия сохранена', tone: 'success' }),
+        onSuccess: () => snackbars.show('Версия сохранена'),
         onError: (error) =>
-          toast.show({
-            message: errorText(error, 'Не удалось сохранить версию', {
+          snackbars.error(
+            errorText(error, 'Не удалось сохранить версию', {
               invalid_request_data: 'Проверьте версии и заметку',
             }),
-            tone: 'error',
-          }),
+          ),
       },
     );
   };
@@ -184,7 +177,7 @@ function AppVersionForm({ saved }: { saved: AppVersion }) {
             Отменить
           </Button>
         )}
-        <Button type="submit" loading={save.isPending} disabled={!dirty || !valid}>
+        <Button type="submit" loading={save.isPending} disabled={!dirty}>
           Сохранить
         </Button>
       </div>
@@ -208,10 +201,10 @@ function ModerationSettingsCard({
   const settings = useModerationSettings();
   const saved = settings.data?.policies[options.policy];
   return (
-    <Card as="section" padding="large" aria-label={title}>
+    <Card as="section" aria-label={title}>
       <CardHeader title={title} subtitle={subtitle} />
       {settings.isPending ? (
-        <CardSkeleton label="Загружаем правила модерации" />
+        <CardLoading label="Загружаем правила модерации" />
       ) : settings.isError || !saved ? (
         <ErrorState
           compact
@@ -279,7 +272,7 @@ function ModerationSettingsForm({
   premoderationEditable,
 }: PolicyOptions & { settings: ModerationSettings; saved: ModerationPolicy }) {
   const fields = limitFields(submissionLabel);
-  const toast = useToast();
+  const snackbars = useSnackbars();
   const save = useSaveModerationSettings();
   const [premoderation, setPremoderation] = useState(saved.premoderation);
   const [limits, setLimits] = useState(() =>
@@ -312,15 +305,14 @@ function ModerationSettingsForm({
       {
         onSuccess: () => {
           setConfirming(false);
-          toast.show({ message: 'Правила сохранены', tone: 'success' });
+          snackbars.show('Правила сохранены');
         },
         onError: (error) =>
-          toast.show({
-            message: errorText(error, 'Не удалось сохранить правила', {
+          snackbars.error(
+            errorText(error, 'Не удалось сохранить правила', {
               invalid_request_data: 'Проверьте пороги',
             }),
-            tone: 'error',
-          }),
+          ),
       },
     );
   };
@@ -345,6 +337,7 @@ function ModerationSettingsForm({
             label="Премодерация"
             description="Ссылки для всех видны только после проверки"
             checked={premoderation}
+            danger={saved.premoderation && !premoderation}
             onChange={setPremoderation}
           />
           <hr className={styles.divider} />
@@ -366,7 +359,7 @@ function ModerationSettingsForm({
         ))}
       </div>
       <div className={styles.formActions}>
-        <Button type="submit" loading={save.isPending && !confirming} disabled={!dirty || !valid}>
+        <Button type="submit" loading={save.isPending && !confirming} disabled={!dirty}>
           Сохранить
         </Button>
       </div>

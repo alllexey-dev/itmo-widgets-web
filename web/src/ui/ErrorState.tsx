@@ -21,6 +21,7 @@ export function ErrorState({
 }: ErrorStateProps) {
   return (
     <EmptyState
+      error
       icon="cloud_off"
       title={title}
       description={description}

@@ -1,6 +1,5 @@
 import { useId, type ReactNode } from 'react';
 import { cx } from './cx';
-import { Icon } from './Icon';
 import styles from './Switch.module.css';
 
 export interface SwitchProps {
@@ -9,16 +8,19 @@ export interface SwitchProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
+  /** Error colour for a dangerous setting; pair it with a confirmation. */
+  danger?: boolean;
   className?: string;
 }
 
-/** A labelled on/off row; the whole label toggles it. */
+/** A labelled `m3-switch` row; it applies at once, the label toggles it too. */
 export function Switch({
   label,
   description,
   checked,
   onChange,
   disabled,
+  danger = false,
   className,
 }: SwitchProps) {
   const id = useId();
@@ -34,18 +36,20 @@ export function Switch({
           </p>
         )}
       </div>
-      <button
-        id={id}
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-describedby={description ? `${id}-description` : undefined}
-        className={cx(styles.switch, checked && styles.on)}
-        disabled={disabled}
-        onClick={() => onChange(!checked)}
-      >
-        <span className={styles.thumb}>{checked && <Icon name="check" size={18} />}</span>
-      </button>
+      <span className={cx('m3-switch', danger && 'danger')}>
+        <input
+          id={id}
+          type="checkbox"
+          role="switch"
+          checked={checked}
+          disabled={disabled}
+          aria-describedby={description ? `${id}-description` : undefined}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+        <span className="track">
+          <span className="thumb" />
+        </span>
+      </span>
     </div>
   );
 }

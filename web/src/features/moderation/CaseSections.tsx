@@ -9,6 +9,7 @@ import {
   formatDateTime,
   formatRelative,
   Icon,
+  Shape,
   type DiffRow,
 } from '../../ui';
 import {
@@ -63,9 +64,9 @@ export function LinkPreview({ target }: { target: SubjectLinkTarget }) {
   return (
     <section className={styles.preview} aria-label="Ссылка">
       <div className={styles.previewHead}>
-        <span className={styles.categoryIcon}>
+        <Shape shape="cookie9" size={48} tone="primary">
           <Icon name={category.icon} />
-        </span>
+        </Shape>
         <div className={styles.previewText}>
           <span className={styles.category}>{category.label}</span>
           <span className={styles.previewTitle}>{revision.title?.trim() || 'Без названия'}</span>

@@ -1,9 +1,7 @@
-import type { IconName } from './icons';
-import styles from './Icon.module.css';
-import { cx } from './cx';
+import { iconPath, type IconName } from './icons';
 
 export interface IconProps {
-  /** Material Symbols Rounded ligature, e.g. `home`. */
+  /** Material Symbols Rounded name, e.g. `home`. */
   name: IconName;
   /** Filled variant, only for a selected or active state. */
   filled?: boolean;
@@ -13,17 +11,22 @@ export interface IconProps {
   className?: string;
 }
 
+/** The markup of `@alllexey/ui`'s Icon: inline SVG in the Material Symbols viewBox. */
 export function Icon({ name, filled = false, size = 24, label, className }: IconProps) {
   return (
-    <span
-      className={cx(styles.icon, filled && styles.filled, className)}
-      style={{ fontSize: size }}
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 -960 960 960"
+      fill="currentColor"
       role={label ? 'img' : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
-      translate="no"
+      focusable="false"
+      data-icon={name}
     >
-      {name}
-    </span>
+      <path d={iconPath(name, filled)} />
+    </svg>
   );
 }

@@ -1,10 +1,8 @@
-import type { IconName } from './icons';
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
-import styles from './Button.module.css';
 import { buttonClasses, type ButtonSize, type ButtonVariant } from './buttonClasses';
 import { cx } from './cx';
 import { Icon } from './Icon';
-import { Spinner } from './Spinner';
+import type { IconName } from './icons';
 
 export type { ButtonSize, ButtonVariant };
 
@@ -13,10 +11,10 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   /** Leading Material Symbols icon. */
   icon?: IconName;
-  /** Shows a spinner, keeps the width and blocks clicks. */
+  /** Blocks clicks while the action runs; the result is shown elsewhere (UX.md: no spinners in buttons). */
   loading?: boolean;
   fullWidth?: boolean;
-  /** Red text and container for destructive actions. */
+  /** Error colours for destructive actions. */
   danger?: boolean;
 }
 
@@ -40,21 +38,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       type={type}
-      className={cx(
-        buttonClasses({ variant, size, fullWidth, danger }),
-        loading && styles.loading,
-        className,
-      )}
+      className={cx(buttonClasses({ variant, size, fullWidth, danger }), className)}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       {...rest}
     >
-      {loading ? (
-        <Spinner size={18} className={styles.spinner} />
-      ) : (
-        icon && <Icon name={icon} size={size === 'small' ? 18 : 20} />
-      )}
-      <span className={styles.label}>{children}</span>
+      {icon && <Icon name={icon} size={size === 'small' ? 18 : 20} />}
+      {children}
     </button>
   );
 });

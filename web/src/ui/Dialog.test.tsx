@@ -48,7 +48,7 @@ describe('Dialog', () => {
     await userEvent.tab();
     expect(screen.getByRole('button', { name: 'Отклонить' })).toHaveFocus();
     await userEvent.tab();
-    expect(screen.getByRole('button', { name: 'Закрыть' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Отмена' })).toHaveFocus();
     await userEvent.tab({ shift: true });
     expect(screen.getByRole('button', { name: 'Отклонить' })).toHaveFocus();
   });

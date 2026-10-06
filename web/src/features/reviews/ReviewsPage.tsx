@@ -7,10 +7,10 @@ import {
   ErrorState,
   formatDateTime,
   formatNumber,
+  LoadingIndicator,
   PageHeader,
-  Skeleton,
   Stat,
-  useToast,
+  useSnackbars,
 } from '../../ui';
 import { useReviewsSync, useReviewVerification, useStartReviewsSync } from './api';
 import { OUTCOMES } from './labels';
@@ -39,17 +39,10 @@ export function ReviewsPage() {
 function SyncCard() {
   const sync = useReviewsSync();
   return (
-    <Card as="section" variant="outlined" padding="large" aria-label="Синхронизация">
+    <Card as="section" aria-label="Синхронизация">
       <CardHeader title="Синхронизация" actions={sync.data && <StartButton status={sync.data} />} />
       {sync.isPending ? (
-        <div className={styles.body} role="status" aria-label="Загружаем синхронизацию">
-          <Skeleton height={24} width={200} />
-          <div className={styles.tiles}>
-            {[0, 1, 2].map((index) => (
-              <Skeleton key={index} height={108} className={styles.skeleton} />
-            ))}
-          </div>
-        </div>
+        <LoadingIndicator compact label="Загружаем синхронизацию" />
       ) : sync.isError ? (
         <ErrorState
           compact
@@ -66,17 +59,16 @@ function SyncCard() {
 }
 
 function StartButton({ status }: { status: ReviewsSyncStatus }) {
-  const toast = useToast();
+  const snackbars = useSnackbars();
   const start = useStartReviewsSync();
   const submit = () =>
     start.mutate(undefined, {
       onError: (error) =>
-        toast.show({
-          message: errorText(error, 'Не удалось запустить синхронизацию', {
+        snackbars.error(
+          errorText(error, 'Не удалось запустить синхронизацию', {
             business_rule_violation: 'Синхронизация уже идёт',
           }),
-          tone: 'error',
-        }),
+        ),
     });
   return (
     <Button
@@ -121,7 +113,7 @@ function SyncView({ status }: { status: ReviewsSyncStatus }) {
         <Stat icon="school" label="Преподавателей" value={formatNumber(status.teachersActive)} />
       </div>
       {status.lastChangedAt && (
-        <p className={styles.muted}>
+        <p className="m3-muted">
           Последний запуск: +{formatNumber(status.lastAdded)}, изменено{' '}
           {formatNumber(status.lastUpdated)}, удалено {formatNumber(status.lastRemoved)}
         </p>
@@ -133,14 +125,10 @@ function SyncView({ status }: { status: ReviewsSyncStatus }) {
 function VerificationCard() {
   const verification = useReviewVerification();
   return (
-    <Card as="section" variant="outlined" padding="large" aria-label="Проверка по ИСУ">
+    <Card as="section" aria-label="Проверка по ИСУ">
       <CardHeader title="Проверка по ИСУ" subtitle="Вёл ли преподаватель у автора отзыва" />
       {verification.isPending ? (
-        <div className={styles.tiles} role="status" aria-label="Загружаем проверку">
-          {[0, 1, 2].map((index) => (
-            <Skeleton key={index} height={108} className={styles.skeleton} />
-          ))}
-        </div>
+        <LoadingIndicator compact label="Загружаем проверку" />
       ) : verification.isError ? (
         <ErrorState
           compact

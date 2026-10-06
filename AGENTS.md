@@ -74,27 +74,31 @@ exit 2 means Docker is unavailable. It never starts colima. CI runs `full`.
 
 ## Design rules
 
-- `tokens/tokens.json` is the token source; run `npm run gen:tokens` from `web/`
-  after editing it. The generated app CSS and marked landing block retain the
-  web's blue primary `#3a5488`, not the Android app's palette. The schema follows
-  the app's Material 3 role export; values intentionally diverge until WB-11b.
-  Flat surfaces (`--surface-low` cards, no shadows except overlays), radius 20,
-  pill buttons 48 px high, a 4 px grid and the Roboto stack remain unchanged.
-  Dark follows `prefers-color-scheme` or the manual `data-theme` toggle on
-  `<html>` (`iw-theme` in localStorage). Never hand-edit generated token CSS.
-- Use the shared components from `web/src/ui/`: Avatar, Badge, Button, Card,
-  Chip, ConfirmDialog, Dialog, DiffView, EmptyState, ErrorState, FieldFrame,
-  Icon, IconButton, Kbd, PageHeader, Pagination, Select, Skeleton, Spinner,
-  Stat, Switch, Table, Tabs, TextField and Textarea; ThemeProvider and
-  ToastProvider provide shared theme and toast behaviour. No UI frameworks.
-  New styling goes in CSS Modules with tokens, no hard-coded colours.
-- Icons: Material Symbols Rounded only, one meaning per symbol; filled only for the
-  selected state.
-- Filled button for the main action, tonal for ordinary prominent ones, text for
-  secondary ones. Touch targets at least 48 px.
-- A status is never shown by colour alone: a Badge always has text.
-- Accessibility: visible focus rings, labelled icon buttons, dialogs trap focus and
-  close on Esc, tables have captions.
+- The web app follows the shared design system `@alllexey/ui` and its `UX.md`
+  (shipped in the npm package); `web/docs/design.md` records how the React app
+  applies them. The package's Svelte components are the reference markup:
+  `web/src/ui/` rebuilds the needed ones as thin React components with the same
+  `m3-*` classes and uses the custom elements (`m3-shape`,
+  `m3-loading-indicator`, `m3-progress`) directly. Import only
+  `@alllexey/ui/css` (once, in `src/ui/global.css`), `/elements` (once, in
+  `src/main.tsx`) and `/theme`; the root entry is Svelte.
+- Colours, type, shape and motion come from the package's `--md-*` properties;
+  no colour literals in `web/src`. New styling goes in CSS Modules; prefer the
+  package's classes to new CSS. No other UI framework.
+- The theme is the shared `alllexey-theme` cookie on `.alllexey.dev` (default
+  seed and variant of the package); `Оформление` is in every screen's reach.
+- Icons: Material Symbols Rounded SVG from `@material-symbols/svg-400`, typed in
+  `src/ui/icons.ts`, one meaning per symbol; filled only for the selected state.
+- Every data screen has loading, data, empty and error states; replaced data
+  fades under `LoadingOverlay`; no skeletons and no spinners in buttons.
+- One filled button per area; confirmations name the action; destructive,
+  irreversible actions use `ConfirmDialog` with `danger` and `requireText`;
+  snackbars report results in the past tense.
+- A status is never shown by colour alone. Numbers in tables are right-aligned
+  `m3-num`. Phones: 375 px without horizontal page scroll, 48 px targets,
+  16 px inputs.
+- Accessibility: visible focus, labelled icon buttons, dialogs trap focus and
+  close on Esc, tables have accessible names.
 - Copy is Russian and short; it says what the user needs, not how the system works.
 
 ## Landing

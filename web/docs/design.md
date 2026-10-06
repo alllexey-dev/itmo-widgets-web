@@ -1,200 +1,154 @@
 # Web app design
 
-The web app looks like the landing (`site/style.css`) and follows the Material 3
-roles of the Android app (`docs/design.md` in ITMO.Widgets): flat surfaces, one
-blue primary, large radii, pill buttons. There is no UI framework; everything
-is built from `src/ui/` and CSS Modules over the tokens below.
+The web app follows the shared alllexey.dev design system `@alllexey/ui` (npm, MIT,
+source `github.com/alllexey-dev/ui`): Material 3 Expressive colour from one seed,
+tokens, `m3-*` CSS classes, the custom elements `<m3-shape>`,
+`<m3-loading-indicator>` and `<m3-progress>`, and the UX rules in the package's
+`UX.md`. The package and its `UX.md` are the source of truth; this page records
+how the React app applies them. Where this page and `UX.md` disagree, `UX.md`
+wins and this page is fixed.
 
-## Tokens
+## The package in a React app
 
-`tokens/tokens.json` at the repository root is the source. Run `npm run gen:tokens`
-from `web/` to regenerate `src/ui/tokens.css` and the marked token block of
-`site/style.css`; `npm run gen:tokens -- --check` refuses drift without writing.
-Components never hard-code colours. The landing exposes its existing subset,
-with its old border `--outline` renamed to `--outline-variant`.
+The package's Svelte components are the reference markup. The app keeps React,
+React Router and TanStack Query and rebuilds the components it needs in `src/ui/`
+as thin React components that emit the same markup and `m3-*` classes. It imports
+only the framework-free entries:
 
-Schema version 1 follows the app export at
-`shared/designsystem/tokens/itmo-tokens.json`: `color.scheme.light/dark` use
-Material 3 role names (`surfaceContainerLow` maps to `--surface-low`),
-`color.extended` holds status containers, fixed QR colours and landing phone
-colours; error containers remain Material 3 roles. Shape, spacing, type and
-motion retain today's web values, not unimplemented app roles. Web-only
-extensions record derived focus/shadow expressions, the monospace font and
-layout dimensions. `source: "web"` explicitly records divergence from the
-app's purple primary. WB-11b can adopt the app values separately; this change
-retains the web's blue palette and existing geometry.
+- `@alllexey/ui/css` - fonts, the default theme, tokens and component classes.
+  `src/ui/global.css` imports it into the cascade layer `ui`, between `reset`
+  and `app`; CSS Modules stay unlayered, so their rules win whatever order the
+  build emits the CSS chunks in. Never import it a second time.
+- `@alllexey/ui/elements` - registers the custom elements; `src/main.tsx`
+  imports it once. Tests do not register them (jsdom has no constructable
+  stylesheets), so they render as plain elements there.
+- `@alllexey/ui/theme` - `readChoice`, `writeChoice`, `watchChoice`,
+  `applyTheme`, `seeds`, `variants`. The root entry (`@alllexey/ui`) and
+  `createTheme` are Svelte and are not used.
 
-### Colour
+Colours, type, shapes, elevation and motion are the package's `--md-*`
+custom properties (`--md-primary`, `--md-surface-container`, `--md-body-medium`,
+`--md-shape-xl`, `--md-spring-default`, ...). Code under `src/` contains no colour
+literals; the only exceptions are `white` and `black` for the QR code, which is
+dark on light in every theme because not every scanner reads an inverted code,
+and white marks on the seed swatches, as in the package. `index.html` carries the
+package's default surface colours for `theme-color` until the theme repaints them.
 
-| Role                                                 | Light                 | Dark                  |
-| ---------------------------------------------------- | --------------------- | --------------------- |
-| `--surface` (page)                                   | `#f9f9fe`             | `#131316`             |
-| `--surface-low` (cards, sidebar)                     | `#f1f2f8`             | `#1c1c20`             |
-| `--surface-container` / `--surface-high`             | `#ebedf3` / `#e6e8ee` | `#212226` / `#26272c` |
-| `--on-surface` / `--on-surface-variant`              | `#1c1b1f` / `#5c5f66` | `#e6e1e5` / `#b3b6c0` |
-| `--outline` / `--outline-variant`                    | `#767983` / `#c6c8d1` | `#90929a` / `#46474f` |
-| `--primary` / `--on-primary`                         | `#3a5488` / `#ffffff` | `#aec4ff` / `#0f2a5e` |
-| `--primary-container` / `--on-primary-container`     | `#d8e2ff` / `#102c5c` | `#294177` / `#d8e2ff` |
-| `--secondary-container` / `--on-secondary-container` | `#dde3f1` / `#1f2a44` | `#2c3548` / `#dde3f1` |
-| `--error` / `--on-error`                             | `#ba1a1a` / `#ffffff` | `#ffb4ab` / `#690005` |
-| `--success-container` / `--on-success-container`     | `#d3f0d9` / `#0d4f26` | `#1d4a2c` / `#b8f0c6` |
-| `--warning-container` / `--on-warning-container`     | `#fbe7b3` / `#573f00` | `#4a3700` / `#fbe08e` |
-| `--error-container` / `--on-error-container`         | `#ffdad6` / `#8c0009` | `#7a1c19` / `#ffdad6` |
-| `--info-container` / `--on-info-container`           | `#d8e2ff` / `#183466` | `#2c3f66` / `#d8e2ff` |
-| `--scrim`                                            | 32 % black            | 56 % black            |
+## Theme
 
-`--inverse-surface`, `--inverse-on-surface` and `--inverse-primary` serve toasts.
-QR codes use `--qr-dark` on `--qr-light` in both themes, because not every
-scanner reads an inverted code.
+`ThemeProvider` reads the shared choice from the `alllexey-theme` cookie
+(`mode|seed|variant`, written by the package on `.alllexey.dev`, so it follows the
+user across every alllexey.dev site), computes the scheme with `applyTheme` and
+follows the system light/dark preference when the mode is `auto`. The default is
+the package's: calm (`tonal`) palette from `#0061a4`, following the system.
+`public/theme-init.js` sets `data-theme` from the cookie before the first paint,
+so a manual dark choice does not flash; the package's default stylesheet covers
+both modes until the scheme for the chosen seed is applied. `ThemeSettings`
+(`Оформление`) changes mode, seed and palette; it is reachable from the rail,
+the phone top bar and the login page. The landing still uses its own `iw-theme`
+until WB-16b moves it to the package.
 
-### Theme
+## Fonts and icons
 
-Dark values apply by `prefers-color-scheme: dark` unless the user picked a theme
-in the account menu (`Как в системе`, `Светлая`, `Тёмная`). A manual choice sets
-`data-theme` on `<html>` and is stored in `localStorage` as `iw-theme`;
-`public/theme-init.js` applies it before the first paint. `color-scheme` follows
-the theme, so native controls and scrollbars match.
-
-Modern engines use one `light-dark()` definition per themed token, selected
-by `color-scheme`. Literal light values are the fallback; engines without
-`light-dark()` (including iOS Safari before 17.5) use the mechanically generated
-legacy media/manual dark blocks. Their necessary selector duplication is not
-a second token source. No helper custom properties are exposed. Raw computed
-custom-property strings in modern engines contain `light-dark()` expressions;
-compare their resolved colour/shadow values, not those strings, for visual
-regression checks.
-
-The test-only `web/src/test/visual/wb-11a/README.md` describes baseline compilation
-and Browser pane token evidence. `node web/src/test/tokens-preview.mjs` provides
-isolated synthetic app/landing QA: port 18411 uses the recorded pre-WB-11a
-landing literals and separately compiled original app CSS; port 18412 uses the
-generated tokens. Both use unchanged app markup/public assets, local-only
-synthetic APIs and a stricter preview CSP with no external images or forms. External
-links are disabled in the fixture. `?qa-theme=light|dark|system` selects the
-theme; the fixture captures raw and resolved inherited token values in
-`document.documentElement.dataset.tokenDump` for read-only Browser pane
-inspection at 375 and 1280 px. No live development proxy or real session is used.
-The legacy fallback assertions are structural/literal tests, not a claim of
-running an old Safari engine.
-
-### Type, space, shape, motion
-
-- Font: `Roboto, 'Segoe UI', system-ui, -apple-system, sans-serif` (the system
-  Roboto where present, no web font); `--font-mono` for codes and URLs.
-- Sizes: display 30, title 22 / 18 / 15, body 16 / 15 / 13, label 14 (px).
-- Space: a 4 px grid, `--space-1` (4) to `--space-10` (40).
-- Radius: `--radius` 20 for cards, 16, 12, 8, and `--radius-pill` for buttons,
-  chips and badges.
-- Elevation: none on surfaces; `--shadow-overlay` only for dialogs, menus and
-  toasts.
-- Motion: `--duration` 160 ms with `--ease`; `prefers-reduced-motion` turns
-  transitions and animations off.
-- Layout: `--nav-width` 264, `--topbar-height` 64, `--content-max` 1280,
-  `--touch` 48 (px).
+Roboto Flex and Roboto Mono come from the package and are bundled by Vite as
+same-origin assets, so the CSP keeps `font-src 'self'`. Icons are Material
+Symbols Rounded SVG paths from `@material-symbols/svg-400` (the set the package
+uses), imported as raw SVG in `src/ui/icons.ts`, which also defines the
+`IconName` type. A few keys keep the app's symbol name while the file carries the
+symbol's current name (`smartphone` is `mobile`, `auto_awesome` is
+`star_shine`, ...). Filled variants exist only for the navigation icons and are
+used only for the selected item. One meaning per symbol.
 
 ## Components
 
 Import from `src/ui` (`index.ts`):
 
-- `Button` — `filled` for the main action, `tonal` for ordinary prominent ones,
-  `text` for secondary ones; `medium` (48 px) or `small` (40 px), `danger`,
-  `loading`, leading `icon`; `buttonClasses()` styles a router `Link` the same
-  way.
-- `IconButton` — 48 × 48, always with a `label`.
-- `Card`, `CardHeader` — flat `--surface-low` container, padding `none`,
-  `normal` or `large`; header with title, subtitle and actions.
-- `PageHeader` — page title, optional description and actions.
-- `Chip` — filters and presets, `selected` state.
-- `Badge` — status text with a tone: `neutral`, `success`, `warning`, `error`,
-  `info`.
-- `Tabs` — section switch with optional counts.
-- `Table` — data tables with a required caption (visually hidden).
-- `Pagination` — page switch for `AdminPage` lists.
-- `TextField`, `Textarea`, `Select`, `Switch` — labelled form controls with
-  errors and hints.
-- `Dialog`, `ConfirmDialog` — modal dialogs `small`, `medium`, `large`;
-  confirmation for risky changes.
-- `ToastProvider`, `useToast` — short results; 4 s, errors 8 s.
-- `Skeleton`, `SkeletonText`, `Spinner` — loading: skeletons for first loads,
-  the spinner inside buttons and small waits.
-- `EmptyState`, `ErrorState` — nothing to show; a failed load with `Повторить`.
-- `Stat` — number tile with icon, label and caption.
-- `Avatar` — photo or initials.
-- `DiffView` — before and after of a changed link.
-- `Kbd` — keyboard shortcut hint.
-- `Icon` — a Material Symbols Rounded glyph.
+| Component                                                | Package reference                                                    | Notes                                                                                                                                                                                                                                                |
+| -------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AppShell`                                               | `AppShell`                                                           | Rail expanded with labels from 1100 px (toggle stored in `ui-rail-expanded`), collapsed rail down to 760 px, then a top app bar and a drawer that closes on navigation, Esc, the scrim and a swipe to the left. Also `Оформление` and the skip link. |
+| `Page`, `PageHeader`                                     | `Page`, `PageHeader`                                                 | 1320 px column; one header per page, title as the navigation item, one line of text, 1-2 actions; `leading` for an avatar.                                                                                                                           |
+| `Account`                                                | `Account`                                                            | The signed-in user at the bottom of the rail; text hides on a collapsed rail.                                                                                                                                                                        |
+| `Card`, `CardHeader`                                     | `m3-card`, `m3-section-title`                                        | One topic per card; `padding="none"` for tables and lists.                                                                                                                                                                                           |
+| `Dialog`, `ConfirmDialog`                                | `Dialog`, `ConfirmDialog`                                            | Bottom sheet on phones. Confirm with a verb; `danger` for noticeable consequences; `requireText` (the object's name) for destructive, irreversible ones.                                                                                             |
+| `ThemeSettings`                                          | `ThemeSettings`                                                      | `Оформление`.                                                                                                                                                                                                                                        |
+| `SnackbarProvider`, `useSnackbars`                       | `Snackbars`, `snackbars`                                             | At most three; `show` 4 s, `error` 8 s.                                                                                                                                                                                                              |
+| `ButtonGroup`                                            | `ButtonGroup`                                                        | Single choice between 2-5 options.                                                                                                                                                                                                                   |
+| `Switch`                                                 | `Switch`                                                             | Labelled row; applies at once; `danger`.                                                                                                                                                                                                             |
+| `Search`                                                 | `Search`                                                             | Pill search field with a clear button.                                                                                                                                                                                                               |
+| `EmptyState`, `ErrorState`                               | `EmptyState`                                                         | Shaped icon, title, optional text and action; `ErrorState` adds `Повторить`.                                                                                                                                                                         |
+| `LoadingIndicator`                                       | `m3-loading-indicator`                                               | Waiting without data.                                                                                                                                                                                                                                |
+| `LoadingOverlay`                                         | `LoadingOverlay`                                                     | Replacing shown data: it fades, the indicator appears after 250 ms.                                                                                                                                                                                  |
+| `StatusShape`, `Shape`                                   | `StatusShape`, `m3-shape`                                            | Status marks always sit next to text.                                                                                                                                                                                                                |
+| `Button`, `IconButton`, `Chip`, `Badge`, `Tabs`, `Table` | `m3-btn`, `m3-icon-btn`, `m3-chip`, `m3-pill`, `m3-tabs`, `m3-table` | `buttonClasses()` styles a router `Link` as a button.                                                                                                                                                                                                |
+| `TextField`, `Textarea`, `Select`                        | `m3-field`                                                           | Label above, example in the placeholder, error under the field.                                                                                                                                                                                      |
 
-Helpers: `formatDate`, `formatDateTime`, `formatRelative`, `formatDuration`,
-`formatNumber`, `plural` (Russian plural forms), `useMediaQuery`,
-`useDebouncedValue`, `focusableIn` and `trapTab`.
+App-specific pieces built on the same tokens: `Stat` (headline figure tile),
+`Avatar` (photo, or initials on the cookie shape), `DiffView`, `Kbd`,
+`Pagination`. Helpers: `formatDate`, `formatDateTime`, `formatRelative`,
+`formatDuration`, `formatNumber`, `plural`, `useMediaQuery`,
+`useDebouncedValue`, `focusableIn`, `trapTab`.
 
-Icons use a self-hosted Material Symbols Rounded subset (`font-display: block`),
-one meaning per symbol, filled only for the selected state such as the active
-sidebar item. `ui/icons.ts` defines all 84 names and the `IconName` prop type.
-`public/fonts/names.txt` and the verified font manifest are checked by Vitest.
+## UX rules as applied
 
-Regenerate with `PYTHON=/path/to/isolated/python node scripts/subset-icons.mjs`
-from the repository root. The Python environment needs `fonttools[woff]==4.60.1`
-and `brotli==1.1.0`. The script fetches checksum-pinned source files from
-`google/material-design-icons` at `737e3324305806514d7909874fa1818ae1808232`,
-subsets exactly the named ligatures, fixes opsz 24, wght 400 and GRAD 0, and verifies
-the actual GSUB sequences and the remaining FILL 0..1 axis. The committed Apache
-2.0 license text is copied from that revision with a final newline. No runtime font service is used.
-
-## Layout
-
-- The shell is a sidebar of `--nav-width` and a column with the top bar and the
-  page, content up to `--content-max`. Below 760 px the sidebar becomes a drawer
-  opened by `Меню`.
-- The moderation queue and the open case sit side by side from 1024 px; below it
-  the list comes first and the case replaces it.
-- Pages start with `PageHeader`, then cards. Tiles and cards reflow into one
-  column on narrow screens (480–600 px breakpoints per page).
-- The login page is a single centred card outside the shell.
-- A loading page keeps its layout with skeletons; a refresh keeps the content.
-
-## Accessibility
-
-- `<html lang="ru">`; a `К содержимому` skip link; the sidebar is a `nav`
-  labelled `Разделы`.
-- Every focusable element shows `--focus-ring` on `:focus-visible`.
-- Icon buttons have a label; decorative icons and avatars are hidden from
-  assistive technology.
-- Dialogs are `aria-modal`, move focus inside, trap Tab, close on Esc (unless
-  saving) and return focus to the opener. The mobile drawer does the same.
-- Tables have captions; loading regions are `aria-busy` or `role="status"` with
-  a label; toasts are announced (`status`, errors as `alert`).
-- A status is never shown by colour alone: a `Badge` always carries text.
-- Touch targets are at least 48 px for buttons, icon buttons, tabs and switches.
-- Codes are `translate="no"` so page translation does not change them.
-- Shortcuts are single keys matched by `KeyboardEvent.code`, ignored while typing
-  or under a dialog, and listed on the page.
+- Every section has the four states: `LoadingIndicator` on the first load,
+  data, `EmptyState` with a clear title, `ErrorState` with `Повторить`. Paged
+  tables keep the previous page through TanStack Query's placeholder data and show
+  it under `LoadingOverlay`; no blank screens, no skeletons, no spinners inside
+  buttons (a running action only disables its button).
+- Actions: safe ones run at once and confirm with a snackbar in the past tense
+  (`Версия сохранена`); noticeable ones ask `ConfirmDialog` with a verb
+  (`Выключить`, `Снять роль`); `Скрыть всё у автора` requires typing the
+  author's name. A submit button is disabled only when there is nothing to
+  send; invalid input is reported under the field and blocks the request.
+- Tables are `m3-table` grid rows inside a card: numbers right-aligned with
+  tabular digits (`m3-num`), wide tables scroll sideways inside the card, never
+  the page. Statuses are `m3-pill` or `StatusShape` with text.
+- Phones: everything is checked at 375 px without horizontal page scroll;
+  targets are at least 48 px (the package's `::after` hit areas plus the app's
+  for 40 px buttons); inputs are at least 16 px on touch screens;
+  `viewport-fit=cover` and `env(safe-area-inset-*)` keep notches clear; the page
+  under a dialog or the drawer does not scroll.
+- Keyboard and motion: visible focus, Esc closes dialogs and the drawer, Enter
+  confirms, Tab is trapped in dialogs and the open drawer; the package turns
+  animations off under `prefers-reduced-motion`.
+- Charts stay on recharts, coloured with `--md-primary` and `--md-chart-grid`;
+  the data behind them is available as a table.
 
 ## Copy
 
-- Russian, short, sentence case. Say what the user needs, not how the system
-  works: `Код устарел`, not an explanation of challenges.
-- No gesture instructions such as `нажмите` or `потяните`: buttons and links say
-  what they do (`Показать новый код`, `Открыть очередь`).
-- Navigation paths use arrows and the app's own labels:
-  `Профиль → Вход на сайт`.
+- Russian, short, sentence case, addressed as "вы". UI strings use Russian
+  typography (guillemets, em dash, the letter "ё"); code, comments and docs stay
+  ASCII.
+- Say what the user needs, not how the system works: `Код устарел`, not an
+  explanation of challenges. No gesture instructions such as `нажмите`.
+- Navigation paths use arrows and the app's own labels: `Профиль -> Вход на сайт`
+  (shown with the arrow character in the UI).
 - One name per thing, the same as in the app: `My ITMO` for the university site,
   `Подключение к ITMO.Widgets` for the server opt-in, `Вход на сайт` for signing
   in to the web version.
 - Error texts come from `src/api/errors.ts` or per-action overrides; backend
   messages are never shown. A reason the author will read (rejection,
   restriction) is written by the moderator and is required.
-- Empty states use a title alone when it is enough; a description only adds what
-  the title cannot.
 
-For isolated CSP/layout QA after `npm run build`, run
-`node web/src/test/csp-preview.mjs` from the repository root. Port 18404 serves
-a synthetic administrator/dashboard; port 18405 serves a synthetic signed-out
-login challenge. Every API response is local; unknown APIs return 404, no proxy
-or external avatar is configured. `?qa-theme=light` or `?qa-theme=dark` selects
-the fixture theme. Never use Vite's live development proxy for this check.
+## Accessibility
 
-The preview resolves static files beneath the canonical public roots and refuses
-symlink escapes or non-public file types. With the fixture running, execute
-`bash web/src/test/csp-preview-isolation.sh` to check absolute-path and symlink
-escapes using a disposable, nonsecret outside canary.
+- `<html lang="ru">`; a `К содержимому` skip link; the rail's links are a `nav`
+  labelled `Разделы`.
+- Icon buttons have a label; decorative icons, shapes and avatars are hidden
+  from assistive technology.
+- Dialogs are `aria-modal`, move focus inside, trap Tab, close on Esc (unless
+  saving) and return focus to the opener.
+- Tables have an accessible name; loading regions are `role="status"` with a
+  label or `aria-busy`; snackbars are announced (`status`, errors as `alert`).
+- Codes are `translate="no"` so page translation does not change them.
+- Shortcuts are single keys matched by `KeyboardEvent.code`, ignored while typing
+  or under a dialog, and listed on the page.
+
+## Visual checks
+
+Check every page in the Browser pane at 375 and 1280 px, light and dark, plus one
+non-default seed and palette from `Оформление`. After `npm run build`,
+`node web/src/test/csp-preview.mjs` serves a synthetic administrator and a
+signed-out login with the production CSP (`?qa-theme=light|dark`); never use
+Vite's live development proxy for screenshots. `web/src/test/tokens-preview.mjs`
+remains only for the landing's generated token block until WB-16b.

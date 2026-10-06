@@ -1,17 +1,24 @@
 import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import styles from './Dialog.module.css';
 import { cx } from './cx';
+import styles from './Dialog.module.css';
 import { focusableIn, trapTab } from './focus';
-import { IconButton } from './IconButton';
+import { Icon } from './Icon';
+import type { IconName } from './icons';
+import { lockScroll } from './scrollLock';
+import { Shape, type ShapeTone } from './Shape';
 
 export interface DialogProps {
   open: boolean;
   onClose: () => void;
   title: ReactNode;
   description?: ReactNode;
+  /** A shaped icon above the title. */
+  icon?: IconName;
+  shape?: string;
+  tone?: ShapeTone;
   children?: ReactNode;
-  /** Buttons at the bottom, primary last. */
+  /** Buttons at the bottom, the main action last. */
   actions?: ReactNode;
   /** Receives focus on open; by default the first focusable element. */
   initialFocusRef?: RefObject<HTMLElement | null>;
@@ -20,11 +27,15 @@ export interface DialogProps {
   size?: 'small' | 'medium' | 'large';
 }
 
+/** `m3-dialog` on `m3-scrim`; on phones the package turns it into a bottom sheet. */
 export function Dialog({
   open,
   onClose,
   title,
   description,
+  icon,
+  shape = 'cookie9',
+  tone = 'secondary',
   children,
   actions,
   initialFocusRef,
@@ -47,14 +58,8 @@ export function Dialog({
     const panel = panelRef.current;
     if (!panel) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const target =
-      initialFocusRef?.current ??
-      focusableIn(panel).find((element) => !element.hasAttribute('data-dialog-close')) ??
-      panel;
-    target.focus();
-
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    (initialFocusRef?.current ?? focusableIn(panel)[0] ?? panel).focus();
+    const unlock = lockScroll();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -69,7 +74,7 @@ export function Dialog({
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = overflow;
+      unlock();
       previous?.focus();
     };
   }, [open, initialFocusRef]);
@@ -77,14 +82,13 @@ export function Dialog({
   if (!open) return null;
 
   return createPortal(
-    <div className={styles.root}>
-      <div
-        className={styles.scrim}
-        aria-hidden
-        onClick={() => {
-          if (dismissible) onClose();
-        }}
-      />
+    <div
+      className="m3-scrim"
+      role="presentation"
+      onClick={() => {
+        if (dismissible) onClose();
+      }}
+    >
       <div
         ref={panelRef}
         role="dialog"
@@ -92,23 +96,23 @@ export function Dialog({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={cx(styles.panel, styles[size])}
-      >
-        <div className={styles.header}>
-          <h2 id={titleId} className={styles.title}>
-            {title}
-          </h2>
-          {dismissible && (
-            <IconButton icon="close" label="Закрыть" onClick={onClose} data-dialog-close="" />
-          )}
-        </div>
-        {description && (
-          <p id={descriptionId} className={styles.description}>
-            {description}
-          </p>
+        className={cx(
+          'm3-dialog',
+          size === 'large' && 'wide',
+          size === 'medium' && styles.medium,
+          styles.dialog,
         )}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {icon && (
+          <Shape shape={shape} size={48} tone={tone}>
+            <Icon name={icon} />
+          </Shape>
+        )}
+        <h2 id={titleId}>{title}</h2>
+        {description && <p id={descriptionId}>{description}</p>}
         {children && <div className={styles.body}>{children}</div>}
-        {actions && <div className={styles.actions}>{actions}</div>}
+        {actions && <div className="actions">{actions}</div>}
       </div>
     </div>,
     document.body,

@@ -4,13 +4,14 @@ import { errorText } from '../../api/errors';
 import {
   Card,
   CardHeader,
+  cx,
   EmptyState,
   ErrorState,
   formatDate,
   formatNumber,
   Icon,
+  LoadingIndicator,
   PageHeader,
-  Skeleton,
   Stat,
   Table,
 } from '../../ui';
@@ -42,7 +43,7 @@ export function DashboardPage() {
     <>
       <PageHeader title="Дашборд" description="Итоги и последние 30 дней" />
       {dashboard.isPending ? (
-        <DashboardSkeleton />
+        <LoadingIndicator label="Загружаем дашборд" />
       ) : dashboard.isError ? (
         <ErrorState
           title="Не удалось загрузить дашборд"
@@ -100,12 +101,12 @@ function Totals({ totals }: { totals: DashboardTotals }) {
         value={formatNumber(totals.activeAutoSignEntries + totals.activeFreeSignEntries)}
         caption={`авто ${formatNumber(totals.activeAutoSignEntries)} · свободная ${formatNumber(totals.activeFreeSignEntries)}`}
       />
-      <Link to="/admin/moderation" className={styles.casesTile}>
+      <Link to="/admin/moderation" className={cx('m3-card primary', styles.casesTile)}>
         <span className={styles.casesLabel}>
           <Icon name="gavel" size={20} />
           Открытые заявки
         </span>
-        <span className={styles.casesValue}>{formatNumber(totals.openCases)}</span>
+        <span className={cx(styles.casesValue, 'm3-num')}>{formatNumber(totals.openCases)}</span>
         <span className={styles.casesAction}>
           В очередь
           <Icon name="arrow_forward" size={18} />
@@ -125,7 +126,7 @@ function ChartCard({
   children: ReactNode;
 }) {
   return (
-    <Card as="section" padding="large" aria-label={title} className={styles.chartCard}>
+    <Card as="section" aria-label={title} className={styles.chartCard}>
       <CardHeader title={title} subtitle={subtitle} />
       {children}
     </Card>
@@ -150,7 +151,7 @@ function TrendCard({
         <EmptyState compact icon="show_chart" title="За 30 дней ничего" />
       ) : (
         <figure className={styles.figure} aria-label={`${title} по дням, всего ${total}`}>
-          <Suspense fallback={<Skeleton height={180} />}>
+          <Suspense fallback={<LoadingIndicator compact label="Загружаем график" />}>
             <TrendChart days={days} metric={metric} unit={unit} />
           </Suspense>
         </figure>
@@ -168,13 +169,15 @@ function LinksByStatus({ links }: { links: DashboardTotals['links'] }) {
         {LINK_STATUSES.map(({ status, label }) => (
           <li key={status} className={styles.bar}>
             <span className={styles.barLabel}>{label}</span>
-            <span className={styles.barTrack} aria-hidden>
-              <span
-                className={styles.barFill}
-                style={{ width: `${(links[status] / max) * 100}%` }}
-              />
-            </span>
-            <span className={styles.barValue}>{formatNumber(links[status])}</span>
+            <m3-progress
+              className={styles.barTrack}
+              value={links[status]}
+              max={max}
+              flat
+              thickness={8}
+              aria-hidden="true"
+            />
+            <span className={cx(styles.barValue, 'm3-num')}>{formatNumber(links[status])}</span>
           </li>
         ))}
       </ul>
@@ -185,7 +188,7 @@ function LinksByStatus({ links }: { links: DashboardTotals['links'] }) {
 /** The chart data as a table, for exact values and screen readers. */
 function DaysTable({ days }: { days: readonly DashboardDay[] }) {
   return (
-    <details className={styles.details}>
+    <details className={cx('m3-card low flush', styles.details)}>
       <summary className={styles.summary}>
         <Icon name="table" size={20} />
         Данные по дням
@@ -194,7 +197,6 @@ function DaysTable({ days }: { days: readonly DashboardDay[] }) {
         caption="Данные по дням"
         rows={[...days].reverse()}
         rowKey={(day) => day.date}
-        maxHeight="none"
         columns={[
           { key: 'date', header: 'День', render: (day) => formatDate(day.date) },
           ...TRENDS.map((trend) => ({
@@ -206,22 +208,5 @@ function DaysTable({ days }: { days: readonly DashboardDay[] }) {
         ]}
       />
     </details>
-  );
-}
-
-function DashboardSkeleton() {
-  return (
-    <div className={styles.page} role="status" aria-label="Загружаем дашборд">
-      <div className={styles.tiles}>
-        {Array.from({ length: 6 }, (_, index) => (
-          <Skeleton key={index} height={108} className={styles.skeletonTile} />
-        ))}
-      </div>
-      <div className={styles.charts}>
-        {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} height={260} className={styles.skeletonTile} />
-        ))}
-      </div>
-    </div>
   );
 }

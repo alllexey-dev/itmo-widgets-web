@@ -22,7 +22,7 @@ export function Stat({ label, value, caption, icon, className }: StatProps) {
         {icon && <Icon name={icon} size={20} />}
         <span id={labelId}>{label}</span>
       </div>
-      <div className={styles.value}>{value}</div>
+      <div className={cx(styles.value, 'm3-num')}>{value}</div>
       {caption && <div className={styles.caption}>{caption}</div>}
     </div>
   );

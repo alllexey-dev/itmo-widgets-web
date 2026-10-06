@@ -10,7 +10,7 @@ import {
   formatDate,
   Icon,
   Table,
-  useToast,
+  useSnackbars,
   type BadgeTone,
   type TableColumn,
 } from '../ui';
@@ -36,6 +36,8 @@ export interface RestrictionsTableProps {
   loading?: boolean;
   /** Hidden on a user card, where the user is already known. */
   showUser?: boolean;
+  /** Inside a padded card. */
+  bleed?: boolean;
   empty: { title: string; description?: string };
 }
 
@@ -45,9 +47,10 @@ export function RestrictionsTable({
   rows,
   loading,
   showUser = true,
+  bleed = false,
   empty,
 }: RestrictionsTableProps) {
-  const toast = useToast();
+  const snackbars = useSnackbars();
   const revoke = useRevokeRestriction();
   const [confirming, setConfirming] = useState<AdminRestriction | null>(null);
 
@@ -57,6 +60,7 @@ export function RestrictionsTable({
           {
             key: 'user',
             header: 'Пользователь',
+            minWidth: 180,
             render: (row: AdminRestriction) => (
               <span className={styles.user}>
                 <Avatar name={row.user.name} src={row.user.pictureUrl} size={32} decorative />
@@ -77,12 +81,14 @@ export function RestrictionsTable({
     {
       key: 'reason',
       header: 'Причина',
+      minWidth: 160,
       render: (row) => <span className={styles.reason}>{row.reason}</span>,
     },
-    { key: 'term', header: 'Срок', render: term },
+    { key: 'term', header: 'Срок', minWidth: 150, render: term },
     {
       key: 'state',
       header: 'Состояние',
+      minWidth: 104,
       render: (row) => {
         const state = restrictionState(row);
         return <Badge tone={state.tone}>{state.label}</Badge>;
@@ -91,12 +97,13 @@ export function RestrictionsTable({
     {
       key: 'actions',
       header: <span className="visually-hidden">Действия</span>,
+      width: 120,
       align: 'end',
       render: (row) => (
         <span className={styles.actions}>
           <Link
             to={`/admin/moderation?case=${encodeURIComponent(row.caseId)}`}
-            className={styles.caseLink}
+            className="m3-icon-btn"
             aria-label={`Заявка: ${row.user.name}, ${CAPABILITIES[row.capability]}`}
             title="Заявка"
           >
@@ -121,11 +128,10 @@ export function RestrictionsTable({
     if (!confirming) return;
     revoke.mutate(confirming.id, {
       onSuccess: () => {
-        toast.show({ message: 'Ограничение снято', tone: 'success' });
+        snackbars.show('Ограничение снято');
         setConfirming(null);
       },
-      onError: (error) =>
-        toast.show({ message: errorText(error, 'Не удалось снять ограничение'), tone: 'error' }),
+      onError: (error) => snackbars.error(errorText(error, 'Не удалось снять ограничение')),
     });
   };
 
@@ -138,7 +144,7 @@ export function RestrictionsTable({
         rowKey={(row) => row.id}
         loading={loading}
         empty={{ icon: 'verified_user', ...empty }}
-        maxHeight="none"
+        bleed={bleed}
       />
       <ConfirmDialog
         open={confirming !== null}

@@ -30,57 +30,26 @@ const value = (path, unit = "") => {
 };
 const kebab = (role) =>
   role.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+// The web app takes its theme from @alllexey/ui (WB-16a); only the landing block is generated here.
 const roles = [
   "surface",
   "surfaceContainerLow",
-  "surfaceContainer",
   "surfaceContainerHigh",
   "onSurface",
   "onSurfaceVariant",
-  "outline",
   "outlineVariant",
   "primary",
   "onPrimary",
-  "primaryContainer",
-  "onPrimaryContainer",
   "secondaryContainer",
   "onSecondaryContainer",
-  "error",
-  "onError",
-  "scrim",
-  "inverseSurface",
-  "inverseOnSurface",
-  "inversePrimary",
-  "errorContainer",
-  "onErrorContainer",
 ];
 const aliases = {
   surfaceContainerLow: "surface-low",
   surfaceContainerHigh: "surface-high",
 };
-const status = [
-  "successContainer",
-  "onSuccessContainer",
-  "warningContainer",
-  "onWarningContainer",
-  "infoContainer",
-  "onInfoContainer",
-];
-const siteRoles = [
-  "surface",
-  "surfaceContainerLow",
-  "surfaceContainerHigh",
-  "onSurface",
-  "onSurfaceVariant",
-  "outlineVariant",
-  "primary",
-  "onPrimary",
-  "secondaryContainer",
-  "onSecondaryContainer",
-];
-const pairs = (target) => {
+const pairs = () => {
   const result = [];
-  for (const role of target === "web" ? roles : siteRoles) {
+  for (const role of roles) {
     result.push([
       aliases[role] ?? kebab(role),
       ...["light", "dark"].map((theme) =>
@@ -88,7 +57,7 @@ const pairs = (target) => {
       ),
     ]);
   }
-  for (const role of target === "web" ? status : ["phone", "phoneRing"]) {
+  for (const role of ["phone", "phoneRing"]) {
     result.push([
       kebab(role),
       ...["light", "dark"].map((theme) =>
@@ -96,98 +65,22 @@ const pairs = (target) => {
       ),
     ]);
   }
-  if (target === "web") {
-    result.push([
-      "shadow-overlay",
-      value("color.derived.shadowOverlay.light"),
-      value("color.derived.shadowOverlay.dark"),
-    ]);
-  }
   return result;
 };
-const staticProperties = (target) => {
-  const corner = (name) => value(`shape.corner.${name}`, "px");
-  if (target === "site")
-    return [
-      ["radius", corner("largeIncreased")],
-      ["max", value("layout.landingMax", "px")],
-    ];
-  const result = [
-    ["qr-light", value("color.extended.light.qrLight")],
-    ["qr-dark", value("color.extended.light.qrDark")],
-    ["font-sans", value("type.fontFamily")],
-    ["font-mono", value("type.monoFontFamily")],
-  ];
-  for (const [step, name] of Object.entries({
-    1: "related",
-    2: "compact",
-    3: "content",
-    4: "group",
-    5: "summaryPadding",
-    6: "section",
-    8: "statePadding",
-    10: "large",
-  }))
-    result.push([`space-${step}`, value(`spacing.${name}`, "px")]);
-  for (const [name, role] of Object.entries({
-    radius: "largeIncreased",
-    "radius-m": "large",
-    "radius-s": "medium",
-    "radius-xs": "small",
-    "radius-pill": "full",
-  }))
-    result.push([name, corner(role)]);
-  for (const [name, role] of Object.entries({
-    display: "displaySmall",
-    "title-l": "titleLarge",
-    "title-m": "titleMedium",
-    "title-s": "titleSmall",
-    "body-m": "bodyMedium",
-    "body-s": "bodySmall",
-    label: "labelLarge",
-  }))
-    result.push([`text-${name}`, value(`type.roles.${role}.size`, "px")]);
-  const easing = tokens.motion.easing;
-  if (
-    !Array.isArray(easing) ||
-    easing.length !== 4 ||
-    easing.some((part) => typeof part !== "number" || !Number.isFinite(part))
-  ) {
-    throw new Error("Expected four finite motion.easing coordinates");
-  }
-  result.push(
-    ["touch", value("layout.touchTarget", "px")],
-    ["focus-ring", value("color.derived.focusRing")],
-    ["duration", value("motion.durationMs.standard", "ms")],
-    ["ease", `cubic-bezier(${easing.join(", ")})`],
-    ["nav-width", value("layout.navWidth", "px")],
-    ["topbar-height", value("layout.topbarHeight", "px")],
-    ["content-max", value("layout.contentMax", "px")],
-  );
-  return result;
-};
+const staticProperties = () => [
+  ["radius", value("shape.corner.largeIncreased", "px")],
+  ["max", value("layout.landingMax", "px")],
+];
 const declarations = (entries, indent = "  ") =>
   entries.map(([name, text]) => `${indent}--${name}: ${text};`).join("\n");
-const modern = (name, light, dark) => {
-  // light-dark() accepts colours, not a shadow list; vary only the shadow colour.
-  if (name === "shadow-overlay") {
-    const lightParts = light.match(/^(.*?)(rgba?\(.+\))$/);
-    const darkParts = dark.match(/^(.*?)(rgba?\(.+\))$/);
-    if (!lightParts || !darkParts || lightParts[1] !== darkParts[1]) {
-      throw new Error("Shadow overlay must differ only in its colour");
-    }
-    return `${lightParts[1]}light-dark(${lightParts[2]}, ${darkParts[2]})`;
-  }
-  return `light-dark(${light}, ${dark})`;
-};
-const render = (target) => {
-  const themed = pairs(target);
+const render = () => {
+  const themed = pairs();
   const dark = themed.map(([name, , text]) => [name, text]);
   return `/* Generated from tokens/tokens.json by scripts/gen-tokens.mjs; do not edit. */
 :root {
   color-scheme: light;
 ${declarations(themed.map(([name, light]) => [name, light]))}
-${declarations(staticProperties(target))}
+${declarations(staticProperties())}
 }
 
 @media (prefers-color-scheme: dark) {
@@ -203,7 +96,7 @@ ${declarations(staticProperties(target))}
 @supports (color: light-dark(white, black)) {
   :root {
 ${declarations(
-  themed.map(([name, light, dark]) => [name, modern(name, light, dark)]),
+  themed.map(([name, light, dark]) => [name, `light-dark(${light}, ${dark})`]),
   "    ",
 )}
   }
@@ -236,13 +129,12 @@ if (
   );
 }
 const outputs = [
-  [resolve(root, "web/src/ui/tokens.css"), render("web")],
   [
     sitePath,
     site.slice(0, site.indexOf(start)) +
       start +
       "\n" +
-      render("site") +
+      render() +
       end +
       site.slice(site.indexOf(end) + end.length),
   ],
@@ -258,5 +150,5 @@ for (const [path, generated] of outputs) {
 }
 if (drift) process.exit(1);
 console.log(
-  check ? "Generated tokens are current." : "Generated web and site tokens.",
+  check ? "Generated tokens are current." : "Generated landing tokens.",
 );

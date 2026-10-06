@@ -1,12 +1,12 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { ThemeProvider, ToastProvider } from '../ui';
+import { SnackbarProvider, ThemeProvider } from '../ui';
 
 export function AppProviders({ client, children }: { client: QueryClient; children: ReactNode }) {
   return (
     <ThemeProvider>
       <QueryClientProvider client={client}>
-        <ToastProvider>{children}</ToastProvider>
+        <SnackbarProvider>{children}</SnackbarProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

@@ -6,9 +6,11 @@ import { DEFAULT_PAGE_SIZE, type AdminPage } from '../../api/admin';
 import { api } from '../../api/client';
 import { errorText } from '../../api/errors';
 import {
+  Card,
   ErrorState,
   formatDateTime,
   Icon,
+  LoadingOverlay,
   PageHeader,
   Pagination,
   Table,
@@ -63,13 +65,14 @@ const COLUMNS: TableColumn<AuditEntry>[] = [
     render: (entry) => (
       <span className={styles.actor}>
         <Link to={`/admin/users/${entry.actorIsu}`}>{entry.actorName}</Link>
-        <span className={styles.muted}>ИСУ {entry.actorIsu}</span>
+        <span className="m3-muted">ИСУ {entry.actorIsu}</span>
       </span>
     ),
   },
   {
     key: 'action',
     header: 'Действие',
+    minWidth: 180,
     render: (entry) => {
       const action = ACTIONS[entry.action];
       return (
@@ -84,11 +87,12 @@ const COLUMNS: TableColumn<AuditEntry>[] = [
   {
     key: 'details',
     header: 'Подробности',
+    minWidth: 200,
     render: (entry) =>
       entry.details ? (
         <code className={styles.details}>{entry.details}</code>
       ) : (
-        <span className={styles.muted}>—</span>
+        <span className="m3-muted">—</span>
       ),
   },
 ];
@@ -120,27 +124,28 @@ export function AuditPage() {
           retrying={audit.isFetching}
         />
       ) : (
-        <>
-          <Table
-            caption="Журнал"
-            columns={COLUMNS}
-            rows={audit.data?.items ?? []}
-            rowKey={(entry) => entry.id}
-            loading={audit.isPending}
-            maxHeight="none"
-            empty={{ icon: 'history', title: 'Записей пока нет' }}
-          />
-          {audit.data && (
-            <Pagination
-              page={page}
-              size={DEFAULT_PAGE_SIZE}
-              total={audit.data.total}
-              onChange={(next) =>
-                setParams(next > 0 ? { page: String(next) } : {}, { replace: false })
-              }
+        <LoadingOverlay loading={audit.isPlaceholderData}>
+          <Card padding="none">
+            <Table
+              caption="Журнал"
+              columns={COLUMNS}
+              rows={audit.data?.items ?? []}
+              rowKey={(entry) => entry.id}
+              loading={audit.isPending}
+              empty={{ icon: 'history', title: 'Записей пока нет' }}
             />
-          )}
-        </>
+            {audit.data && (
+              <Pagination
+                page={page}
+                size={DEFAULT_PAGE_SIZE}
+                total={audit.data.total}
+                onChange={(next) =>
+                  setParams(next > 0 ? { page: String(next) } : {}, { replace: false })
+                }
+              />
+            )}
+          </Card>
+        </LoadingOverlay>
       )}
     </>
   );

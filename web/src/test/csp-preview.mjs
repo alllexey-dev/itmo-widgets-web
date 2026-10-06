@@ -90,7 +90,7 @@ for (const [port, mode] of [
     if (path === '/app/qa.js') {
       response.setHeader('Content-Type', 'text/javascript');
       response.end(
-        `document.documentElement.dataset.cspViolations='0';document.addEventListener('securitypolicyviolation',(event)=>{document.documentElement.dataset.cspViolations=String(Number(document.documentElement.dataset.cspViolations)+1);document.documentElement.dataset.cspDetails=JSON.stringify({directive:event.violatedDirective,source:event.sourceFile,line:event.lineNumber,blocked:event.blockedURI,sample:event.sample})});const theme=new URLSearchParams(location.search).get('qa-theme');if(theme){localStorage.setItem('iw-theme',theme);document.documentElement.dataset.theme=theme}`,
+        `document.documentElement.dataset.cspViolations='0';document.addEventListener('securitypolicyviolation',(event)=>{document.documentElement.dataset.cspViolations=String(Number(document.documentElement.dataset.cspViolations)+1);document.documentElement.dataset.cspDetails=JSON.stringify({directive:event.violatedDirective,source:event.sourceFile,line:event.lineNumber,blocked:event.blockedURI,sample:event.sample})});const theme=new URLSearchParams(location.search).get('qa-theme');if(theme){document.cookie='alllexey-theme='+theme+'%7C%230061a4%7Ctonal; Path=/'}`,
       );
       return;
     }

@@ -207,7 +207,7 @@ describe('SystemPage', () => {
     await userEvent.type(minimum, '3.0');
 
     expect(minimum).toHaveAccessibleDescription('Не выше последней');
-    expect(within(card).getByRole('button', { name: 'Сохранить' })).toBeDisabled();
+    await userEvent.click(within(card).getByRole('button', { name: 'Сохранить' }));
     expect(versionSaves).toHaveLength(0);
   });
 
@@ -249,7 +249,7 @@ describe('SystemPage', () => {
 
   it('rejects a positive vote threshold', async () => {
     mockSession(sessionOf(['ADMIN']));
-    mockSystem();
+    const { settingsSaves } = mockSystem();
     renderApp('/admin/system');
     const card = await moderationCard();
     const votes = await within(card).findByRole('textbox', { name: 'Рейтинг для проверки' });
@@ -258,7 +258,8 @@ describe('SystemPage', () => {
     await userEvent.type(votes, '2');
 
     expect(votes).toHaveAccessibleDescription('Не больше −1');
-    expect(within(card).getByRole('button', { name: 'Сохранить' })).toBeDisabled();
+    await userEvent.click(within(card).getByRole('button', { name: 'Сохранить' }));
+    expect(settingsSaves).toHaveLength(0);
   });
 
   it('keeps review premoderation on and saves review thresholds with both policies', async () => {

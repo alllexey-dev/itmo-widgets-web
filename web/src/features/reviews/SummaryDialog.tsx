@@ -8,7 +8,7 @@ import {
   formatDateTime,
   formatNumber,
   plural,
-  useToast,
+  useSnackbars,
 } from '../../ui';
 import { useAiSummaries, useRegenerateSummary, useSetSummaryHidden } from './api';
 import {
@@ -37,7 +37,7 @@ export interface SummaryDialogProps {
 
 /** Texts come from the model and are shown as plain text only. */
 export function SummaryDialog({ row: initial, onClose }: SummaryDialogProps) {
-  const toast = useToast();
+  const snackbars = useSnackbars();
   const state = useAiSummaries();
   const setHidden = useSetSummaryHidden();
   const regenerate = useRegenerateSummary();
@@ -52,14 +52,13 @@ export function SummaryDialog({ row: initial, onClose }: SummaryDialogProps) {
       {
         onSuccess: setRow,
         onError: (error) =>
-          toast.show({
-            message: errorText(
+          snackbars.error(
+            errorText(
               error,
               row.hidden ? 'Не удалось показать сводку' : 'Не удалось скрыть сводку',
               ERRORS,
             ),
-            tone: 'error',
-          }),
+          ),
       },
     );
 
@@ -67,13 +66,10 @@ export function SummaryDialog({ row: initial, onClose }: SummaryDialogProps) {
     regenerate.mutate(row.teacherIsu, {
       onSuccess: (updated) => {
         setRow(updated);
-        toast.show({ message: 'Пересчёт запрошен', tone: 'success' });
+        snackbars.show('Пересчёт запрошен');
       },
       onError: (error) =>
-        toast.show({
-          message: errorText(error, 'Не удалось пересчитать сводку', ERRORS),
-          tone: 'error',
-        }),
+        snackbars.error(errorText(error, 'Не удалось пересчитать сводку', ERRORS)),
     });
 
   const status = SUMMARY_STATUSES[row.status];
@@ -86,6 +82,9 @@ export function SummaryDialog({ row: initial, onClose }: SummaryDialogProps) {
       size="large"
       actions={
         <>
+          <Button variant="text" onClick={onClose}>
+            Закрыть
+          </Button>
           <Button
             variant="tonal"
             icon={row.hidden ? 'visibility' : 'visibility_off'}
@@ -129,7 +128,7 @@ export function SummaryDialog({ row: initial, onClose }: SummaryDialogProps) {
         {row.summary ? (
           <SummaryContent summary={row.summary} />
         ) : (
-          <p className={styles.muted}>Сводки ещё нет</p>
+          <p className="m3-muted">Сводки ещё нет</p>
         )}
       </div>
     </Dialog>
@@ -140,16 +139,13 @@ function SummaryContent({ summary }: { summary: TeacherSummary }) {
   const count = summary.reviewCount;
   return (
     <>
-      <p className={styles.muted}>
+      <p className="m3-muted">
         Сводка по {formatNumber(count)} {plural(count, ['отзыву', 'отзывам', 'отзывам'])} · ИИ ·{' '}
         {formatDateTime(summary.generatedAt)}
       </p>
       <p>
         Тон: {SUMMARY_LEVELS[summary.level]}
-        <span className={styles.muted}>
-          {' '}
-          · уверенность {SUMMARY_CONFIDENCES[summary.confidence]}
-        </span>
+        <span className="m3-muted"> · уверенность {SUMMARY_CONFIDENCES[summary.confidence]}</span>
       </p>
       <p className={styles.text}>{summary.description}</p>
       <Points title="Плюсы" items={summary.pros} />
@@ -169,7 +165,7 @@ function SummaryContent({ summary }: { summary: TeacherSummary }) {
             <dt>{SUMMARY_SCALES[scale.kind]}</dt>
             <dd>
               {SUMMARY_SCALE_VALUES[scale.kind][scale.value]}
-              {scale.reason && <span className={styles.muted}> · {scale.reason}</span>}
+              {scale.reason && <span className="m3-muted"> · {scale.reason}</span>}
             </dd>
           </div>
         ))}

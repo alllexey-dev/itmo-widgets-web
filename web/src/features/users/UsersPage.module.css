@@ -3,8 +3,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .search {
@@ -13,15 +13,15 @@
 }
 
 .total {
-  color: var(--on-surface-variant);
-  font-size: var(--text-body-s);
+  color: var(--md-on-surface-variant);
+  font: var(--md-body-medium);
 }
 
 .user {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  min-width: 180px;
+  gap: 12px;
+  min-width: 0;
 }
 
 .name {
@@ -31,9 +31,9 @@
 .roles {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: 4px;
 }
 
 .muted {
-  color: var(--on-surface-variant);
+  color: var(--md-on-surface-variant);
 }

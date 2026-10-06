@@ -1,76 +1,80 @@
-.wrapper {
-  overflow: auto;
-  border-radius: var(--radius);
-  background: var(--surface-low);
-}
-
 .table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: var(--text-body-m);
+  /* Contains absolutely positioned content (visually hidden headers) in the sideways scroll. */
+  position: relative;
+  overscroll-behavior-x: contain;
 }
 
-.table th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: var(--space-3) var(--space-4);
-  background: var(--surface-low);
-  border-bottom: 1px solid var(--outline-variant);
-  color: var(--on-surface-variant);
-  font-size: var(--text-body-s);
-  font-weight: 600;
-  white-space: nowrap;
+.bleed {
+  width: auto;
+  margin-inline: -24px;
 }
 
-.table td {
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--outline-variant);
-  vertical-align: middle;
-}
-
-.table tbody tr:last-child td {
-  border-bottom: 0;
+.inner {
+  min-width: 100%;
 }
 
 .start {
+  justify-self: start;
   text-align: start;
 }
 
-.end {
-  text-align: end;
-  font-variant-numeric: tabular-nums;
-}
-
 .center {
+  justify-self: center;
   text-align: center;
 }
 
+.end {
+  justify-self: end;
+  text-align: end;
+}
+
+.cell {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .clickable {
+  position: relative;
+  isolation: isolate;
   cursor: pointer;
 }
 
-.clickable:hover td {
-  background: color-mix(in srgb, var(--on-surface) 4%, transparent);
+.clickable::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--md-on-surface);
+  opacity: 0;
+  transition: opacity 0.15s var(--md-effects-fast);
+}
+
+@media (hover: hover) {
+  .clickable:hover::before {
+    opacity: 0.06;
+  }
+}
+
+.clickable:active::before {
+  opacity: 0.1;
 }
 
 .clickable:focus-visible {
-  outline: none;
+  outline: 3px solid var(--md-secondary);
+  outline-offset: -3px;
 }
 
-.clickable:focus-visible td {
-  box-shadow:
-    inset 0 2px 0 var(--primary),
-    inset 0 -2px 0 var(--primary);
+.selected {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
 }
 
-.selected td,
-.selected:hover td {
-  background: var(--secondary-container);
-  color: var(--on-secondary-container);
+.state {
+  position: sticky;
+  left: 0;
+  border-top: 1px solid var(--md-outline-variant);
 }
 
-.emptyCell {
-  padding: 0;
+.table [role='rowgroup'] + [role='rowgroup'] > :first-child {
+  border-top: 1px solid var(--md-outline-variant);
 }

@@ -1,4 +1,5 @@
 import { useId, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { cx } from './cx';
 import styles from './Field.module.css';
 import { FieldFrame } from './FieldFrame';
 import { describedBy } from './fieldIds';
@@ -49,7 +50,7 @@ export function Select<Value extends string>({
       <div className={styles.control}>
         <select
           id={selectId}
-          className={styles.select}
+          className={cx('m3-field', styles.select)}
           value={value}
           disabled={disabled}
           aria-invalid={error ? true : undefined}

@@ -1,24 +1,13 @@
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ICON_NAMES } from './icons';
+import { ICON_NAMES, iconPath } from './icons';
 
-const fontFile = (name: string) => readFileSync(resolve(process.cwd(), `public/fonts/${name}`));
-
-describe('self-hosted icon subset', () => {
-  it('covers every typed icon with a unique sorted name', () => {
-    const names = fontFile('names.txt').toString().trim().split('\n');
-    expect(names).toEqual(ICON_NAMES);
-    expect(names).toEqual([...new Set(names)].sort());
+describe('Material Symbols Rounded icons', () => {
+  it('has path data for every typed icon', () => {
+    for (const name of ICON_NAMES) expect(iconPath(name), name).toMatch(/^[Mm][\d.-]/);
   });
 
-  it('matches the font whose exact ligatures and FILL axis were verified during generation', () => {
-    const manifest = JSON.parse(fontFile('manifest.json').toString());
-    expect(manifest.names).toEqual(ICON_NAMES);
-    expect(manifest.axes).toEqual({ FILL: [0, 0, 1], opsz: 24, wght: 400, GRAD: 0 });
-    expect(
-      createHash('sha256').update(fontFile('material-symbols-rounded.woff2')).digest('hex'),
-    ).toBe(manifest.sha256);
+  it('draws a different filled variant where one is bundled and falls back otherwise', () => {
+    expect(iconPath('home', true)).not.toBe(iconPath('home'));
+    expect(iconPath('search', true)).toBe(iconPath('search'));
   });
 });

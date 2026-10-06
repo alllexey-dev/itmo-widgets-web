@@ -21,26 +21,26 @@ In development Vite serves `http://localhost:5173/app/` and proxies `/api` to
 
 ## Routing
 
-`App` wraps everything in `AppProviders` (theme, TanStack Query, toasts) and a
+`App` wraps everything in `AppProviders` (theme, TanStack Query, snackbars) and a
 `RouterProvider` with a `createBrowserRouter` whose `basename` is `import.meta.env.BASE_URL` without the
 trailing slash. `src/app/routes.tsx` composes route objects from each feature's
-`routes.ts` manifest. Manifests also provide sidebar items, assembled in the
-existing group order by `src/app/navigation.ts`; shared manifest and navigation
+`routes.ts` manifest. Manifests also provide navigation rail items, assembled in
+order by `src/app/navigation.ts`; shared manifest and navigation
 types live in `src/shared/routes.ts` (features never import the app layer).
 `SessionLostRedirect` is the root element and renders an outlet. `LoginPage`
 stays eager outside the shell; feature pages load through route `lazy` imports.
 Section paths and roles are listed in the [section documentation](#section-documentation).
 The catch-all route renders `NotFoundPage` inside the signed-in shell.
 
-`Shell` is the layout route: sidebar, top bar with the account menu, and an
-`<Outlet>` rendered only after the session loads. Below 760 px the sidebar
-becomes a drawer with a scrim, a focus trap and Esc to close.
+`Shell` is the layout route: `AppShell` from `src/ui` (navigation rail with the
+signed-in user, `Выйти` and `Оформление`) around an `<Outlet>` rendered only
+after the session loads. Below 760 px the rail becomes a drawer with a scrim, a
+focus trap, Esc and a swipe to close, under a top app bar.
 
 `RequireAccess` is a layout route around each protected group. Without the
 access it renders `ForbiddenPage` (`Нет доступа`) instead of the outlet, so the
-page makes no requests. The sidebar comes from `NAV_GROUPS` in
-`src/app/navigation.ts`, filtered by the same rule; a group without visible
-items is hidden.
+page makes no requests. The rail items come from `NAV_ITEMS` in
+`src/app/navigation.ts`, filtered by the same rule.
 
 Page state that should survive a reload or a shared link lives in the query
 string through `useSearchParams`. Section documents list their parameters.
@@ -152,7 +152,7 @@ mutations never retry.
 
 ```text
 src/
-  app/        App, providers, routes, Shell, AccountMenu, navigation, RequireAccess,
+  app/        App, providers, routes, Shell, navigation, RequireAccess,
               ForbiddenPage, NotFoundPage, queryClient
   api/        client.ts, errors.ts, admin.ts (AdminPage {items, page, size, total},
               shared admin shapes), moderation.ts (open-case count and shared key),
@@ -237,9 +237,9 @@ CSS are split by the route manifests' dynamic imports and downloaded only when
 matched; common page dependencies are shared chunks. The dashboard chart loads with `React.lazy` inside `Suspense`, keeping
 recharts in its own chunk. Compare entry bytes using production builds with the same Node version,
 Vite base and environment, and inspect `ls -l web/dist/assets` before and after.
-Material Symbols Rounded is a preloaded, self-hosted WOFF2 subset with 84 typed
-ligatures and a FILL axis; `public/theme-init.js` runs
-before the bundle to apply a saved theme without a flash.
+Fonts come from `@alllexey/ui` and icons are bundled Material Symbols Rounded SVG
+paths, both same-origin; `public/theme-init.js` runs before the bundle to apply
+the shared `alllexey-theme` light/dark choice without a flash.
 
 The nginx image sends the same CSP and Permissions-Policy in every location,
 including cached assets and app-link pages. Scripts, styles, fonts and API

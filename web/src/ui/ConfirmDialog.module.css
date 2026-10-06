@@ -1,0 +1,11 @@
+.type {
+  display: grid;
+  gap: 8px;
+}
+
+.type b {
+  color: var(--md-on-surface);
+  font-family: var(--md-mono);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}

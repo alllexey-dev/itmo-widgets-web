@@ -5,8 +5,6 @@ import styles from './Field.module.css';
 export interface FieldFrameProps {
   id: string;
   label: ReactNode;
-  /** Keeps the label for assistive technology only, e.g. a search field with an icon. */
-  hideLabel?: boolean;
   hint?: ReactNode;
   error?: ReactNode;
   disabled?: boolean;
@@ -16,11 +14,10 @@ export interface FieldFrameProps {
   children: ReactNode;
 }
 
-/** Label, control and hint or error shared by the text fields and the select. */
+/** Label above, `m3-field` control, hint or error under it (UX.md, forms). */
 export function FieldFrame({
   id,
   label,
-  hideLabel = false,
   hint,
   error,
   disabled,
@@ -38,7 +35,7 @@ export function FieldFrame({
         className,
       )}
     >
-      <label htmlFor={id} className={hideLabel ? 'visually-hidden' : styles.label}>
+      <label htmlFor={id} className={styles.label}>
         {label}
       </label>
       {children}
@@ -49,11 +46,7 @@ export function FieldFrame({
               {error}
             </span>
           ) : (
-            hint && (
-              <span id={`${id}-hint`} className={styles.hint}>
-                {hint}
-              </span>
-            )
+            hint && <span id={`${id}-hint`}>{hint}</span>
           )}
           {aside}
         </div>

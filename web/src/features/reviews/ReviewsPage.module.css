@@ -1,53 +1,44 @@
 .cards {
   display: grid;
-  gap: var(--space-4);
+  gap: 16px;
 }
 
 .body {
   display: grid;
-  gap: var(--space-4);
+  gap: 16px;
 }
 
 .state {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
-  color: var(--on-surface-variant);
-  font-size: var(--text-body-s);
+  gap: 8px 12px;
+  color: var(--md-on-surface-variant);
+  font: var(--md-body-medium);
 }
 
 .error {
-  font-family: var(--font-mono);
+  font-family: var(--md-mono);
   font-size: 12px;
   overflow-wrap: anywhere;
 }
 
 .tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
-  gap: var(--space-3);
-}
-
-.skeleton {
-  border-radius: var(--radius);
-}
-
-.muted {
-  color: var(--on-surface-variant);
-  font-size: var(--text-body-s);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 144px), 1fr));
+  gap: 12px;
 }
 
 .notice {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-m);
-  background: var(--warning-container);
-  color: var(--on-warning-container);
-  font-size: var(--text-body-m);
+  gap: 8px 12px;
+  padding: 12px 16px;
+  border-radius: var(--md-shape-lg);
+  background: var(--md-warning-container);
+  color: var(--md-on-warning-container);
+  font: var(--md-body-medium);
 }
 
 .notice a {
@@ -56,7 +47,7 @@
 }
 
 .filters {
-  margin-bottom: var(--space-3);
+  margin-bottom: 12px;
 }
 
 .nowrap {
@@ -65,7 +56,7 @@
 
 .summary {
   display: grid;
-  gap: var(--space-4);
+  gap: 16px;
 }
 
 .text {
@@ -75,25 +66,25 @@
 
 .points {
   display: grid;
-  gap: var(--space-1);
+  gap: 4px;
 }
 
 .points ul {
   display: grid;
-  gap: var(--space-1);
+  gap: 4px;
   margin: 0;
-  padding-left: var(--space-5);
+  padding-left: 20px;
 }
 
 .pointsTitle {
-  font-size: var(--text-title-s);
+  font: var(--md-title-medium);
   font-weight: 600;
 }
 
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -101,18 +92,18 @@
 
 .scales {
   display: grid;
-  gap: var(--space-2);
+  gap: 8px;
   margin: 0;
 }
 
 .scales > div {
   display: grid;
   grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
-  gap: var(--space-3);
+  gap: 12px;
 }
 
 .scales dt {
-  color: var(--on-surface-variant);
+  color: var(--md-on-surface-variant);
 }
 
 .scales dd {
