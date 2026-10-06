@@ -14,8 +14,8 @@ export const pages: PageTable = {
   dashboard: soon('Статистика', 'Сводка и графики за 30 дней появятся здесь.'),
   users: soon('Пользователи', 'Поиск пользователей и роли появятся здесь.'),
   user: soon('Пользователи', 'Карточка пользователя появится здесь.'),
-  adminSport: soon('Система', 'Автозапись на спорт появится здесь.'),
-  system: soon('Система', 'Версии приложения, учётные данные и правила появятся здесь.'),
-  reviews: soon('Отзывы', 'Синхронизация отзывов и AI-сводки появятся здесь.'),
+  adminSport: { load: () => import('./features/system/SystemPage.svelte') },
+  system: { load: () => import('./features/system/SystemPage.svelte') },
+  reviews: { load: () => import('./features/reviews/ReviewsPage.svelte') },
   audit: soon('Журнал', 'Журнал действий появится здесь.'),
 };

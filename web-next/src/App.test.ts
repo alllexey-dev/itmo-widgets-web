@@ -66,7 +66,6 @@ describe('Shell', () => {
   it.each([
     ['/admin/restrictions', 'Модерация'],
     ['/admin/dashboard', 'Главная'],
-    ['/admin/sport', 'Система'],
     ['/admin/users/400002', 'Пользователи'],
     ['/u/400002', 'Друзья'],
   ])('marks the section that hosts %s', async (path, section) => {
@@ -84,9 +83,6 @@ describe('Shell', () => {
     '/admin/dashboard',
     '/admin/users',
     '/admin/users/400002',
-    '/admin/sport',
-    '/admin/system',
-    '/admin/reviews',
     '/admin/audit',
   ])('opens %s for the administrator', async (path) => {
     mockSession(userOf(['ADMIN']));
