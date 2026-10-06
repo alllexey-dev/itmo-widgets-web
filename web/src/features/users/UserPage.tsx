@@ -17,11 +17,12 @@ import {
   formatNumber,
   formatRelative,
   Icon,
-  Skeleton,
+  LoadingIndicator,
+  PageHeader,
   Stat,
   Switch,
   Table,
-  useToast,
+  useSnackbars,
 } from '../../ui';
 import { RestrictionsTable } from '../../shared/RestrictionsTable';
 import { useModeratorRole, useUser } from './api';
@@ -42,15 +43,19 @@ export function UserPage() {
   const isu = Number(useParams().isu);
   const user = useUser(isu);
 
-  if (user.isPending) return <UserSkeleton />;
+  if (user.isPending) return <LoadingIndicator label="Загружаем пользователя" />;
   if (user.isError) {
     const missing = user.error instanceof ApiError && user.error.code === 'not_found';
     return (
-      <>
+      <div className={styles.page}>
         <BackLink />
         <Card>
           {missing ? (
-            <EmptyState icon="person_off" title="Пользователь не найден" />
+            <EmptyState
+              icon="person_off"
+              title="Пользователь не найден"
+              description="Проверьте номер ИСУ."
+            />
           ) : (
             <ErrorState
               title="Не удалось загрузить пользователя"
@@ -60,7 +65,7 @@ export function UserPage() {
             />
           )}
         </Card>
-      </>
+      </div>
     );
   }
   return <UserView detail={user.data} />;
@@ -76,20 +81,18 @@ function UserView({ detail }: { detail: AdminUserDetail }) {
   return (
     <div className={styles.page}>
       <BackLink />
-      <Card as="section" padding="large" className={styles.profile} aria-labelledby="user-name">
-        <Avatar name={user.name} src={user.pictureUrl} size={80} decorative />
-        <div className={styles.profileText}>
-          <h1 id="user-name" className={styles.name}>
-            {user.name}
-          </h1>
-          <p className={styles.muted}>
-            ИСУ {user.isu}
-            {current && ` · ${groupLine(current)}`}
-          </p>
-          <div className={styles.badges}>
-            <RoleBadges roles={detail.roles} />
-          </div>
-        </div>
+      <section aria-labelledby="user-name">
+        <PageHeader
+          titleId="user-name"
+          leading={<Avatar name={user.name} src={user.pictureUrl} size={80} decorative />}
+          title={user.name}
+          description={`ИСУ ${user.isu}${current ? ` · ${groupLine(current)}` : ''}`}
+          actions={<RoleBadges roles={detail.roles} />}
+        />
+      </section>
+
+      <Card as="section" aria-labelledby="user-access">
+        <CardHeader title={<span id="user-access">Доступ</span>} />
         <ModeratorSwitch detail={detail} />
       </Card>
 
@@ -130,8 +133,7 @@ function UserView({ detail }: { detail: AdminUserDetail }) {
             ]}
             rows={detail.devices}
             rowKey={(device) => `${device.name}-${device.lastLogin}`}
-            maxHeight="none"
-            className={styles.innerTable}
+            bleed
             empty={{ icon: 'mobile_off', title: 'Нет устройств' }}
           />
         </Card>
@@ -141,7 +143,7 @@ function UserView({ detail }: { detail: AdminUserDetail }) {
             subtitle="Все группы, которые были у пользователя"
           />
           {detail.groups.length === 0 ? (
-            <p className={styles.muted}>Групп нет</p>
+            <p className="m3-muted">Групп нет</p>
           ) : (
             <ul className={styles.groups}>
               {detail.groups.map((group) => (
@@ -154,23 +156,22 @@ function UserView({ detail }: { detail: AdminUserDetail }) {
         </Card>
       </div>
 
-      <section aria-labelledby="user-restrictions" className={styles.section}>
-        <h2 id="user-restrictions" className={styles.sectionTitle}>
-          Ограничения
-        </h2>
+      <Card as="section" aria-labelledby="user-restrictions">
+        <CardHeader title={<span id="user-restrictions">Ограничения</span>} />
         <RestrictionsTable
           caption="Ограничения пользователя"
           rows={detail.restrictions}
           showUser={false}
+          bleed
           empty={{ title: 'Ограничений не было' }}
         />
-      </section>
+      </Card>
     </div>
   );
 }
 
 function ModeratorSwitch({ detail }: { detail: AdminUserDetail }) {
-  const toast = useToast();
+  const snackbars = useSnackbars();
   const role = useModeratorRole(detail.user.isu);
   const [confirming, setConfirming] = useState<boolean | null>(null);
   const isAdmin = detail.roles.includes('ADMIN');
@@ -183,18 +184,14 @@ function ModeratorSwitch({ detail }: { detail: AdminUserDetail }) {
     role.mutate(grant, {
       onSuccess: () => {
         setConfirming(null);
-        toast.show({
-          message: grant ? `${name} теперь модератор` : 'Роль модератора снята',
-          tone: 'success',
-        });
+        snackbars.show(grant ? `${name} теперь модератор` : 'Роль модератора снята');
       },
-      onError: (error) =>
-        toast.show({ message: errorText(error, 'Не удалось изменить роль'), tone: 'error' }),
+      onError: (error) => snackbars.error(errorText(error, 'Не удалось изменить роль')),
     });
   };
 
   return (
-    <div className={styles.role}>
+    <div>
       <Switch
         label="Модератор"
         description={
@@ -218,21 +215,6 @@ function ModeratorSwitch({ detail }: { detail: AdminUserDetail }) {
         confirmLabel={confirming ? 'Назначить' : 'Снять роль'}
         danger={confirming === false}
       />
-    </div>
-  );
-}
-
-function UserSkeleton() {
-  return (
-    <div className={styles.page} role="status" aria-label="Загружаем пользователя">
-      <Skeleton width={140} height={40} />
-      <Skeleton height={128} />
-      <div className={styles.stats}>
-        {[0, 1, 2, 3].map((index) => (
-          <Skeleton key={index} height={96} />
-        ))}
-      </div>
-      <Skeleton height={200} />
     </div>
   );
 }

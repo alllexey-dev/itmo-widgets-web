@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- WB-16a: Rebuild the web app on the shared @alllexey/ui design system and its UX rules: navigation rail, shared alllexey.dev theme, package fonts and icons, four states per screen and typed confirmation for destructive actions.
 - BK-15w: Match the signed-out fixture to Backend 401 responses and verify legacy session compatibility and access-error routing.
 - WB-11a: Generate landing and app tokens from one recorded web token source.
 

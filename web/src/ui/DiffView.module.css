@@ -2,20 +2,20 @@
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: var(--text-body-s);
+  font: var(--md-body-medium);
   table-layout: fixed;
 }
 
 .diff th,
 .diff td {
-  padding: var(--space-2) var(--space-3);
+  padding: 8px 12px;
   text-align: start;
   vertical-align: top;
   overflow-wrap: anywhere;
 }
 
 .diff thead th {
-  color: var(--on-surface-variant);
+  color: var(--md-on-surface-variant);
   font-weight: 600;
 }
 
@@ -24,34 +24,34 @@
 }
 
 .field {
-  color: var(--on-surface-variant);
+  color: var(--md-on-surface-variant);
   font-weight: 500;
 }
 
 .badge {
   display: flex;
   width: fit-content;
-  margin-top: var(--space-1);
+  margin-top: 4px;
 }
 
 .diff tbody td {
-  border-top: 1px solid var(--outline-variant);
+  border-top: 1px solid var(--md-outline-variant);
 }
 
 .diff tbody th {
-  border-top: 1px solid var(--outline-variant);
+  border-top: 1px solid var(--md-outline-variant);
 }
 
 .changed .before {
-  background: color-mix(in srgb, var(--error-container) 40%, transparent);
-  color: var(--on-surface);
+  background: color-mix(in srgb, var(--md-error-container) 40%, transparent);
+  color: var(--md-on-surface);
   text-decoration: line-through;
-  text-decoration-color: color-mix(in srgb, var(--on-error-container) 50%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--md-on-error-container) 50%, transparent);
 }
 
 .changed .after {
-  background: color-mix(in srgb, var(--success-container) 45%, transparent);
-  color: var(--on-surface);
+  background: color-mix(in srgb, var(--md-success-container) 45%, transparent);
+  color: var(--md-on-surface);
 }
 
 @media (max-width: 600px) {
@@ -66,19 +66,19 @@
   }
 
   .diff tbody tr {
-    padding: var(--space-2) 0;
-    border-top: 1px solid var(--outline-variant);
+    padding: 8px 0;
+    border-top: 1px solid var(--md-outline-variant);
   }
 
   .diff tbody th,
   .diff tbody td {
     border-top: 0;
-    border-radius: var(--radius-xs);
+    border-radius: var(--md-shape-sm);
   }
 
   .diff td::before {
     content: attr(data-label) ': ';
-    color: var(--on-surface-variant);
+    color: var(--md-on-surface-variant);
     font-weight: 500;
   }
 }

@@ -198,8 +198,14 @@ describe('ModerationPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Скрыть всё у автора' }));
     const dialog = screen.getByRole('dialog', { name: 'Скрыть все ссылки автора?' });
+    const confirm = within(dialog).getByRole('button', { name: 'Скрыть всё' });
+    expect(confirm).toBeDisabled();
+    await userEvent.type(
+      within(dialog).getByRole('textbox', { name: /Чтобы подтвердить/ }),
+      'Иван Петров',
+    );
     expect(decisions).toHaveLength(0);
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Скрыть всё' }));
+    await userEvent.click(confirm);
 
     expect(await screen.findByText('Ссылки автора скрыты')).toBeInTheDocument();
     expect(decisions[0]?.body).toEqual({ action: 'HIDE_ALL_BY_USER' });
@@ -379,7 +385,10 @@ describe('ModerationPage', () => {
       expect(dialog).toHaveTextContent(
         'Опубликованные отзывы Иван Петров скроются, отзывы на проверке будут отклонены.',
       );
-      await userEvent.click(within(dialog).getByRole('button', { name: 'Скрыть всё' }));
+      await userEvent.type(
+        within(dialog).getByRole('textbox', { name: /Чтобы подтвердить/ }),
+        'Иван Петров{Enter}',
+      );
 
       expect(await screen.findByText('Отзывы автора скрыты')).toBeInTheDocument();
       expect(decisions[0]?.body).toEqual({ action: 'HIDE_ALL_BY_USER' });

@@ -10,9 +10,8 @@ import {
   formatDateTime,
   IconButton,
   Kbd,
-  Skeleton,
-  SkeletonText,
-  useToast,
+  LoadingIndicator,
+  useSnackbars,
 } from '../../ui';
 import { useAccess } from '../auth/useSession';
 import { useCase, useDecision } from './api';
@@ -87,14 +86,18 @@ export interface CaseDetailProps {
 export function CaseDetail({ caseId, onBack, onDecided }: CaseDetailProps) {
   const query = useCase(caseId);
 
-  if (query.isPending) return <DetailSkeleton />;
+  if (query.isPending) return <DetailLoading />;
   if (query.isError) {
     const missing = query.error instanceof ApiError && query.error.code === 'not_found';
     return (
       <div className={styles.detail}>
         {onBack && <BackButton onBack={onBack} />}
         {missing ? (
-          <EmptyState icon="search_off" title="Заявка не найдена" />
+          <EmptyState
+            icon="search_off"
+            title="Заявка не найдена"
+            description="Возможно, её уже удалили."
+          />
         ) : (
           <ErrorState
             title="Не удалось загрузить заявку"
@@ -124,7 +127,7 @@ function CaseView({
   onDecided: (updated: ModerationCase) => void;
 }) {
   const canOpenProfile = useAccess('admin');
-  const toast = useToast();
+  const snackbars = useSnackbars();
   const decision = useDecision(data.id);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const target = data.target;
@@ -135,17 +138,16 @@ function CaseView({
     decision.mutate(request, {
       onSuccess: (updated) => {
         setDialog(null);
-        toast.show({ message: doneText(request.action, data.targetType), tone: 'success' });
+        snackbars.show(doneText(request.action, data.targetType));
         onDecided(updated);
       },
       onError: (error) =>
-        toast.show({
-          message: errorText(error, 'Не удалось сохранить решение', {
+        snackbars.error(
+          errorText(error, 'Не удалось сохранить решение', {
             business_rule_violation: 'Заявка уже закрыта',
             invalid_request_data: 'Проверьте причину и срок',
           }),
-          tone: 'error',
-        }),
+        ),
     });
   };
 
@@ -367,14 +369,6 @@ export function ShortcutHint() {
   );
 }
 
-function DetailSkeleton() {
-  return (
-    <div className={styles.detail} role="status" aria-label="Загружаем заявку">
-      <Skeleton shape="text" width="30%" />
-      <Skeleton height={32} width="60%" />
-      <Skeleton height={48} />
-      <Skeleton height={140} />
-      <SkeletonText lines={4} />
-    </div>
-  );
+function DetailLoading() {
+  return <LoadingIndicator label="Загружаем заявку" />;
 }

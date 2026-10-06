@@ -12,7 +12,7 @@ import {
   formatDateTime,
   Table,
   TextField,
-  useToast,
+  useSnackbars,
   type TableColumn,
 } from '../../ui';
 import { useReplaceServiceCredential, useServiceCredentials } from './api';
@@ -30,7 +30,7 @@ function Time({ value }: { value: string | null }) {
   return value ? (
     <span className={styles.nowrap}>{formatDateTime(value)}</span>
   ) : (
-    <span className={styles.muted}>—</span>
+    <span className="m3-muted">—</span>
   );
 }
 
@@ -44,7 +44,7 @@ function Status({ credential }: { credential: ServiceCredential }) {
         <code className={styles.code}>{credential.lastError}</code>
       )}
       {failed && credential.lastErrorAt && (
-        <span className={styles.muted}>{formatDateTime(credential.lastErrorAt)}</span>
+        <span className="m3-muted">{formatDateTime(credential.lastErrorAt)}</span>
       )}
     </span>
   );
@@ -53,10 +53,10 @@ function Status({ credential }: { credential: ServiceCredential }) {
 function Source({ credential }: { credential: ServiceCredential }) {
   const { updatedSource: source, updatedByIsu: isu } = credential;
   if (!source) return null;
-  if (source !== 'ADMIN') return <span className={styles.muted}>{CREDENTIAL_SOURCES[source]}</span>;
+  if (source !== 'ADMIN') return <span className="m3-muted">{CREDENTIAL_SOURCES[source]}</span>;
   if (isu === null) return null;
   return (
-    <span className={styles.muted}>
+    <span className="m3-muted">
       <Link to={`/admin/users/${isu}`}>{credential.updatedByName ?? `ИСУ ${isu}`}</Link>
       {credential.updatedByName && ` · ИСУ ${isu}`}
     </span>
@@ -65,10 +65,16 @@ function Source({ credential }: { credential: ServiceCredential }) {
 
 function columns(onReplace: (key: ServiceCredentialKey) => void): TableColumn<ServiceCredential>[] {
   return [
-    { key: 'name', header: 'Значение', render: (credential) => CREDENTIALS[credential.key] },
+    {
+      key: 'name',
+      header: 'Значение',
+      minWidth: 176,
+      render: (credential) => CREDENTIALS[credential.key],
+    },
     {
       key: 'status',
       header: 'Статус',
+      minWidth: 140,
       render: (credential) => <Status credential={credential} />,
     },
     {
@@ -104,6 +110,7 @@ function columns(onReplace: (key: ServiceCredentialKey) => void): TableColumn<Se
     {
       key: 'actions',
       header: <span className="visually-hidden">Действия</span>,
+      width: 120,
       align: 'end',
       render: (credential) =>
         credential.replaceable && (
@@ -119,7 +126,7 @@ export function CredentialsCard() {
   const credentials = useServiceCredentials();
   const [replacing, setReplacing] = useState<ServiceCredentialKey | null>(null);
   return (
-    <Card as="section" padding="large" aria-label="Учётные данные" className={styles.wide}>
+    <Card as="section" aria-label="Учётные данные" className={styles.wide}>
       <CardHeader
         title="Учётные данные"
         subtitle="Секреты внешних сервисов. Значения не показываются"
@@ -139,7 +146,7 @@ export function CredentialsCard() {
           rows={credentials.data ?? []}
           rowKey={(credential) => credential.key}
           loading={credentials.isPending}
-          maxHeight="none"
+          bleed
         />
       )}
       {replacing && (
@@ -157,7 +164,7 @@ function ReplaceCredentialDialog({
   credentialKey: ServiceCredentialKey;
   onClose: () => void;
 }) {
-  const toast = useToast();
+  const snackbars = useSnackbars();
   const replace = useReplaceServiceCredential();
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -178,14 +185,11 @@ function ReplaceCredentialDialog({
       {
         onSuccess: () => {
           close();
-          toast.show({ message: 'Значение заменено', tone: 'success' });
+          snackbars.show('Значение заменено');
         },
         onError: (error) => {
           if (error instanceof ApiError && error.status === 400) return;
-          toast.show({
-            message: errorText(error, 'Не удалось заменить значение'),
-            tone: 'error',
-          });
+          snackbars.error(errorText(error, 'Не удалось заменить значение'));
         },
       },
     );

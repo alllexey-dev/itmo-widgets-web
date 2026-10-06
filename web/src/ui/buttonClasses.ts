@@ -1,7 +1,6 @@
-import styles from './Button.module.css';
 import { cx } from './cx';
 
-export type ButtonVariant = 'filled' | 'tonal' | 'text';
+export type ButtonVariant = 'filled' | 'tonal' | 'outlined' | 'text';
 export type ButtonSize = 'medium' | 'small';
 
 export interface ButtonLook {
@@ -11,7 +10,21 @@ export interface ButtonLook {
   danger?: boolean;
 }
 
-/** Button classes for elements that are not <button>, e.g. a router link. */
+const LOOKS: Record<ButtonVariant, string | null> = {
+  filled: null,
+  tonal: 'tonal',
+  outlined: 'outlined',
+  text: 'text',
+};
+
+const DANGER_LOOKS: Record<ButtonVariant, string> = {
+  filled: 'danger',
+  tonal: 'danger-tonal',
+  outlined: 'outlined iw-danger',
+  text: 'text iw-danger',
+};
+
+/** `m3-btn` classes, also for elements that are not <button>, e.g. a router link. */
 export function buttonClasses({
   variant = 'filled',
   size = 'medium',
@@ -19,10 +32,9 @@ export function buttonClasses({
   danger = false,
 }: ButtonLook = {}): string {
   return cx(
-    styles.button,
-    styles[variant],
-    styles[size],
-    fullWidth && styles.fullWidth,
-    danger && styles.danger,
+    'm3-btn',
+    danger ? DANGER_LOOKS[variant] : LOOKS[variant],
+    size === 'small' && 'small',
+    fullWidth && 'iw-full-width',
   );
 }

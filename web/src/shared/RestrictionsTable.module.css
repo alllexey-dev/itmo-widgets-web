@@ -1,8 +1,8 @@
 .user {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  min-width: 180px;
+  gap: 12px;
+  min-width: 0;
 }
 
 .userText {
@@ -15,8 +15,7 @@
 }
 
 .muted {
-  color: var(--on-surface-variant);
-  font-size: var(--text-body-s);
+  color: var(--md-on-surface-variant);
 }
 
 .reason {
@@ -31,24 +30,5 @@
 .actions {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-}
-
-.caseLink {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--touch);
-  height: var(--touch);
-  border-radius: var(--radius-pill);
-  color: var(--on-surface-variant);
-}
-
-.caseLink:hover {
-  background: color-mix(in srgb, var(--on-surface) 8%, transparent);
-}
-
-.caseLink:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+  gap: 4px;
 }

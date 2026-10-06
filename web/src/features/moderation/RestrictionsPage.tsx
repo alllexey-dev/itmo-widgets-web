@@ -3,12 +3,13 @@ import { useSearchParams } from 'react-router';
 import { DEFAULT_PAGE_SIZE } from '../../api/admin';
 import { errorText } from '../../api/errors';
 import {
+  Card,
   Chip,
   ErrorState,
-  IconButton,
+  LoadingOverlay,
   PageHeader,
   Pagination,
-  TextField,
+  Search,
   useDebouncedValue,
 } from '../../ui';
 import { useRestrictions } from './api';
@@ -53,20 +54,15 @@ export function RestrictionsPage() {
     <>
       <PageHeader title="Ограничения" description="Кому и что запрещено после решений модерации" />
       <div className={styles.toolbar}>
-        <TextField
+        <Search
           className={styles.search}
           label="ИСУ"
-          hideLabel
-          icon="search"
           placeholder="Поиск по ИСУ"
           inputMode="numeric"
           autoComplete="off"
           value={isuText}
-          onChange={(event) => changeIsu(event.target.value)}
+          onChange={changeIsu}
           error={valid ? undefined : 'Только цифры'}
-          trailing={
-            isuText && <IconButton icon="close" label="Очистить" onClick={() => changeIsu('')} />
-          }
         />
         <div className={styles.filters} role="group" aria-label="Состояние">
           <Chip selected={active} onClick={() => update({ all: null, page: null })}>
@@ -85,28 +81,30 @@ export function RestrictionsPage() {
           retrying={restrictions.isFetching}
         />
       ) : (
-        <>
-          <RestrictionsTable
-            caption="Ограничения"
-            rows={restrictions.data?.items ?? []}
-            loading={restrictions.isPending}
-            empty={
-              debounced
-                ? { title: 'Ничего не нашли', description: 'Проверьте номер ИСУ.' }
-                : {
-                    title: active ? 'Действующих ограничений нет' : 'Ограничений ещё не было',
-                  }
-            }
-          />
-          {restrictions.data && (
-            <Pagination
-              page={page}
-              size={DEFAULT_PAGE_SIZE}
-              total={restrictions.data.total}
-              onChange={(next) => update({ page: next > 0 ? String(next) : null })}
+        <LoadingOverlay loading={restrictions.isPlaceholderData}>
+          <Card padding="none">
+            <RestrictionsTable
+              caption="Ограничения"
+              rows={restrictions.data?.items ?? []}
+              loading={restrictions.isPending}
+              empty={
+                debounced
+                  ? { title: 'Ничего не нашли', description: 'Проверьте номер ИСУ.' }
+                  : {
+                      title: active ? 'Действующих ограничений нет' : 'Ограничений ещё не было',
+                    }
+              }
             />
-          )}
-        </>
+            {restrictions.data && (
+              <Pagination
+                page={page}
+                size={DEFAULT_PAGE_SIZE}
+                total={restrictions.data.total}
+                onChange={(next) => update({ page: next > 0 ? String(next) : null })}
+              />
+            )}
+          </Card>
+        </LoadingOverlay>
       )}
     </>
   );

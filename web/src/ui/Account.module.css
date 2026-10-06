@@ -1,0 +1,20 @@
+.account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+}
+
+.text {
+  min-width: 0;
+}
+
+.name {
+  font: var(--md-title-small);
+  letter-spacing: 0.1px;
+}
+
+.status {
+  font: var(--md-body-small);
+  color: var(--md-on-surface-variant);
+}

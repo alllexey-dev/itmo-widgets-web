@@ -112,7 +112,7 @@ describe('Shell navigation', () => {
     },
   );
 
-  it('logs out from the account menu and returns to the login page', async () => {
+  it('logs out from the rail and returns to the login page', async () => {
     let loggedOut = false;
     server.use(
       http.get('*/api/web/auth/me', () =>
@@ -128,24 +128,25 @@ describe('Shell navigation', () => {
     mockPoll();
     renderApp('/');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Аккаунт: Анна Смирнова' }));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Выйти' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Выйти' }));
 
     expect(await screen.findByRole('img', { name: 'QR-код для входа' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Вход' })).toBeInTheDocument();
     expect(loggedOut).toBe(true);
   });
 
-  it('switches and remembers the theme', async () => {
+  it('switches the shared alllexey.dev theme', async () => {
     mockSession(sessionOf([]));
     renderApp('/');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Аккаунт: Анна Смирнова' }));
-    await userEvent.click(screen.getByRole('menuitemradio', { name: 'Тёмная' }));
+    const [appearance] = await screen.findAllByRole('button', { name: 'Оформление' });
+    await userEvent.click(appearance as HTMLElement);
+    const dialog = screen.getByRole('dialog', { name: 'Оформление' });
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'Тёмная' }));
 
     expect(document.documentElement.dataset.theme).toBe('dark');
-    expect(localStorage.getItem('iw-theme')).toBe('dark');
-    expect(screen.getByRole('menuitemradio', { name: 'Тёмная' })).toHaveAttribute(
+    expect(decodeURIComponent(document.cookie)).toMatch(/alllexey-theme=dark\|#[0-9a-f]{6}\|tonal/);
+    expect(within(dialog).getByRole('radio', { name: 'Тёмная' })).toHaveAttribute(
       'aria-checked',
       'true',
     );

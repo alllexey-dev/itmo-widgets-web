@@ -2,13 +2,13 @@
   display: block;
   width: 100%;
   height: auto;
-  border-radius: var(--radius-s);
 }
 
+/* Fixed dark-on-light in every theme (scanners), so no theme colours here. */
 .background {
-  fill: var(--qr-light);
+  fill: white;
 }
 
 .modules {
-  fill: var(--qr-dark);
+  fill: black;
 }

@@ -15,7 +15,7 @@ import {
 } from '../../ui';
 import { prefetchCase, QUEUE_PAGE_SIZE, useCases, useOpenCaseCount, type CaseFilter } from './api';
 import { CaseDetail, ShortcutHint } from './CaseDetail';
-import { CaseList, CaseListSkeleton } from './CaseList';
+import { CaseList, CaseListLoading } from './CaseList';
 import { REASONS } from './labels';
 import styles from './ModerationPage.module.css';
 import type { CaseReason, CaseStatus, ModerationCase } from './types';
@@ -127,7 +127,7 @@ export function ModerationPage() {
       <div className={cx(styles.layout, showDetail && styles.showDetail)}>
         <Card padding="none" as="section" className={styles.queue} aria-label="Очередь">
           {cases.isPending ? (
-            <CaseListSkeleton />
+            <CaseListLoading />
           ) : cases.isError ? (
             <ErrorState
               compact

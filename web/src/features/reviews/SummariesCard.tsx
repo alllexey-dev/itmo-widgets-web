@@ -12,9 +12,9 @@ import {
   formatDateTime,
   formatNumber,
   Icon,
-  Skeleton,
+  LoadingIndicator,
   Stat,
-  useToast,
+  useSnackbars,
 } from '../../ui';
 import { useAiSummaries, useReloadTeachersAfterRun, useStartAiSummaries } from './api';
 import { SUMMARY_OUTCOMES } from './labels';
@@ -28,21 +28,14 @@ export function SummariesCard() {
   useReloadTeachersAfterRun(summaries.data?.running);
   const model = summaries.data?.model;
   return (
-    <Card as="section" variant="outlined" padding="large" aria-label="ИИ-сводки">
+    <Card as="section" aria-label="ИИ-сводки">
       <CardHeader
         title="ИИ-сводки"
         subtitle={model && `Gemini · ${model}`}
         actions={summaries.data && <StartButton state={summaries.data} />}
       />
       {summaries.isPending ? (
-        <div className={styles.body} role="status" aria-label="Загружаем сводки">
-          <Skeleton height={24} width={200} />
-          <div className={styles.tiles}>
-            {[0, 1, 2, 3, 4].map((index) => (
-              <Skeleton key={index} height={108} className={styles.skeleton} />
-            ))}
-          </div>
-        </div>
+        <LoadingIndicator compact label="Загружаем сводки" />
       ) : summaries.isError ? (
         <ErrorState
           compact
@@ -63,7 +56,7 @@ function remaining(state: AiSummariesState): number {
 }
 
 function StartButton({ state }: { state: AiSummariesState }) {
-  const toast = useToast();
+  const snackbars = useSnackbars();
   const start = useStartAiSummaries();
   const [confirming, setConfirming] = useState(false);
   const submit = () =>
@@ -71,12 +64,11 @@ function StartButton({ state }: { state: AiSummariesState }) {
       onSuccess: () => setConfirming(false),
       onError: (error) => {
         setConfirming(false);
-        toast.show({
-          message: errorText(error, 'Не удалось запустить пересчёт', {
+        snackbars.error(
+          errorText(error, 'Не удалось запустить пересчёт', {
             business_rule_violation: 'Пересчёт уже идёт',
           }),
-          tone: 'error',
-        });
+        );
       },
     });
   return (
@@ -158,7 +150,7 @@ function SummariesView({ state }: { state: AiSummariesState }) {
         />
       </div>
       {state.lastFinishedAt && (
-        <p className={styles.muted}>
+        <p className="m3-muted">
           Последний запуск: построено {formatNumber(state.lastGenerated)}, отклонено{' '}
           {formatNumber(state.lastFailed)}, запросов {formatNumber(state.lastRequests)}
         </p>

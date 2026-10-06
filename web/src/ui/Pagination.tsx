@@ -20,7 +20,7 @@ export function Pagination({ page, size, total, onChange, className }: Paginatio
   const to = Math.min(total, (page + 1) * size);
   return (
     <nav className={cx(styles.pagination, className)} aria-label="Страницы">
-      <span className={styles.range} aria-live="polite">
+      <span className={cx(styles.range, 'm3-num')} aria-live="polite">
         {formatNumber(from)}–{formatNumber(to)} из {formatNumber(total)}
       </span>
       <IconButton

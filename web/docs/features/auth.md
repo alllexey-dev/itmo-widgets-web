@@ -14,7 +14,8 @@ in-development card.
 - `ADMIN` has moderator access plus dashboard, users, sport, system, reviews
   and audit. It is granted only through SQL on the server.
 
-The account menu contains logout and system, light and dark theme choices.
+The bottom of the navigation rail shows the signed-in user with `Выйти`;
+`Оформление` sets the shared alllexey.dev theme (see `../design.md`).
 A session expires after 2 hours without requests or 12 hours after sign-in.
 Only the phone app can approve sign-in; a web session cannot approve another
 browser.

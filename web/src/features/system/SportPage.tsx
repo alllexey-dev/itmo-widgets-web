@@ -8,10 +8,12 @@ import {
   formatDuration,
   formatNumber,
   formatRelative,
+  LoadingIndicator,
   PageHeader,
-  Skeleton,
   Stat,
+  StatusShape,
   Table,
+  type StatusTone,
   type TableColumn,
 } from '../../ui';
 import { useSportStatus } from './api';
@@ -20,7 +22,7 @@ import styles from './SystemPages.module.css';
 import type { SportErrorCategory, SportOutcome, SportRun, SportStatus } from './types';
 
 const RUN_COLUMNS: TableColumn<SportRun>[] = [
-  { key: 'time', header: 'Время', render: (run) => formatDateTime(run.timestamp) },
+  { key: 'time', header: 'Время', minWidth: 152, render: (run) => formatDateTime(run.timestamp) },
   {
     key: 'outcome',
     header: 'Исход',
@@ -43,28 +45,32 @@ const RUN_COLUMNS: TableColumn<SportRun>[] = [
     key: 'error',
     header: 'Ошибка',
     render: (run) =>
-      run.errorCategory ? (
-        ERROR_CATEGORIES[run.errorCategory]
-      ) : (
-        <span className={styles.muted}>—</span>
-      ),
+      run.errorCategory ? ERROR_CATEGORIES[run.errorCategory] : <span className="m3-muted">—</span>,
   },
 ];
 
 /** The latest run decides the headline state. */
 function Health({ runs }: { runs: readonly SportRun[] }) {
   const latest = runs[0];
-  if (!latest) return <Badge>Запусков не было</Badge>;
-  const outcome = OUTCOMES[latest.outcome];
+  if (!latest) {
+    return (
+      <span className={styles.health}>
+        <StatusShape tone="off" />
+        Запусков не было
+      </span>
+    );
+  }
   const text: Record<SportOutcome, string> = {
     SUCCESS: 'Каталог обновляется',
     PARTIAL: 'Последний запуск с ошибками',
     FAILED: 'Последний запуск упал',
   };
+  const tone: Record<SportOutcome, StatusTone> = { SUCCESS: 'ok', PARTIAL: 'warn', FAILED: 'bad' };
   return (
-    <Badge tone={outcome.tone} icon={outcome.icon}>
+    <span className={styles.health}>
+      <StatusShape tone={tone[latest.outcome]} size={14} />
       {text[latest.outcome]}
-    </Badge>
+    </span>
   );
 }
 
@@ -78,14 +84,7 @@ export function SportPage() {
         actions={status.data && <Health runs={status.data.runs} />}
       />
       {status.isPending ? (
-        <div className={styles.stack} role="status" aria-label="Загружаем состояние спорта">
-          <div className={styles.tiles}>
-            {[0, 1, 2, 3].map((index) => (
-              <Skeleton key={index} height={108} className={styles.skeleton} />
-            ))}
-          </div>
-          <Skeleton height={320} className={styles.skeleton} />
-        </div>
+        <LoadingIndicator label="Загружаем состояние спорта" />
       ) : status.isError ? (
         <ErrorState
           title="Не удалось загрузить состояние спорта"
@@ -144,10 +143,10 @@ function SportView({ status }: { status: SportStatus }) {
           caption="ждут места"
         />
       </div>
-      <Card as="section" padding="large" aria-label="Ошибки за 7 дней">
+      <Card as="section" aria-label="Ошибки за 7 дней">
         <CardHeader title="Ошибки за 7 дней" />
         {errors.length === 0 ? (
-          <p className={styles.muted}>Ошибок не было</p>
+          <p className="m3-muted">Ошибок не было</p>
         ) : (
           <ul className={styles.errorList}>
             {errors.map((category) => (
@@ -160,19 +159,17 @@ function SportView({ status }: { status: SportStatus }) {
           </ul>
         )}
       </Card>
-      <section className={styles.section} aria-labelledby="sport-runs">
-        <h2 id="sport-runs" className={styles.sectionTitle}>
-          Последние запуски
-        </h2>
+      <Card as="section" aria-labelledby="sport-runs">
+        <CardHeader title={<span id="sport-runs">Последние запуски</span>} />
         <Table
           caption="Последние запуски"
           columns={RUN_COLUMNS}
           rows={status.runs}
           rowKey={(run) => String(run.id)}
-          maxHeight="none"
+          bleed
           empty={{ icon: 'sync_disabled', title: 'Запусков ещё не было' }}
         />
-      </section>
+      </Card>
     </div>
   );
 }

@@ -4,15 +4,16 @@ import { DEFAULT_PAGE_SIZE } from '../../api/admin';
 import { errorText } from '../../api/errors';
 import {
   Avatar,
+  Card,
   ErrorState,
   formatDate,
   formatNumber,
-  IconButton,
+  LoadingOverlay,
   PageHeader,
   Pagination,
   plural,
+  Search,
   Table,
-  TextField,
   useDebouncedValue,
   type TableColumn,
 } from '../../ui';
@@ -27,6 +28,7 @@ const COLUMNS: TableColumn<AdminUserItem>[] = [
   {
     key: 'name',
     header: 'Пользователь',
+    minWidth: 200,
     render: (user) => (
       <span className={styles.user}>
         <Avatar name={user.name} src={user.pictureUrl} size={32} decorative />
@@ -91,17 +93,14 @@ export function UsersPage() {
     <>
       <PageHeader title="Пользователи" description="Поиск по ИСУ, имени или группе" />
       <div className={styles.toolbar}>
-        <TextField
+        <Search
           className={styles.search}
           label="Поиск"
-          hideLabel
-          icon="search"
           placeholder="ИСУ, имя или группа"
           autoComplete="off"
           maxLength={QUERY_LIMIT}
           value={text}
-          onChange={(event) => search(event.target.value)}
-          trailing={text && <IconButton icon="close" label="Очистить" onClick={() => search('')} />}
+          onChange={search}
         />
         {total !== undefined && (
           <span className={styles.total} aria-live="polite">
@@ -117,30 +116,31 @@ export function UsersPage() {
           retrying={users.isFetching}
         />
       ) : (
-        <>
-          <Table
-            caption="Пользователи"
-            columns={COLUMNS}
-            rows={users.data?.items ?? []}
-            rowKey={(user) => String(user.isu)}
-            loading={users.isPending}
-            onRowClick={(user) => void navigate(`/admin/users/${user.isu}`)}
-            maxHeight="none"
-            empty={{
-              icon: 'person_search',
-              title: 'Никого не нашли',
-              description: query ? 'Проверьте запрос: ИСУ, часть имени или группы.' : undefined,
-            }}
-          />
-          {users.data && (
-            <Pagination
-              page={page}
-              size={DEFAULT_PAGE_SIZE}
-              total={users.data.total}
-              onChange={(next) => update({ page: next > 0 ? String(next) : null })}
+        <LoadingOverlay loading={users.isPlaceholderData}>
+          <Card padding="none">
+            <Table
+              caption="Пользователи"
+              columns={COLUMNS}
+              rows={users.data?.items ?? []}
+              rowKey={(user) => String(user.isu)}
+              loading={users.isPending}
+              onRowClick={(user) => void navigate(`/admin/users/${user.isu}`)}
+              empty={{
+                icon: 'person_search',
+                title: 'Никого не нашли',
+                description: query ? 'Проверьте запрос: ИСУ, часть имени или группы.' : undefined,
+              }}
             />
-          )}
-        </>
+            {users.data && (
+              <Pagination
+                page={page}
+                size={DEFAULT_PAGE_SIZE}
+                total={users.data.total}
+                onChange={(next) => update({ page: next > 0 ? String(next) : null })}
+              />
+            )}
+          </Card>
+        </LoadingOverlay>
       )}
     </>
   );

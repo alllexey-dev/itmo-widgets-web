@@ -37,7 +37,8 @@ name from the backend, else `Преподаватель`, and the ISU), the prev
 version and score), the changes (`ChangesSection` or `ReviewChangesSection`),
 the reject presets (`LINK_REJECT_PRESETS`, `REVIEW_REJECT_PRESETS` in
 `labels.ts`), the default restriction (`SUBMIT_RESOURCES` or `WRITE_REVIEWS`),
-the "hide all" dialog texts and the decision toasts (`doneText`).
+the "hide all" dialog texts (confirmed by typing the author's name) and the
+decision snackbars (`doneText`).
 `ReviewChangesSection` compares the reviewed revision with `review.shown`, the
 approved content: the subject goes into the usual `DiffView` table and the text
 into `TextDiff`, which renders `wordDiff(before, after)`, a word-level longest

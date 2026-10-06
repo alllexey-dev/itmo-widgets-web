@@ -18,6 +18,8 @@
     "gen:tokens": "node ../scripts/gen-tokens.mjs"
   },
   "dependencies": {
+    "@alllexey/ui": "0.2.0",
+    "@material-symbols/svg-400": "0.47.6",
     "@tanstack/react-query": "5.103.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -44,12 +46,12 @@
     "jsdom": "30.1.1",
     "jsqr": "1.4.0",
     "msw": "2.15.0",
+    "openapi-typescript": "7.13.0",
     "prettier": "3.9.9",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.1",
     "vite": "8.3.0",
-    "vitest": "5.0.1",
-    "openapi-typescript": "7.13.0"
+    "vitest": "5.0.1"
   },
   "overrides": {
     "openapi-typescript": {

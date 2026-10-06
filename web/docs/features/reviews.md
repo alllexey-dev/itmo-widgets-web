@@ -57,7 +57,7 @@ whose `summaryTagLabel(code)` returns an unknown code as is.
   "Сводки ещё нет". Model texts are rendered as React text only, never as HTML
   or links. "Скрыть"/"Показать" toggles `hidden`; "Пересчитать" is disabled for
   a hidden summary, fewer than 3 current reviews or disabled summaries and
-  toasts "Пересчёт запрошен". Errors 404 and 409 toast "Сводка не найдена" and
+  shows the snackbar "Пересчёт запрошен". Errors 404 and 409 show "Сводка не найдена" and
   "Сейчас пересчитать нельзя". A tall dialog scrolls as a whole panel because
   `.body` in `ui/Dialog.module.css` does not shrink (`flex-shrink: 0`), so the
   content never runs under the actions.

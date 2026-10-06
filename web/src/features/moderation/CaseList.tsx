@@ -1,6 +1,6 @@
 import type { IconName } from '../../ui/icons';
 import { useEffect, useRef } from 'react';
-import { Badge, cx, Icon, Skeleton, formatRelative } from '../../ui';
+import { Badge, cx, Icon, LoadingIndicator, formatRelative } from '../../ui';
 import { CATEGORIES, hostOf, REASONS } from './labels';
 import styles from './CaseList.module.css';
 import type { AdminCaseItem } from './types';
@@ -116,18 +116,6 @@ function CaseRow({
   );
 }
 
-export function CaseListSkeleton() {
-  return (
-    <div className={styles.skeleton} role="status" aria-label="Загружаем заявки">
-      {Array.from({ length: 6 }, (_, index) => (
-        <div key={index} className={styles.skeletonRow}>
-          <Skeleton shape="circle" />
-          <div className={styles.skeletonText}>
-            <Skeleton shape="text" width="70%" />
-            <Skeleton shape="text" width="45%" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+export function CaseListLoading() {
+  return <LoadingIndicator label="Загружаем заявки" />;
 }

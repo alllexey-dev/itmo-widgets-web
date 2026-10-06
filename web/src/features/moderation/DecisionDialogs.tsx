@@ -180,6 +180,7 @@ export function HideAllDialog({
       description={description}
       confirmLabel="Скрыть всё"
       danger
+      requireText={authorName}
       loading={saving}
     />
   );

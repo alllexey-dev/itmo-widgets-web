@@ -98,7 +98,7 @@ describe('UsersPage', () => {
     renderApp('/admin/users');
     await screen.findByRole('row', { name: /Олег Сидоров/ });
 
-    await userEvent.type(screen.getByRole('textbox', { name: 'Поиск' }), 'P32');
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Поиск' }), 'P32');
 
     await waitFor(() =>
       expect(screen.queryByRole('row', { name: /Иван Петров/ })).not.toBeInTheDocument(),

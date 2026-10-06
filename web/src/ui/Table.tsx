@@ -1,15 +1,19 @@
-import type { IconName } from './icons';
-import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
-import styles from './Table.module.css';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { cx } from './cx';
 import { EmptyState } from './EmptyState';
-import { Skeleton } from './Skeleton';
+import type { IconName } from './icons';
+import { LoadingIndicator } from './LoadingIndicator';
+import styles from './Table.module.css';
 
 export interface TableColumn<Row> {
   key: string;
   header: ReactNode;
   render: (row: Row) => ReactNode;
-  width?: CSSProperties['width'];
+  /** A fixed width in px; by default the column takes a share of the free space. */
+  width?: number;
+  /** The narrowest the column gets before the table scrolls sideways (px). */
+  minWidth?: number;
+  /** `end` for numbers: right-aligned with tabular digits (`m3-num`). */
   align?: 'start' | 'end' | 'center';
 }
 
@@ -19,18 +23,25 @@ export interface TableProps<Row> {
   columns: TableColumn<Row>[];
   rows: readonly Row[];
   rowKey: (row: Row) => string;
+  /** First load: no rows yet. Replacing shown rows belongs to LoadingOverlay. */
   loading?: boolean;
   /** Shown instead of rows when there are none. */
   empty?: { title: ReactNode; description?: ReactNode; icon?: IconName };
   onRowClick?: (row: Row) => void;
   selectedKey?: string | null;
-  /** The table scrolls inside this height so the header stays visible. */
-  maxHeight?: CSSProperties['maxHeight'];
+  /** Inside a padded card: rows reach the card's edges. */
+  bleed?: boolean;
   className?: string;
 }
 
-const SKELETON_ROWS = 5;
+const GAP = 16;
+const PADDING = 40;
+const DEFAULT_MIN = 96;
 
+/**
+ * `m3-table`: grid rows inside a card that scroll sideways on their own when the screen is
+ * narrower than the columns, so the page itself never does.
+ */
 export function Table<Row>({
   caption,
   columns,
@@ -40,10 +51,22 @@ export function Table<Row>({
   empty = { title: 'Пусто' },
   onRowClick,
   selectedKey,
-  maxHeight = '70vh',
+  bleed = false,
   className,
 }: TableProps<Row>) {
-  const handleKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, row: Row) => {
+  const template = columns
+    .map((column) =>
+      column.width ? `${column.width}px` : `minmax(${column.minWidth ?? DEFAULT_MIN}px, 1fr)`,
+    )
+    .join(' ');
+  const minWidth =
+    columns.reduce((sum, column) => sum + (column.width ?? column.minWidth ?? DEFAULT_MIN), 0) +
+    GAP * (columns.length - 1) +
+    PADDING;
+  const align = (column: TableColumn<Row>) =>
+    cx(styles.cell, styles[column.align ?? 'start'], column.align === 'end' && 'm3-num');
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>, row: Row) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       onRowClick?.(row);
@@ -51,64 +74,62 @@ export function Table<Row>({
   };
 
   return (
-    <div className={cx(styles.wrapper, className)} style={{ maxHeight }}>
-      <table className={styles.table} aria-busy={loading || undefined}>
-        <caption className="visually-hidden">{caption}</caption>
-        <thead>
-          <tr>
+    <div
+      className={cx('m3-table', styles.table, bleed && styles.bleed, className)}
+      role="table"
+      aria-label={caption}
+      aria-busy={loading || undefined}
+    >
+      <div className={styles.inner} style={{ minWidth }}>
+        <div role="rowgroup">
+          <div role="row" className="tr" style={{ gridTemplateColumns: template }}>
             {columns.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                className={styles[column.align ?? 'start']}
-                style={{ width: column.width }}
-              >
+              <div key={column.key} role="columnheader" className={cx('th', align(column))}>
                 {column.header}
-              </th>
+              </div>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {loading &&
-            Array.from({ length: SKELETON_ROWS }, (_, index) => (
-              <tr key={`skeleton-${index}`}>
-                {columns.map((column) => (
-                  <td key={column.key}>
-                    <Skeleton shape="text" width="70%" />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          {!loading && rows.length === 0 && (
-            <tr>
-              <td colSpan={columns.length} className={styles.emptyCell}>
-                <EmptyState compact {...empty} />
-              </td>
-            </tr>
-          )}
+          </div>
+        </div>
+        <div role="rowgroup">
           {!loading &&
             rows.map((row) => {
               const key = rowKey(row);
               const selected = selectedKey === key;
               return (
-                <tr
+                <div
                   key={key}
-                  className={cx(onRowClick && styles.clickable, selected && styles.selected)}
+                  role="row"
+                  className={cx('tr', onRowClick && styles.clickable, selected && styles.selected)}
+                  style={{ gridTemplateColumns: template }}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   onKeyDown={onRowClick ? (event) => handleKeyDown(event, row) : undefined}
                   tabIndex={onRowClick ? 0 : undefined}
                   aria-selected={onRowClick ? selected : undefined}
                 >
                   {columns.map((column) => (
-                    <td key={column.key} className={styles[column.align ?? 'start']}>
+                    <div key={column.key} role="cell" className={align(column)}>
                       {column.render(row)}
-                    </td>
+                    </div>
                   ))}
-                </tr>
+                </div>
               );
             })}
-        </tbody>
-      </table>
+        </div>
+      </div>
+      {/* Outside the wide grid, so the state stays in view on a phone. */}
+      {(loading || rows.length === 0) && (
+        <div role="rowgroup" className={styles.state}>
+          <div role="row">
+            <div role="cell">
+              {loading ? (
+                <LoadingIndicator compact label={`Загружаем: ${caption.toLowerCase()}`} />
+              ) : (
+                <EmptyState compact {...empty} />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

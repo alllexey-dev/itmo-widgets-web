@@ -14,7 +14,7 @@ const columns: TableColumn<Row>[] = [
 ];
 
 describe('Table', () => {
-  it('shows the empty state in one full-width cell', () => {
+  it('shows the empty state in one cell across the row', () => {
     render(
       <Table
         caption="Пользователи"
@@ -26,8 +26,11 @@ describe('Table', () => {
     );
 
     const table = screen.getByRole('table', { name: 'Пользователи' });
-    const cell = within(table).getByText('Никого не нашли').closest('td');
-    expect(cell).toHaveAttribute('colspan', '2');
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(2);
+    const cells = within(rows[1] as HTMLElement).getAllByRole('cell');
+    expect(cells).toHaveLength(1);
+    expect(cells[0]).toHaveTextContent('Никого не нашли');
     expect(within(table).getByText('Измените запрос.')).toBeInTheDocument();
     expect(within(table).getAllByRole('columnheader')).toHaveLength(2);
   });
