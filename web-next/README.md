@@ -105,9 +105,22 @@ npm run dev
 каждой роли на 375 и 1280 px; любое нарушение CSP или ошибка страницы - код 1,
 нет Chromium - код 2 (скрипт ничего не скачивает, берёт `CHROMIUM` или
 уже скачанный Playwright headless shell).
-`npm run csp-preview -- --serve` оставляет сервер на `http://127.0.0.1:4176`:
-`/qa/signed-out`, `/qa/student`, `/qa/moderator`, `/qa/admin` переключают
-синтетическую сессию.
+`npm run csp-preview -- --serve` оставляет сервер на `http://127.0.0.1:4176`
+(другой порт - `PREVIEW_PORT`): `/qa/signed-out`, `/qa/student`,
+`/qa/moderator`, `/qa/admin` переключают синтетическую сессию. Для персонала
+`scripts/qa-moderation.mjs` отдаёт вымышленные заявки и ограничения.
+
+## Модерация
+
+Порт `../web/docs/features/moderation.md` в `src/features/moderation/`:
+`/admin/moderation` - вкладка "Заявки", `/admin/restrictions` - вкладка
+"Ограничения" той же страницы. От 1100 px очередь и заявка стоят рядом и первая
+заявка открывается сама, на телефоне сначала список, заявка открывается вместо
+него. В адресе `status`, `reason`, `page`, `case` (выбор заявки заменяет запись
+истории) и `isu`, `all`, `page` у ограничений. Ключи кеша - пути запросов, после
+решения `forget('/api/admin/moderation')`. Подписи категорий и жалоб сверяет
+`src/test/labelsDrift.test.ts` с `src/test/fixtures/app-labels.json`, который
+`scripts/sync-app-labels.mjs` пишет для обоих приложений.
 
 ## Тесты
 

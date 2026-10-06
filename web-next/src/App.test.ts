@@ -64,7 +64,6 @@ describe('Shell', () => {
   });
 
   it.each([
-    ['/admin/restrictions', 'Модерация'],
     ['/admin/dashboard', 'Главная'],
     ['/admin/users/400002', 'Пользователи'],
     ['/u/400002', 'Друзья'],
@@ -78,8 +77,6 @@ describe('Shell', () => {
   });
 
   it.each([
-    '/admin/moderation',
-    '/admin/restrictions',
     '/admin/dashboard',
     '/admin/users',
     '/admin/users/400002',

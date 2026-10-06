@@ -3,6 +3,7 @@
 //
 //   npm run csp-preview             build, check every page, exit 1 on a violation (2 without Chromium)
 //   npm run csp-preview -- --serve  build and keep serving on http://127.0.0.1:4176/app/ for a browser
+//                                   (PREVIEW_PORT=<port> picks another port)
 //
 // In --serve mode /qa/<signed-out|student|moderator|admin> switches the synthetic session and opens /app/.
 // Static synthetic data only: no proxy, no upstream request, no real account or cookie.
@@ -11,6 +12,7 @@ import { createServer } from 'node:http';
 import { homedir } from 'node:os';
 import { extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { moderationApi } from './qa-moderation.mjs';
 
 const project = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dist = resolve(project, 'dist');
@@ -46,11 +48,17 @@ function roleOf(request) {
   return match?.[1] ?? 'signed-out';
 }
 
-function api(request, response, path) {
+async function api(request, response, url) {
+  const path = url.pathname;
   const role = roleOf(request);
   let status = 200;
   let body;
-  if (path === '/api/web/auth/me') {
+  const staff = role === 'moderator' || role === 'admin';
+  const moderation = staff ? await moderationApi(request, url) : undefined;
+  if (moderation) {
+    status = moderation[0];
+    body = status === 200 ? ok(moderation[1]) : failure('not_found', 'No synthetic case');
+  } else if (path === '/api/web/auth/me') {
     if (ROLES[role]) body = ok(userOf(ROLES[role]));
     else [status, body] = [401, failure('unauthorized', 'Synthetic signed out')];
   } else if (path === '/api/web/auth/logout' && request.method === 'POST') {
@@ -98,7 +106,7 @@ const server = createServer((request, response) => {
     response.setHeader('Set-Cookie', `qa-role=${qa[1]}; Path=/`);
     response.setHeader('Location', qa[1] === 'signed-out' ? '/app/login' : '/app/');
     response.end();
-  } else if (path.startsWith('/api/')) api(request, response, path);
+  } else if (path.startsWith('/api/')) void api(request, response, url);
   else if (path === '/app' || path === '/') {
     response.statusCode = 302;
     response.setHeader('Location', '/app/');
@@ -118,6 +126,7 @@ const PAGES = [
   ['student', '/app/admin/users'],
   ['student', '/app/no-such-page'],
   ['moderator', '/app/admin/moderation'],
+  ['moderator', '/app/admin/moderation?case=qa-review-1'],
   ['admin', '/app/'],
   ['admin', '/app/admin/restrictions'],
   ['admin', '/app/admin/dashboard'],
@@ -225,7 +234,8 @@ async function check(base) {
   return problems.length ? 1 : 0;
 }
 
-server.listen(serve ? 4176 : 0, '127.0.0.1', async () => {
+// PREVIEW_PORT lets parallel worktrees serve side by side.
+server.listen(serve ? Number(process.env.PREVIEW_PORT) || 4176 : 0, '127.0.0.1', async () => {
   const { port } = server.address();
   const base = `http://127.0.0.1:${port}`;
   if (serve) {
