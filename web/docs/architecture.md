@@ -71,9 +71,11 @@ string through `useSearchParams`. Section documents list their parameters.
 
 `src/api/openapi.json` is the byte-identical Backend `docs/openapi.json` snapshot
 at the full commit recorded in `src/api/openapi.source` (including its SHA-256).
-Refresh only from a commit on Backend `v2.3/next` with
+Since WV-01 `scripts/sync-openapi.sh` refreshes the copy in `web-next/src/api/`
+(see `web-next/README.md`); this copy stays frozen with the React app until
+WV-06. Refresh only from a commit on Backend `v2.3/next` with
 `scripts/sync-openapi.sh <full-sha>` at the repository root, then run
-`cd web && npm run gen:api`. The script reads a local Backend checkout when
+`cd web-next && npm run gen:api`. The script reads a local Backend checkout when
 available (`BACKEND_REPO` overrides its path), otherwise GitHub's commit-pinned
 contents API; it never calls a running Backend. Never hand-edit the snapshot or
 `schema.ts`, including during a rebase: refresh and regenerate them instead.

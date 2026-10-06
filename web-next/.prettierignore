@@ -1,0 +1,7 @@
+dist
+coverage
+node_modules
+package-lock.json
+# Generated: openapi-typescript output and the Backend snapshot stay byte-exact.
+src/api/openapi.json
+src/api/schema.ts

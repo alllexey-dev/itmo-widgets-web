@@ -3,5 +3,7 @@
 web/node_modules
 web/dist
 web/coverage
+web-next/node_modules
+web-next/dist
 compose*.yml
 design/

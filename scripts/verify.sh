@@ -3,18 +3,35 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
-quick() {
-    "$ROOT/scripts/check-site.sh" --unreferenced
-    cd "$ROOT/web"
+install() {
     if ! cmp -s package-lock.json node_modules/.package-lock.json; then
         npm ci --no-audit --no-fund
     fi
-    npm run gen:api -- --check
-    npm run gen:tokens -- --check
-    npm run lint
-    npm run typecheck
-    npm test
-    npm run build
+}
+
+quick() {
+    "$ROOT/scripts/check-site.sh" --unreferenced
+    # The React app (frozen, deployed until WV-06).
+    (
+        cd "$ROOT/web"
+        install
+        npm run gen:api -- --check
+        npm run gen:tokens -- --check
+        npm run lint
+        npm run typecheck
+        npm test
+        npm run build
+    )
+    # The Svelte app growing next to it; not in the image yet.
+    (
+        cd "$ROOT/web-next"
+        install
+        npm run gen:api -- --check
+        npm run lint
+        npm run typecheck
+        npm test
+        npm run build
+    )
 }
 
 site() (
