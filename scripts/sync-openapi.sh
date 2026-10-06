@@ -25,7 +25,7 @@ else
         "repos/$REPO/contents/docs/openapi.json?ref=$SHA" > "$SNAPSHOT"
 fi
 
-cp "$SNAPSHOT" "$ROOT/web/src/api/openapi.json"
+cp "$SNAPSHOT" "$ROOT/web-next/src/api/openapi.json"
 DIGEST=$(shasum -a 256 "$SNAPSHOT" | cut -d ' ' -f 1)
-printf 'repo=%s\ncommit=%s\npath=docs/openapi.json\nsha256=%s\n' "$REPO" "$SHA" "$DIGEST" > "$ROOT/web/src/api/openapi.source"
-echo "Copied Backend $SHA; run cd web && npm run gen:api."
+printf 'repo=%s\ncommit=%s\npath=docs/openapi.json\nsha256=%s\n' "$REPO" "$SHA" "$DIGEST" > "$ROOT/web-next/src/api/openapi.source"
+echo "Copied Backend $SHA; run cd web-next && npm run gen:api."

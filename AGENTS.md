@@ -13,6 +13,9 @@ Ecosystem rules: `/Users/alllexey/proj/ITMO.Widgets/AGENTS.md` and its `docs/pro
   is not installed.
 - `web/` - the web app: Vite, React 19, TypeScript strict, React Router
   (`basename="/app"`), TanStack Query v5, CSS Modules, Vitest + Testing Library + MSW.
+  Frozen (fixes only) and deployed until WV-06 replaces it with `web-next/`.
+- `web-next/` - the web v3 in Svelte 5 on `@alllexey/ui`, growing card by card
+  (WV-01..WV-06); not in the image yet. See `web-next/README.md`.
 - `deploy/site.nginx.conf` — nginx inside the image: landing at `/`, the SPA at `/app/`.
 - Caddy routing lives in `srvscripts/stacks/edge/Caddyfile`: `/api/*` goes to
   Backend; all other paths go to `itmowidgets-web{,-dev}:80` on both hosts.
