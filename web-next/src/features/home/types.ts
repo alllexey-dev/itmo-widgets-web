@@ -11,3 +11,7 @@ export type AiSummaries = Schemas['AdminAiSummaries'];
 export type ReviewsSync = Schemas['AdminReviewsSync'];
 export type DashboardTotals = Schemas['AdminDashboardTotals'];
 export type Dashboard = Schemas['AdminDashboard'];
+
+export type UserProfile = Schemas['UserProfile'];
+export type QueueEntry = Schemas['SportAutoSignEntry'] | Schemas['SportFreeSignEntry'];
+export type PrivacySettings = Schemas['UserPrivacySettings'];

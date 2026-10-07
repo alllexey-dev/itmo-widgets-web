@@ -13,6 +13,7 @@ import { homedir } from 'node:os';
 import { extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { moderationApi } from './qa-moderation.mjs';
+import { studentApi } from './qa-student.mjs';
 
 const project = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dist = resolve(project, 'dist');
@@ -240,9 +241,13 @@ async function api(request, response, url) {
   let status = 200;
   let body;
   const moderation = staff ? await moderationApi(request, url) : undefined;
+  const student = ROLES[role] ? await studentApi(request, url) : undefined;
   if (moderation) {
     status = moderation[0];
     body = status === 200 ? ok(moderation[1]) : failure('not_found', 'No synthetic case');
+  } else if (student) {
+    status = student[0];
+    body = status === 200 ? ok(student[1]) : failure('not_found', 'No synthetic user');
   } else if (path.startsWith('/api/admin/') && !staff) {
     [status, body] = [403, failure('permission_denied', 'Synthetic role check')];
   } else if (request.method === 'GET' && ADMIN[path]) {
@@ -316,6 +321,13 @@ const PAGES = [
   ['signed-out', '/app/login?code=K7MW3QXP'],
   ['signed-out', '/app/admin/users'],
   ['student', '/app/'],
+  ['student', '/app/friends'],
+  ['student', '/app/friends?tab=incoming'],
+  ['student', '/app/u/311111'],
+  ['student', '/app/u/311114'],
+  ['student', '/app/u/999999'],
+  ['student', '/app/sport'],
+  ['student', '/app/me'],
   ['student', '/app/admin/users'],
   ['student', '/app/no-such-page'],
   ['moderator', '/app/'],

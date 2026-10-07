@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../../test/render';
 import {
   challengeOf,
@@ -14,6 +14,10 @@ import {
   server,
   userOf,
 } from '../../test/server';
+import { mockStudentSources } from '../../test/student';
+
+// A signed-in user lands on Главная, which loads the student cards.
+beforeEach(() => void mockStudentSources());
 
 function setTabHidden(hidden: boolean) {
   Object.defineProperty(document, 'visibilityState', {
@@ -62,7 +66,7 @@ describe('LoginPage', () => {
 
     await vi.advanceTimersByTimeAsync(2_000);
 
-    expect(await screen.findByRole('heading', { name: 'Анна Смирнова' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Главная' })).toBeInTheDocument();
     expect(location.pathname).toBe('/app/');
   });
 
@@ -187,7 +191,7 @@ describe('LoginPage', () => {
 
     renderApp('/login');
 
-    expect(await screen.findByRole('heading', { name: 'Анна Смирнова' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Главная' })).toBeInTheDocument();
     expect(location.pathname).toBe('/app/');
   });
 

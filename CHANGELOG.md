@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- WV-05: Build the student sections of the web v3: friend requests, sport queues, audiences and the app on Главная; Друзья with tabs, local search and adding by ISU; a person's page with schedule, sport and friends by capability; own sport queues with leaving and the auto-sign limit; Профиль with privacy, an active restriction and sign-out.
 - WV-03: Build the web v3 home with the staff attention card and the admin 7-day card, statistics on the shared uPlot chart, users with search, devices per platform and the moderator switch, and the audit log.
 - WV-02: Port moderation to the Svelte web v3: one queue for links and reviews with a split view on wide screens, case details with diffs, decisions with required reasons and typed confirmation, J/K/A/R shortcuts, shareable URL state, and the restrictions tab at the old address.
 - WV-04: Build Система and Отзывы in the web v3: per-platform app versions with the iOS editor only on a Backend that keeps platforms apart, credentials with replacement and polling, sport automation (also at /app/admin/sport), moderation rules, reviews sync, ISU check, AI summaries, the teachers table and the summary dialog.
