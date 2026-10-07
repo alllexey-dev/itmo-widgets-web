@@ -1,9 +1,9 @@
-import react from '@vitejs/plugin-react';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
   base: '/app/',
-  plugins: [react()],
+  plugins: [svelte()],
   server: {
     port: 5173,
     proxy: {
@@ -14,8 +14,10 @@ export default defineConfig({
       },
     },
   },
+  preview: { port: 4174 },
   build: {
     outDir: 'dist',
+    emptyOutDir: true,
     sourcemap: false,
   },
 });

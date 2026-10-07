@@ -1,4 +1,6 @@
-/** The backend's rule (`AdminSystemService`): up to four dotted numbers and an optional `-suffix`. */
+// The rules of Backend `AdminSystemService`, so the form refuses what the server would refuse.
+
+/** Up to four dotted numbers and an optional `-suffix`. */
 const VERSION = /^[0-9]+(\.[0-9]+){0,3}(-[0-9A-Za-z.]{1,20})?$/;
 
 export const NOTE_LIMIT = 500;
@@ -10,11 +12,7 @@ export function isVersion(value: string): boolean {
 /** Compares the numeric parts; a suffix like `-beta` does not count, as on the backend. */
 export function compareVersions(first: string, second: string): number {
   const parts = (version: string) =>
-    version
-      .trim()
-      .split('-')[0]
-      ?.split('.')
-      .map((part) => Number(part) || 0) ?? [];
+    (version.trim().split('-')[0] ?? '').split('.').map((part) => Number(part) || 0);
   const a = parts(first);
   const b = parts(second);
   for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
@@ -22,4 +20,10 @@ export function compareVersions(first: string, second: string): number {
     if (diff !== 0) return diff;
   }
   return 0;
+}
+
+export function versionError(value: string): string | undefined {
+  if (!value.trim()) return 'Укажите версию';
+  if (!isVersion(value)) return 'Например, 2.3 или 2.3.1-beta';
+  return undefined;
 }

@@ -11,11 +11,8 @@ Ecosystem rules: `/Users/alllexey/proj/ITMO.Widgets/AGENTS.md` and its `docs/pro
   `site/.well-known/assetlinks.json` verifies the Android App Links on both hosts;
   `site/link/` holds the pages nginx serves for `/u/*` and `/sport/*` when the app
   is not installed.
-- `web/` - the web app: Vite, React 19, TypeScript strict, React Router
-  (`basename="/app"`), TanStack Query v5, CSS Modules, Vitest + Testing Library + MSW.
-  Frozen (fixes only) and deployed until WV-06 replaces it with `web-next/`.
-- `web-next/` - the web v3 in Svelte 5 on `@alllexey/ui`, growing card by card
-  (WV-01..WV-06); not in the image yet. See `web-next/README.md`.
+- `web/` - the web app: Svelte 5 on `@alllexey/ui`, Vite (`base: '/app/'`),
+  TypeScript strict, its own history router, Vitest + Testing Library + MSW.
 - `deploy/site.nginx.conf` — nginx inside the image: landing at `/`, the SPA at `/app/`.
 - Caddy routing lives in `srvscripts/stacks/edge/Caddyfile`: `/api/*` goes to
   Backend; all other paths go to `itmowidgets-web{,-dev}:80` on both hosts.
@@ -37,15 +34,17 @@ Run from `web/`:
 npm ci
 npm run dev          # http://localhost:5173/app/, /api proxied to dev.widgets.alllexey.dev
 npm run lint
-npm run typecheck
+npm run typecheck    # svelte-check, warnings fail
 npm test
 npm run build
+npm run csp-preview  # built app under the production CSP in headless Chromium; -- --serve for a browser
 npm run format
 ```
 
 Before calling web work done, run `scripts/verify.sh` from the repository root
-(default `quick`: install locked dependencies when needed, lint, typecheck, test,
-build). Use Node 22 (`web/.nvmrc`, also used by the Dockerfile and CI).
+(default `quick`: the landing image check, install locked dependencies when
+needed, API type and token drift checks, lint, typecheck, test, build). Use
+Node 22 (`web/.nvmrc`, also used by the Dockerfile and CI).
 For changes to `site/`, `deploy/` or `Dockerfile`, also run `scripts/verify.sh site`:
 it builds and checks a temporary container, then removes it. `full` runs both modes.
 Locally, site mode defaults to `DOCKER_HOST=unix://$HOME/.colima/default/docker.sock`;
@@ -61,13 +60,17 @@ exit 2 means Docker is unavailable. It never starts colima. CI runs `full`.
 ## Web conventions
 
 - Features live in `web/src/features/<name>/` with tests next to the code
-  (`*.test.tsx`); the shell, routes and navigation in `web/src/app/`.
+  (`*.test.ts`); the router, session, shell and shared pieces in `web/src/lib/`;
+  routes map to pages in `web/src/pages.ts`. A feature imports only itself,
+  `src/lib` and `src/api` (ESLint enforces it).
 - All HTTP goes through `web/src/api/client.ts`: same-origin cookie session,
   `X-Web-Request: 1` on every non-GET request, the backend `ApiResponse`
   envelope unwrapped, failures as `ApiError` with the backend error code.
-- Server state through TanStack Query; no global stores. The signed-in user comes
-  from `useSession()` inside the shell.
-- Role-based visibility uses `hasAccess(session, 'user' | 'moderator' | 'admin')`;
+- Server data through `Resource` (`src/lib/resource.svelte.ts`) on the
+  package's `revalidate`; cache keys are request paths and a mutation calls
+  `forget(prefix)` for what it changed. No global stores besides `session` and
+  `router`.
+- Role-based visibility uses `hasAccess(user, 'user' | 'moderator' | 'admin')`;
   `ADMIN` implies moderator rights. The backend enforces access; the UI only hides.
 - Tests: Vitest + Testing Library queries by role and accessible name; HTTP mocked
   with MSW (`web/src/test/server.ts`), never by stubbing `fetch`. Do not test private
@@ -78,24 +81,24 @@ exit 2 means Docker is unavailable. It never starts colima. CI runs `full`.
 ## Design rules
 
 - The web app follows the shared design system `@alllexey/ui` and its `UX.md`
-  (shipped in the npm package); `web/docs/design.md` records how the React app
-  applies them. The package's Svelte components are the reference markup:
-  `web/src/ui/` rebuilds the needed ones as thin React components with the same
-  `m3-*` classes and uses the custom elements (`m3-shape`,
-  `m3-loading-indicator`, `m3-progress`) directly. Import only
-  `@alllexey/ui/css` (once, in `src/ui/global.css`), `/elements` (once, in
-  `src/main.tsx`) and `/theme`; the root entry is Svelte.
+  (shipped in the npm package); `web/docs/design.md` records how the app applies
+  them. Use the package's Svelte components and `m3-*` classes directly; import
+  `@alllexey/ui/css` and `/elements` only once, in `src/main.ts`.
 - Colours, type, shape and motion come from the package's `--md-*` properties;
-  no colour literals in `web/src`. New styling goes in CSS Modules; prefer the
-  package's classes to new CSS. No other UI framework.
+  no colour literals in `web/src` (the QR code's black and white excepted).
+  Styles go in the component's `<style>`; prefer the package's classes to new
+  CSS. No other UI framework.
+- No static `style="..."` in markup: the CSP blocks it. Use classes or `style:`
+  directives; `npm run csp-preview` catches violations.
 - The theme is the shared `alllexey-theme` cookie on `.alllexey.dev` (default
   seed and variant of the package); `Оформление` is in every screen's reach.
-- Icons: Material Symbols Rounded SVG from `@material-symbols/svg-400`, typed in
-  `src/ui/icons.ts`, one meaning per symbol; filled only for the selected state.
-- Every data screen has loading, data, empty and error states; replaced data
+- Icons: Material Symbols Rounded SVG from `@material-symbols/svg-400`,
+  registered with `defineIcons` in `src/lib/icons.ts` or a feature's `icons.ts`,
+  one meaning per symbol; filled only for the selected state.
+- Every data card has loading, data, empty and error states; replaced data
   fades under `LoadingOverlay`; no skeletons and no spinners in buttons.
 - One filled button per area; confirmations name the action; destructive,
-  irreversible actions use `ConfirmDialog` with `danger` and `requireText`;
+  irreversible actions use `ConfirmDialog` with `danger` and a typed name;
   snackbars report results in the past tense.
 - A status is never shown by colour alone. Numbers in tables are right-aligned
   `m3-num`. Phones: 375 px without horizontal page scroll, 48 px targets,

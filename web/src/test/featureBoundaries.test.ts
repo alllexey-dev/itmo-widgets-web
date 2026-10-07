@@ -14,16 +14,9 @@ describe('feature import boundaries', () => {
   it.each([
     '../moderation/types',
     '../../features/moderation/types',
-    '../../../src/features/moderation/types',
-    '@/features/moderation/types',
-    '@features/moderation/types',
-    '#features/moderation/types',
-    '@app/routes',
-    'src/features/moderation/types',
-    '~/features/moderation/types',
-    '../auth/login',
-    '../../app/routes',
     '../../test/server',
+    '../../App.svelte',
+    '../../pages',
     '../../api/../features/moderation/types',
     './nested/../../moderation/types',
   ])('rejects the home feature importing %s', async (specifier) => {
@@ -36,18 +29,12 @@ describe('feature import boundaries', () => {
   });
 
   it.each([
-    './HomePage',
-    '../home/HomePage',
-    '../../features/home/HomePage',
-    '../../api/admin',
-    '../../ui',
-    '../../shared/RestrictionsTable',
-    '../auth/session',
-    '../auth/useSession',
-    '../../features/auth/session',
-    '@/api/admin',
-    'src/shared/RestrictionsTable',
-    'react',
+    './HomePage.svelte',
+    '../home/api',
+    '../../api/client',
+    '../../lib/session.svelte',
+    '@alllexey/ui',
+    'svelte',
   ])('permits the home feature importing %s', async (specifier) => {
     const errors = await boundaryErrors(
       'src/features/home/BoundaryProbe.ts',
@@ -57,15 +44,8 @@ describe('feature import boundaries', () => {
     expect(errors).toHaveLength(0);
   });
 
-  it.each(['ui', 'api', 'shared'])('%s cannot import features or the shell', async (layer) => {
-    for (const specifier of [
-      '../features/home/HomePage',
-      '@/features/auth/session',
-      '../app/routes',
-      'src/app/routes',
-      '@features/home/HomePage',
-      '#app/routes',
-    ]) {
+  it.each(['lib', 'api'])('%s cannot import features', async (layer) => {
+    for (const specifier of ['../features/home/HomePage.svelte', '../features/auth/login']) {
       const errors = await boundaryErrors(
         `src/${layer}/BoundaryProbe.ts`,
         `export { probe } from '${specifier}';`,
@@ -75,13 +55,16 @@ describe('feature import boundaries', () => {
     }
   });
 
-  it.each([
-    'src/app/BoundaryProbe.ts',
-    'src/features/home/BoundaryProbe.test.ts',
-    'src/test/BoundaryProbe.ts',
-  ])('permits feature imports in %s', async (filePath) => {
-    const errors = await boundaryErrors(filePath, "export { probe } from '../moderation/types';");
+  it.each(['src/pages.ts', 'src/features/home/BoundaryProbe.test.ts', 'src/test/BoundaryProbe.ts'])(
+    'permits feature imports in %s',
+    async (filePath) => {
+      const source =
+        filePath === 'src/pages.ts'
+          ? "export { probe } from './features/moderation/types';"
+          : "export { probe } from '../moderation/types';";
+      const errors = await boundaryErrors(filePath, source);
 
-    expect(errors).toHaveLength(0);
-  });
+      expect(errors).toHaveLength(0);
+    },
+  );
 });

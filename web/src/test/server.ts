@@ -1,10 +1,9 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import type { ApiEnvelope } from '../api/client';
-import type { AdminPage } from '../api/admin';
 import type { components } from '../api/schema';
 import type { LoginChallenge, LoginStatus } from '../features/auth/login';
-import type { Session } from '../features/auth/session';
+import type { Role, User } from '../lib/session.svelte';
 
 export const server = setupServer();
 
@@ -20,7 +19,8 @@ export function fail(status: number, code: string, message = 'Ошибка') {
   );
 }
 
-export function sessionOf(roles: Session['roles'], overrides: Partial<Session> = {}): Session {
+/** A synthetic signed-in user; no real accounts. */
+export function userOf(roles: Role[], overrides: Partial<User> = {}): User {
   return {
     isu: 400001,
     name: 'Анна Смирнова',
@@ -28,16 +28,21 @@ export function sessionOf(roles: Session['roles'], overrides: Partial<Session> =
     groups: [{ name: 'P3212', course: 2, facultyShortName: 'ФПИиКТ' }],
     roles,
     ...overrides,
-  } satisfies Session;
+  } satisfies User;
 }
 
-export function mockSession(session: Session) {
-  server.use(http.get('*/api/web/auth/me', () => ok(session)));
+export function mockSession(user: User) {
+  server.use(http.get('*/api/web/auth/me', () => ok(user)));
 }
 
 /** A visitor without a session: `/me` answers 401 unauthorized after Backend BK-15. */
 export function mockSignedOut() {
   server.use(http.get('*/api/web/auth/me', () => fail(401, 'unauthorized')));
+}
+
+/** The same visitor on a Backend before BK-15 (production until gate R): 403 on `/me`. */
+export function mockLegacySignedOut() {
+  server.use(http.get('*/api/web/auth/me', () => fail(403, 'forbidden')));
 }
 
 /** A code that lives 2 minutes from the moment the backend answers. */
@@ -50,8 +55,8 @@ export function challengeOf(code: string): LoginChallenge {
   } satisfies LoginChallenge;
 }
 
-/** Each POST hands out the next code; the last one repeats. */
-export function mockChallenges(...codes: string[]) {
+/** Each POST hands out the next code; the last one repeats. Returns how many were created. */
+export function mockChallenges(...codes: string[]): { created: () => number } {
   let created = 0;
   server.use(
     http.post('*/api/web/auth/challenges', () => {
@@ -60,6 +65,7 @@ export function mockChallenges(...codes: string[]) {
       return ok(challengeOf(code));
     }),
   );
+  return { created: () => created };
 }
 
 /** Answers polls with [status] for the code; a wrong poll secret gets 404 like the backend. */
@@ -70,14 +76,5 @@ export function mockPoll(status: (code: string) => LoginStatus = () => 'PENDING'
       if (request.headers.get('X-Poll-Secret') !== `secret-${code}`) return fail(404, 'not_found');
       return ok({ status: status(code) } satisfies components['schemas']['WebLoginPoll']);
     }),
-  );
-}
-
-/** The open-case count behind the home card: a one-item page with [count] as the total. */
-export function mockOpenCases(count: number) {
-  server.use(
-    http.get('*/api/admin/moderation/cases', () =>
-      ok({ items: [], page: 0, size: 1, total: count } satisfies AdminPage<never>),
-    ),
   );
 }

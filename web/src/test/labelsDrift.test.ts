@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { CATEGORIES, REPORT_REASONS, visibilityLabel } from '../features/moderation/labels';
 import app from './fixtures/app-labels.json';
 
-// Registry IDs correspond to LinkCategory.iconRes() at the recorded app SHA.
+// The guard of web/src/test/labelsDrift.test.ts over the same fixture, which
+// scripts/sync-app-labels.mjs writes for both apps. Registry IDs correspond to
+// LinkCategory.iconRes() at the recorded app SHA.
 const MAPPING = {
   categories: {
     SCORES: ['links_category_scores', 'table'],

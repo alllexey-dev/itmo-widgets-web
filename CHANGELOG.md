@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- WV-06: Switch /app/ to the Svelte web v3: the React app is removed, web-next/ becomes web/ in the same image, nginx and CSP unchanged; the web docs describe the new router, session, data loading, design rules and every section.
 - WV-05: Build the student sections of the web v3: friend requests, sport queues, audiences and the app on Главная; Друзья with tabs, local search and adding by ISU; a person's page with schedule, sport and friends by capability; own sport queues with leaving and the auto-sign limit; Профиль with privacy, an active restriction and sign-out.
 - WV-03: Build the web v3 home with the staff attention card and the admin 7-day card, statistics on the shared uPlot chart, users with search, devices per platform and the moderator switch, and the audit log.
 - WV-02: Port moderation to the Svelte web v3: one queue for links and reviews with a split view on wide screens, case details with diffs, decisions with required reasons and typed confirmation, J/K/A/R shortcuts, shareable URL state, and the restrictions tab at the old address.

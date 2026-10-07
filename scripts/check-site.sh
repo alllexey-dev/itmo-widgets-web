@@ -74,13 +74,20 @@ header() {
     }' "$TMP/headers"
 }
 
-for path in / /privacy.html /delete-account /u/1 /sport/1 /sport/p/1 /app/ /app/admin/users; do
+# Every app route answers the SPA, including the login QR and the admin bookmarks of earlier versions.
+APP_PATHS=(/app/ '/app/login?code=K7MW3QXP' /app/friends /app/u/1 /app/sport /app/me
+    /app/admin/moderation /app/admin/restrictions /app/admin/dashboard /app/admin/users
+    /app/admin/users/1 /app/admin/system /app/admin/sport /app/admin/reviews /app/admin/audit)
+for path in / /privacy.html /delete-account /u/1 /sport/1 /sport/p/1 "${APP_PATHS[@]}"; do
     request "$path" 200
     [ "$(header Content-Security-Policy)" = "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" ] || fail "$path lacks the expected CSP"
     [ "$(header Permissions-Policy)" = 'camera=(), microphone=(), geolocation=()' ] || fail "$path lacks Permissions-Policy"
     case "$path" in
         /u/*|/sport/*)
             [ "$(header X-Robots-Tag)" = noindex ] || fail "$path lacks X-Robots-Tag: noindex"
+            ;;
+        /app/*)
+            grep -q '<div id="app"></div>' "$TMP/body" || fail "$path does not answer the web app"
             ;;
     esac
 done

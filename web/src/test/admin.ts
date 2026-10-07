@@ -1,305 +1,208 @@
-import { http } from 'msw';
-import type { AdminPage, AdminRestriction, AdminUserSummary } from '../api/admin';
-import type {
-  AdminCaseItem,
-  CaseReason,
-  DecisionRequest,
-  ModerationCase,
-  SubjectLinkTarget,
-  TeacherReviewTarget,
-} from '../features/moderation/types';
+import { http, type JsonBodyType } from 'msw';
+import type { components } from '../api/schema';
 import { fail, ok, server } from './server';
 
-/** Synthetic admin API data and MSW handlers that filter and page like the backend. */
+type Schemas = components['schemas'];
 
-export const NOW = new Date();
-
+/** An instant [minutes] before now, as Backend writes it. */
 export function minutesAgo(minutes: number): string {
-  return new Date(NOW.getTime() - minutes * 60_000).toISOString();
+  return new Date(Date.now() - minutes * 60_000).toISOString();
 }
 
-export function userSummary(overrides: Partial<AdminUserSummary> = {}): AdminUserSummary {
+/** An instant [days] from now. */
+export function daysAhead(days: number): string {
+  return new Date(Date.now() + days * 24 * 60 * 60_000).toISOString();
+}
+
+/** A Backend `AdminPage` of [items] cut by the request's `page` and `size` (defaults 0 and 20). */
+export function pageOf<T>(items: readonly T[], request: Request) {
+  const params = new URL(request.url).searchParams;
+  const page = Number(params.get('page') ?? 0);
+  const size = Number(params.get('size') ?? 20);
+  return { items: items.slice(page * size, (page + 1) * size), page, size, total: items.length };
+}
+
+export function credentialOf(
+  key: Schemas['AdminServiceCredential']['key'],
+  overrides: Partial<Schemas['AdminServiceCredential']> = {},
+): Schemas['AdminServiceCredential'] {
   return {
-    isu: 311111,
-    name: 'Иван Петров',
-    pictureUrl: null,
-    groups: [{ name: 'M3205', course: 2, facultyShortName: 'ФИТиП' }],
+    key,
+    kind: 'COOKIE',
+    replaceable: true,
+    present: true,
+    status: 'OK',
+    expiresAt: null,
+    expiresSoon: false,
+    lastUsedAt: minutesAgo(5),
+    lastRenewedAt: null,
+    lastErrorAt: null,
+    lastError: null,
+    updatedAt: minutesAgo(60 * 24),
+    updatedSource: 'ROTATION',
+    updatedByIsu: null,
+    updatedByName: null,
     ...overrides,
-  } satisfies AdminUserSummary;
+  };
 }
 
-export function pageOf<T>(all: readonly T[], request: Request, defaultSize = 20): AdminPage<T> {
-  const url = new URL(request.url);
-  const page = Number(url.searchParams.get('page') ?? 0);
-  const size = Number(url.searchParams.get('size') ?? defaultSize);
+export const CREDENTIAL_KEYS = [
+  'MY_ITMO_REFRESH_TOKEN',
+  'MY_ITMO_ACCESS_TOKEN',
+  'MY_ITMO_ID_TOKEN',
+  'ISU_KEYCLOAK_IDENTITY',
+  'GEMINI_API_KEY',
+] as const;
+
+/** All five rows healthy, with [changes] applied by key. */
+export function credentialsOf(
+  changes: Partial<
+    Record<Schemas['AdminServiceCredential']['key'], Partial<Schemas['AdminServiceCredential']>>
+  > = {},
+): Schemas['AdminServiceCredential'][] {
+  return CREDENTIAL_KEYS.map((key) => credentialOf(key, changes[key]));
+}
+
+export function sportStatusOf(
+  overrides: Partial<Schemas['AdminSportStatus']> = {},
+): Schemas['AdminSportStatus'] {
   return {
-    items: all.slice(page * size, (page + 1) * size),
-    page,
-    size,
-    total: all.length,
-  } satisfies AdminPage<T>;
+    runs: [
+      {
+        id: 1,
+        timestamp: minutesAgo(5),
+        outcome: 'SUCCESS',
+        durationMillis: 1200,
+        receivedLessons: 40,
+        newLessonsAdded: 0,
+        updatedLessons: 2,
+        skippedLessons: 0,
+        errorCategory: null,
+      },
+    ],
+    outcomes7d: { SUCCESS: 1000, PARTIAL: 0, FAILED: 0 },
+    errors7d: { AUTH: 0, NETWORK: 0, HTTP: 0, MAPPING: 0, PERSISTENCE: 0, INTERNAL: 0 },
+    averageDurationMillis7d: 1200,
+    lastSuccessAt: minutesAgo(5),
+    activeAutoSignEntries: 11,
+    activeFreeSignEntries: 4,
+    ...overrides,
+  };
 }
 
-interface CaseSeed {
-  id: string;
-  title: string;
-  reason?: CaseReason;
-  url?: string;
-  subjectName?: string;
-  authorName?: string;
-}
-
-export function linkTarget(
-  seed: CaseSeed,
-  overrides: Partial<SubjectLinkTarget> = {},
-): SubjectLinkTarget {
-  const url = seed.url ?? `https://docs.google.com/spreadsheets/d/${seed.id}`;
-  const author = userSummary({ name: seed.authorName ?? 'Иван Петров' });
+export function aiSummariesOf(
+  overrides: Partial<Schemas['AdminAiSummaries']> = {},
+): Schemas['AdminAiSummaries'] {
   return {
-    targetType: 'SUBJECT_RESOURCE',
-    revision: {
-      id: `rev-${seed.id}`,
-      linkId: `link-${seed.id}`,
-      number: 1,
-      category: 'SCORES',
-      url,
-      title: seed.title,
-      visibility: 'ALL',
-      flowId: null,
-      status: 'PENDING',
-      submittedAt: minutesAgo(30),
-      decidedAt: null,
-      note: null,
+    enabled: true,
+    running: false,
+    runningSince: null,
+    model: 'gemini-test',
+    keyStatus: 'OK',
+    lastStartedAt: minutesAgo(600),
+    lastFinishedAt: minutesAgo(590),
+    lastTrigger: 'SCHEDULE',
+    lastOutcome: 'COMPLETED',
+    lastError: null,
+    lastGenerated: 3,
+    lastFailed: 0,
+    lastRequests: 3,
+    ready: 40,
+    pending: 2,
+    failed: 0,
+    hidden: 1,
+    budgetDay: '2026-10-07',
+    budgetUsed: 12,
+    dailyBudget: 400,
+    ...overrides,
+  };
+}
+
+export function reviewsSyncOf(
+  overrides: Partial<Schemas['AdminReviewsSync']> = {},
+): Schemas['AdminReviewsSync'] {
+  return {
+    enabled: true,
+    running: false,
+    runningSince: null,
+    lastCheckedAt: minutesAgo(30),
+    lastChangedAt: minutesAgo(60 * 24),
+    lastSuccessAt: minutesAgo(30),
+    lastOutcome: 'UNCHANGED',
+    lastError: null,
+    lastAdded: 0,
+    lastUpdated: 0,
+    lastRemoved: 0,
+    upstreamTeachers: 120,
+    upstreamReviews: 900,
+    reviewsTotal: 900,
+    reviewsActive: 880,
+    reviewsRemoved: 20,
+    teachersActive: 118,
+    ...overrides,
+  };
+}
+
+/** 30 Moscow days ending on 2026-09-30, oldest first, with [value] per day index. */
+export function daysOf(value: (index: number) => number): Schemas['AdminDashboardDay'][] {
+  return Array.from({ length: 30 }, (_, index) => ({
+    date: `2026-09-${String(index + 1).padStart(2, '0')}`,
+    newUsers: value(index),
+    activeDevices: value(index) * 2,
+    createdLinks: value(index),
+  }));
+}
+
+export function dashboardOf(
+  days: Schemas['AdminDashboardDay'][] = daysOf(() => 1),
+): Schemas['AdminDashboard'] {
+  return {
+    totals: {
+      users: 1250,
+      newUsers7d: 42,
+      activeDevices7d: 610,
+      activeDevices30d: 900,
+      webSessions7d: 7,
+      friendships: 380,
+      links: { PRIVATE: 20, PENDING: 3, PUBLISHED: 150, REJECTED: 9, HIDDEN: 2 },
+      openCases: 5,
+      activeAutoSignEntries: 11,
+      activeFreeSignEntries: 4,
     },
-    link: {
-      id: `link-${seed.id}`,
-      subjectId: 101,
-      subjectName: seed.subjectName ?? 'Математический анализ',
-      periodKey: '2026-1',
-      category: 'SCORES',
-      url,
-      title: seed.title,
-      visibility: 'ALL',
-      flowId: null,
-      audienceLabel: null,
-      status: 'PENDING',
-      reviewNote: null,
-      score: 0,
-      updatedAt: minutesAgo(30),
-    },
-    author: { ...author },
-    reports: [],
-    submitterHistory: { approved: 4, rejected: 1, dismissedReports: 0, activeRestrictions: [] },
-    ...overrides,
-  } satisfies SubjectLinkTarget;
+    days,
+  };
 }
 
-export function moderationCase(
-  seed: CaseSeed,
-  overrides: Partial<ModerationCase> = {},
-  target: SubjectLinkTarget | null = linkTarget(seed),
-): ModerationCase {
-  return {
-    id: seed.id,
-    targetType: 'SUBJECT_RESOURCE',
-    status: 'OPEN',
-    reason: seed.reason ?? 'SUBMISSION',
-    openedAt: minutesAgo(30),
-    target,
-    decisions: [],
-    ...overrides,
-  } satisfies ModerationCase;
+/** Answers of the sources of Главная for staff; `null` makes that source fail with 503. */
+export interface StaffSources {
+  cases?: number | null;
+  credentials?: JsonBodyType | null;
+  sport?: JsonBodyType | null;
+  ai?: JsonBodyType | null;
+  sync?: JsonBodyType | null;
+  dashboard?: JsonBodyType | null;
 }
 
-export function caseItemOf(detail: ModerationCase): AdminCaseItem {
-  if (detail.targetType === 'TEACHER_REVIEW') return reviewCaseItemOf(detail);
-  const target = detail.target?.targetType === 'SUBJECT_RESOURCE' ? detail.target : null;
-  return {
-    id: detail.id,
-    targetType: 'SUBJECT_RESOURCE',
-    status: detail.status,
-    reason: detail.reason,
-    openedAt: detail.openedAt,
-    resolvedAt: detail.status === 'OPEN' ? null : minutesAgo(1),
-    revision: target?.revision ?? null,
-    link: target
-      ? {
-          id: target.link.id,
-          subjectId: target.link.subjectId,
-          subjectName: target.link.subjectName,
-          periodKey: target.link.periodKey,
-          score: target.link.score,
-          hidden: target.link.status === 'HIDDEN',
-        }
-      : null,
-    review: null,
-    author: target ? { ...target.author } : null,
-    reportCount: target?.reports.length ?? 0,
-  } satisfies AdminCaseItem;
-}
-
-interface ReviewSeed {
-  id: string;
-  teacherIsu?: number;
-  teacherName?: string | null;
-  subjectTitle?: string | null;
-  text?: string;
-  reason?: CaseReason;
-  authorName?: string;
-}
-
-export const REVIEW_TEXT =
-  'Объясняет понятно, на консультациях разбирает каждую задачу и отвечает на вопросы.';
-
-/** A first revision of an anonymous review waiting for the ISU check. */
-export function reviewTarget(
-  seed: ReviewSeed,
-  overrides: Partial<TeacherReviewTarget> = {},
-): TeacherReviewTarget {
-  const reviewId = `review-${seed.id}`;
-  return {
-    targetType: 'TEACHER_REVIEW',
-    revision: {
-      id: `rev-${seed.id}`,
-      reviewId,
-      number: 1,
-      subjectTitle: seed.subjectTitle === undefined ? 'Математический анализ' : seed.subjectTitle,
-      text: seed.text ?? REVIEW_TEXT,
-      status: 'PENDING',
-      submittedAt: minutesAgo(30),
-      decidedAt: null,
-      note: null,
-    },
-    review: {
-      id: reviewId,
-      teacherIsu: seed.teacherIsu ?? 123456,
-      teacherName: seed.teacherName === undefined ? 'Сергей Кузнецов' : seed.teacherName,
-      anonymous: true,
-      status: 'PENDING',
-      reviewNote: null,
-      shown: null,
-      score: 0,
-      hidden: false,
-      verification: 'PENDING',
-      verifiedFlowId: null,
-    },
-    author: { ...userSummary({ name: seed.authorName ?? 'Иван Петров' }) },
-    reports: [],
-    submitterHistory: { approved: 2, rejected: 0, dismissedReports: 0, activeRestrictions: [] },
-    ...overrides,
-  } satisfies TeacherReviewTarget;
-}
-
-export function reviewCase(
-  seed: ReviewSeed,
-  overrides: Partial<ModerationCase> = {},
-  target: TeacherReviewTarget | null = reviewTarget(seed),
-): ModerationCase {
-  return {
-    id: seed.id,
-    targetType: 'TEACHER_REVIEW',
-    status: 'OPEN',
-    reason: seed.reason ?? 'SUBMISSION',
-    openedAt: minutesAgo(30),
-    target,
-    decisions: [],
-    ...overrides,
-  } satisfies ModerationCase;
-}
-
-/** The backend cuts the excerpt to one short line. */
-export function reviewCaseItemOf(detail: ModerationCase): AdminCaseItem {
-  const target = detail.target?.targetType === 'TEACHER_REVIEW' ? detail.target : null;
-  return {
-    id: detail.id,
-    targetType: 'TEACHER_REVIEW',
-    status: detail.status,
-    reason: detail.reason,
-    openedAt: detail.openedAt,
-    resolvedAt: detail.status === 'OPEN' ? null : minutesAgo(1),
-    revision: null,
-    link: null,
-    review: target
-      ? {
-          id: target.review.id,
-          teacherIsu: target.review.teacherIsu,
-          subjectTitle: target.revision.subjectTitle,
-          excerpt: target.revision.text.slice(0, 160),
-          score: target.review.score,
-          hidden: target.review.hidden,
-          anonymous: target.review.anonymous,
-        }
-      : null,
-    author: target ? { ...target.author } : null,
-    reportCount: target?.reports.length ?? 0,
-  } satisfies AdminCaseItem;
-}
-
-/**
- * Serves the queue, case details and decisions from [cases]. A terminal decision
- * resolves the case as the backend does; every request body is kept in `decisions`.
- */
-export function mockModeration(cases: ModerationCase[]) {
-  const state = new Map(cases.map((item) => [item.id, item]));
-  const decisions: { caseId: string; body: DecisionRequest; csrf: string | null }[] = [];
+/** Healthy answers of every staff source of Главная unless [sources] say otherwise; returns the paths asked. */
+export function mockStaffSources(sources: StaffSources = {}): string[] {
+  const requested: string[] = [];
+  const answer = (path: string, value: JsonBodyType | null | undefined, healthy: JsonBodyType) =>
+    http.get(`*${path}`, ({ request }) => {
+      requested.push(new URL(request.url).pathname);
+      if (value === null) return fail(503, 'service_unavailable');
+      return ok(value ?? healthy);
+    });
   server.use(
     http.get('*/api/admin/moderation/cases', ({ request }) => {
-      const url = new URL(request.url);
-      const status = url.searchParams.get('status') ?? 'OPEN';
-      const reason = url.searchParams.get('reason');
-      const matching = [...state.values()]
-        .filter((item) => item.status === status && (!reason || item.reason === reason))
-        .map(caseItemOf);
-      return ok(pageOf(matching, request));
+      requested.push(new URL(request.url).pathname);
+      if (sources.cases === null) return fail(503, 'service_unavailable');
+      return ok({ items: [], page: 0, size: 1, total: sources.cases ?? 0 });
     }),
-    http.get('*/api/admin/moderation/cases/:id', ({ params }) => {
-      const found = state.get(String(params.id));
-      return found ? ok(found) : fail(404, 'not_found');
-    }),
-    http.post('*/api/admin/moderation/cases/:id/decisions', async ({ params, request }) => {
-      const id = String(params.id);
-      const body = (await request.json()) as DecisionRequest;
-      decisions.push({ caseId: id, body, csrf: request.headers.get('X-Web-Request') });
-      const current = state.get(id);
-      if (!current) return fail(404, 'not_found');
-      const keepsOpen = body.action === 'RESTRICT_USER' || body.action === 'HIDE_ALL_BY_USER';
-      const updated: ModerationCase = {
-        ...current,
-        status: keepsOpen ? current.status : 'RESOLVED',
-        decisions: [
-          ...current.decisions,
-          {
-            id: `decision-${decisions.length}`,
-            moderatorId: 'moderator',
-            action: body.action,
-            note: body.note ?? null,
-            restriction: body.restriction
-              ? { capability: body.restriction.capability, days: body.restriction.days ?? null }
-              : null,
-            createdAt: new Date().toISOString(),
-            actor: 'MODERATOR',
-          },
-        ],
-      };
-      state.set(id, updated);
-      return ok(updated);
-    }),
+    answer('/api/admin/system/credentials', sources.credentials, credentialsOf()),
+    answer('/api/admin/system/sport', sources.sport, sportStatusOf()),
+    answer('/api/admin/reviews/summaries', sources.ai, aiSummariesOf()),
+    answer('/api/admin/reviews/sync', sources.sync, reviewsSyncOf()),
+    answer('/api/admin/dashboard', sources.dashboard, dashboardOf()),
   );
-  return { decisions };
-}
-
-export function restriction(overrides: Partial<AdminRestriction> = {}): AdminRestriction {
-  return {
-    id: 'restriction-1',
-    user: userSummary(),
-    capability: 'SUBMIT_RESOURCES',
-    reason: 'Спам в ссылках',
-    startsAt: minutesAgo(60 * 24),
-    expiresAt: minutesAgo(-60 * 24 * 6),
-    revokedAt: null,
-    revokedByIsu: null,
-    active: true,
-    caseId: 'case-1',
-    ...overrides,
-  } satisfies AdminRestriction;
+  return requested;
 }
