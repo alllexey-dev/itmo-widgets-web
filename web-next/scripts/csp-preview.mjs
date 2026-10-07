@@ -19,7 +19,8 @@ const dist = resolve(project, 'dist');
 const nginx = readFileSync(resolve(project, '../deploy/site.nginx.conf'), 'utf8');
 const csp = nginx.match(/add_header Content-Security-Policy "([^"]+)"/)?.[1];
 const permissions = nginx.match(/add_header Permissions-Policy "([^"]+)"/)?.[1];
-if (!csp || !permissions) throw new Error('deploy/site.nginx.conf lacks the CSP or Permissions-Policy');
+if (!csp || !permissions)
+  throw new Error('deploy/site.nginx.conf lacks the CSP or Permissions-Policy');
 if (!existsSync(resolve(dist, 'index.html'))) throw new Error('Build the app first: npm run build');
 
 const serve = process.argv.includes('--serve');
@@ -43,6 +44,188 @@ const MIME = {
   '.json': 'application/json',
 };
 
+const iso = (minutes) => new Date(Date.now() + minutes * 60_000).toISOString();
+const DAY = 24 * 60;
+const page = (items, url, size = 20) => {
+  const index = Number(url.searchParams.get('page') ?? 0);
+  return {
+    items: items.slice(index * size, (index + 1) * size),
+    page: index,
+    size,
+    total: items.length,
+  };
+};
+const summary = (isu, name, group) => ({
+  isu,
+  name,
+  pictureUrl: null,
+  groups: [{ name: group, course: 2, facultyShortName: 'ФПИиКТ' }],
+});
+const PEOPLE = [
+  [400002, 'Тимур Абдуллаев', 'P3212', ['MODERATOR']],
+  [400003, 'Александра-Виктория Константинопольская-Преображенская', 'M3205', []],
+  [400004, 'Олег Сидоров', 'R3135', []],
+  [400001, 'Анна Смирнова', 'P3212', ['ADMIN']],
+];
+const USERS = PEOPLE.map(([isu, name, group, roles], index) => ({
+  ...summary(isu, name, group),
+  roles,
+  createdAt: iso(-(index + 1) * 9 * DAY),
+}));
+const credential = (key, kind, changes = {}) => ({
+  key,
+  kind,
+  replaceable: ['MY_ITMO_REFRESH_TOKEN', 'ISU_KEYCLOAK_IDENTITY', 'GEMINI_API_KEY'].includes(key),
+  present: true,
+  status: 'OK',
+  expiresAt: null,
+  expiresSoon: false,
+  lastUsedAt: iso(-5),
+  lastRenewedAt: null,
+  lastErrorAt: null,
+  lastError: null,
+  updatedAt: iso(-DAY),
+  updatedSource: 'ROTATION',
+  updatedByIsu: null,
+  updatedByName: null,
+  ...changes,
+});
+// Synthetic admin data for every staff page: an expiring ISU cookie and sport failures on Главная.
+const ADMIN = {
+  '/api/admin/system/credentials': () => [
+    credential('MY_ITMO_REFRESH_TOKEN', 'REFRESH_TOKEN'),
+    credential('MY_ITMO_ACCESS_TOKEN', 'ACCESS_TOKEN'),
+    credential('MY_ITMO_ID_TOKEN', 'ID_TOKEN'),
+    credential('ISU_KEYCLOAK_IDENTITY', 'COOKIE', {
+      expiresSoon: true,
+      expiresAt: iso(6 * DAY + 60),
+    }),
+    credential('GEMINI_API_KEY', 'API_KEY'),
+  ],
+  '/api/admin/system/sport': () => ({
+    runs: [],
+    outcomes7d: { SUCCESS: 980, PARTIAL: 4, FAILED: 3 },
+    errors7d: { AUTH: 0, NETWORK: 3, HTTP: 0, MAPPING: 0, PERSISTENCE: 0, INTERNAL: 0 },
+    averageDurationMillis7d: 1300,
+    lastSuccessAt: iso(-4),
+    activeAutoSignEntries: 11,
+    activeFreeSignEntries: 4,
+  }),
+  '/api/admin/reviews/summaries': () => ({
+    enabled: true,
+    running: false,
+    runningSince: null,
+    model: 'synthetic',
+    keyStatus: 'OK',
+    lastStartedAt: iso(-600),
+    lastFinishedAt: iso(-590),
+    lastTrigger: 'SCHEDULE',
+    lastOutcome: 'COMPLETED',
+    lastError: null,
+    lastGenerated: 3,
+    lastFailed: 0,
+    lastRequests: 3,
+    ready: 40,
+    pending: 2,
+    failed: 0,
+    hidden: 1,
+    budgetDay: new Date().toISOString().slice(0, 10),
+    budgetUsed: 12,
+    dailyBudget: 400,
+  }),
+  '/api/admin/reviews/sync': () => ({
+    enabled: true,
+    running: false,
+    runningSince: null,
+    lastCheckedAt: iso(-30),
+    lastChangedAt: iso(-DAY),
+    lastSuccessAt: iso(-30),
+    lastOutcome: 'UNCHANGED',
+    lastError: null,
+    lastAdded: 0,
+    lastUpdated: 0,
+    lastRemoved: 0,
+    upstreamTeachers: 120,
+    upstreamReviews: 900,
+    reviewsTotal: 900,
+    reviewsActive: 880,
+    reviewsRemoved: 20,
+    teachersActive: 118,
+  }),
+  '/api/admin/dashboard': () => ({
+    totals: {
+      users: 1250,
+      newUsers7d: 42,
+      activeDevices7d: 610,
+      activeDevices30d: 900,
+      webSessions7d: 7,
+      friendships: 380,
+      links: { PRIVATE: 20, PENDING: 3, PUBLISHED: 150, REJECTED: 9, HIDDEN: 2 },
+      openCases: 3,
+      activeAutoSignEntries: 11,
+      activeFreeSignEntries: 4,
+    },
+    days: Array.from({ length: 30 }, (_, index) => ({
+      date: new Date(Date.now() - (29 - index) * DAY * 60_000).toISOString().slice(0, 10),
+      newUsers: 4 + ((index * 7) % 9),
+      activeDevices: 80 + Math.round(30 * Math.sin(index / 3)),
+      createdLinks: (index * 5) % 4,
+    })),
+  }),
+  '/api/admin/users': (url) => page(USERS, url),
+  '/api/admin/audit': (url) =>
+    page(
+      [
+        ['ROLE_GRANTED', 'user:400002', 'role MODERATOR'],
+        ['APP_VERSION_CHANGED', 'app-version', 'IOS: latest 1.0 -> 1.1'],
+        ['APP_VERSION_CHANGED', 'app-version', 'latest 2.2 -> 2.3; minimum 2.0 -> 2.1'],
+        ['SERVICE_CREDENTIAL_REPLACED', 'credential:ISU_KEYCLOAK_IDENTITY', null],
+        ['AI_SUMMARY_HIDDEN', 'teacher:123456', null],
+      ].map(([action, target, details], index) => ({
+        id: `synthetic-${index}`,
+        action,
+        target,
+        details,
+        createdAt: iso(-index * 90),
+        actorIsu: 400001,
+        actorName: 'Анна Смирнова',
+      })),
+      url,
+    ),
+};
+
+function userDetail(isu) {
+  const user = USERS.find((item) => item.isu === isu);
+  if (!user) return null;
+  return {
+    user: summary(user.isu, user.name, user.groups[0].name),
+    roles: user.roles,
+    groups: [...user.groups, { name: 'P3112', course: 1, facultyShortName: 'ФПИиКТ' }],
+    createdAt: user.createdAt,
+    devices: [
+      { name: 'Pixel 8', lastLogin: iso(-90) },
+      { name: 'iPhone 15', lastLogin: iso(-30), platform: 'IOS', appVersion: '1.0.0' },
+    ],
+    friendsCount: 12,
+    linksCount: 5,
+    restrictions: [
+      {
+        id: 'synthetic-restriction',
+        user: summary(user.isu, user.name, user.groups[0].name),
+        capability: 'SUBMIT_RESOURCES',
+        reason: 'Повторяющиеся ссылки на сторонние сайты',
+        startsAt: iso(-2 * DAY),
+        expiresAt: iso(5 * DAY),
+        revokedAt: null,
+        revokedByIsu: null,
+        active: true,
+        caseId: 'synthetic-case',
+      },
+    ],
+    lastSeen: iso(-15),
+  };
+}
+
 function roleOf(request) {
   const match = /(?:^|;\s*)qa-role=([a-z-]+)/.exec(request.headers.cookie ?? '');
   return match?.[1] ?? 'signed-out';
@@ -51,13 +234,23 @@ function roleOf(request) {
 async function api(request, response, url) {
   const path = url.pathname;
   const role = roleOf(request);
+  const staff =
+    role === 'admin' || (role === 'moderator' && path.startsWith('/api/admin/moderation/'));
+  const userPath = /^\/api\/admin\/users\/(\d+)$/.exec(path);
   let status = 200;
   let body;
-  const staff = role === 'moderator' || role === 'admin';
   const moderation = staff ? await moderationApi(request, url) : undefined;
   if (moderation) {
     status = moderation[0];
     body = status === 200 ? ok(moderation[1]) : failure('not_found', 'No synthetic case');
+  } else if (path.startsWith('/api/admin/') && !staff) {
+    [status, body] = [403, failure('permission_denied', 'Synthetic role check')];
+  } else if (request.method === 'GET' && ADMIN[path]) {
+    body = ok(ADMIN[path](url));
+  } else if (request.method === 'GET' && userPath) {
+    const detail = userDetail(Number(userPath[1]));
+    if (detail) body = ok(detail);
+    else [status, body] = [404, failure('not_found', 'No synthetic user')];
   } else if (path === '/api/web/auth/me') {
     if (ROLES[role]) body = ok(userOf(ROLES[role]));
     else [status, body] = [401, failure('unauthorized', 'Synthetic signed out')];
@@ -125,12 +318,15 @@ const PAGES = [
   ['student', '/app/'],
   ['student', '/app/admin/users'],
   ['student', '/app/no-such-page'],
+  ['moderator', '/app/'],
   ['moderator', '/app/admin/moderation'],
   ['moderator', '/app/admin/moderation?case=qa-review-1'],
   ['admin', '/app/'],
   ['admin', '/app/admin/restrictions'],
   ['admin', '/app/admin/dashboard'],
+  ['admin', '/app/admin/users'],
   ['admin', '/app/admin/users/400002'],
+  ['admin', '/app/admin/users/999999'],
   ['admin', '/app/admin/sport'],
   ['admin', '/app/admin/system'],
   ['admin', '/app/admin/reviews'],

@@ -29,3 +29,27 @@ if (!window.ResizeObserver) {
 }
 
 window.scrollTo = () => undefined;
+
+// uPlot (`@alllexey/ui/chart`) draws on a 2D canvas with Path2D, which jsdom does not implement: a context
+// and paths that accept every call and draw nothing.
+function inert<T extends object>(target: T): T {
+  return new Proxy(target, {
+    get: (object, key) =>
+      key in object
+        ? (object as Record<PropertyKey, unknown>)[key]
+        : key === 'measureText'
+          ? () => ({ width: 0 })
+          : () => undefined,
+  });
+}
+
+if (!window.Path2D) {
+  // Called with `new`; returning an object from a constructor makes that object the instance.
+  window.Path2D = function Path2D() {
+    return inert({});
+  } as unknown as typeof Path2D;
+}
+
+HTMLCanvasElement.prototype.getContext = function getContext(this: HTMLCanvasElement) {
+  return inert({ canvas: this });
+} as unknown as HTMLCanvasElement['getContext'];

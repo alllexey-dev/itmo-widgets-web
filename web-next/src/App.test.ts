@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { api } from './api/client';
+import { mockStaffSources } from './test/admin';
 import { renderApp } from './test/render';
 import {
   fail,
@@ -46,6 +47,7 @@ describe('Shell', () => {
     ],
   ] as const)('shows the rail sections for roles %j', async (roles, labels) => {
     mockSession(userOf([...roles]));
+    mockStaffSources();
 
     renderApp('/');
 
@@ -55,6 +57,7 @@ describe('Shell', () => {
 
   it('shows the signed-in user on the home page', async () => {
     mockSession(userOf(['MODERATOR']));
+    mockStaffSources();
 
     renderApp('/');
 
@@ -64,8 +67,6 @@ describe('Shell', () => {
   });
 
   it.each([
-    ['/admin/dashboard', 'Главная'],
-    ['/admin/users/400002', 'Пользователи'],
     ['/u/400002', 'Друзья'],
   ])('marks the section that hosts %s', async (path, section) => {
     mockSession(userOf(['ADMIN']));
@@ -74,19 +75,6 @@ describe('Shell', () => {
 
     await screen.findByText('Раздел скоро появится');
     expect(rail().getByRole('link', { name: section })).toHaveAttribute('aria-current', 'page');
-  });
-
-  it.each([
-    '/admin/dashboard',
-    '/admin/users',
-    '/admin/users/400002',
-    '/admin/audit',
-  ])('opens %s for the administrator', async (path) => {
-    mockSession(userOf(['ADMIN']));
-
-    renderApp(path);
-
-    expect(await screen.findByText('Раздел скоро появится')).toBeInTheDocument();
   });
 
   it('tells a student that a staff section is closed without asking the backend', async () => {
@@ -161,6 +149,7 @@ describe('Session', () => {
         return fail(401, 'unauthorized');
       }),
     );
+    mockStaffSources();
     mockChallenges('ABCDEFGH');
     mockPoll();
     renderApp('/');
@@ -180,7 +169,8 @@ describe('Session', () => {
       mockSession(userOf(['ADMIN']));
       server.use(http.get('*/api/admin/users', () => fail(403, code)));
       renderApp('/admin/users');
-      await screen.findByText('Раздел скоро появится');
+      // The page shows its own access error and the session stays.
+      await screen.findByText('Недостаточно прав, чтобы открыть эти данные.');
 
       await expect(api.get('/api/admin/users')).rejects.toMatchObject({ status: 403 });
 
