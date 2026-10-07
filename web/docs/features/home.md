@@ -26,4 +26,4 @@ own.
 - Sport queues the user still waits in, linking to Спорт.
 - "Кто видит ваши данные" with the three privacy audiences, linking to
   Профиль.
-- The app card, linking to the landing's `/#download`.
+- The app card on the secondary container, linking to the landing's `/#download`.
