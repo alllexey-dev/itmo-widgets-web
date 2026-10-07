@@ -40,9 +40,14 @@ export function mockSignedOut() {
   server.use(http.get('*/api/web/auth/me', () => fail(401, 'unauthorized')));
 }
 
-/** The same visitor on a Backend before BK-15 (production until gate R): 403 on `/me`. */
+/** A Backend before BK-15 (production until gate R) answers a lost session with a bare 403. */
+export function legacySessionLost() {
+  return new HttpResponse(null, { status: 403 });
+}
+
+/** The same visitor on a Backend before BK-15: an empty-body 403 on `/me`. */
 export function mockLegacySignedOut() {
-  server.use(http.get('*/api/web/auth/me', () => fail(403, 'forbidden')));
+  server.use(http.get('*/api/web/auth/me', legacySessionLost));
 }
 
 /** A code that lives 2 minutes from the moment the backend answers. */

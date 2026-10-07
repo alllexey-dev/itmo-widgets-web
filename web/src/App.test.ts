@@ -8,6 +8,7 @@ import { renderApp } from './test/render';
 import {
   fail,
   mockChallenges,
+  legacySessionLost,
   mockLegacySignedOut,
   mockPoll,
   mockSession,
@@ -176,6 +177,17 @@ describe('Session', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Войти' }));
     expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
     expect(location.pathname).toBe('/app/login');
+  });
+
+  it('asks a signed-in user to sign in again after a bare 403 of a Backend before BK-15', async () => {
+    mockSession(userOf(['ADMIN']));
+    server.use(http.get('*/api/admin/users', legacySessionLost));
+    renderApp('/admin/users');
+
+    expect(await screen.findByRole('alertdialog', { name: 'Сессия истекла' })).toBeInTheDocument();
+    expect(
+      screen.queryByText('Недостаточно прав, чтобы открыть эти данные.'),
+    ).not.toBeInTheDocument();
   });
 
   it.each(['forbidden', 'restricted', 'permission_denied'])(

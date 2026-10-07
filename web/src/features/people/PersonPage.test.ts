@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import type { components } from '../../api/schema';
 import { renderApp } from '../../test/render';
-import { fail, mockSession, ok, server, userOf } from '../../test/server';
+import { fail, legacySessionLost, mockSession, ok, server, userOf } from '../../test/server';
 import {
   autoEntryOf,
   freeEntryOf,
@@ -203,6 +203,26 @@ describe('PersonPage', () => {
     renderApp(`/u/${ISU}`);
 
     expect(await within(await card('Расписание')).findByText('Расписание скрыто.')).toBeVisible();
+  });
+
+  it('does not call the cards hidden when the session is lost', async () => {
+    mockSession(userOf([]));
+    mockPerson();
+    server.use(
+      http.get(`*/api/schedule/lessons/user/${ISU}`, legacySessionLost),
+      http.get(`*/api/sport/users/${ISU}/bookings`, legacySessionLost),
+      http.get(`*/api/users/${ISU}/friends`, legacySessionLost),
+    );
+
+    renderApp(`/u/${ISU}`);
+
+    expect(await screen.findByRole('alertdialog', { name: 'Сессия истекла' })).toBeInTheDocument();
+    expect(
+      await within(await card('Расписание')).findByText('Не удалось загрузить расписание'),
+    ).toBeVisible();
+    expect(screen.queryByText('Расписание скрыто.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Спорт скрыт.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Список друзей скрыт.')).not.toBeInTheDocument();
   });
 
   it('says when the next days have no lessons and the person has no friends yet', async () => {
