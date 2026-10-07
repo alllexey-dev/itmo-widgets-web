@@ -1,120 +1,98 @@
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type QueryClient,
-} from '@tanstack/react-query';
-import type { AdminPage, AdminRestriction } from '../../api/admin';
+import { cached, forget, revalidate } from '@alllexey/ui';
 import { api } from '../../api/client';
-import { moderationKey } from '../../api/moderation';
-
 import type {
   AdminCaseItem,
+  AdminPage,
+  AdminRestriction,
   CaseReason,
   CaseStatus,
   DecisionRequest,
   ModerationCase,
 } from './types';
 
-export { moderationKey, useOpenCaseCount } from '../../api/moderation';
-export { useRevokeRestriction } from '../../api/restrictions';
-
+/** Cache keys are request paths, so one `forget(BASE)` refreshes the section and other cards using it. */
 const BASE = '/api/admin/moderation';
+export const QUEUE_PAGE_SIZE = 25;
+export const RESTRICTIONS_PAGE_SIZE = 20;
 
 export interface CaseFilter {
   status: CaseStatus;
   reason: CaseReason | null;
   page: number;
-  size: number;
 }
 
-export const QUEUE_PAGE_SIZE = 25;
+export function casesKey(filter: CaseFilter): string {
+  return `${BASE}/cases?status=${filter.status}&reason=${filter.reason ?? ''}&page=${filter.page}&size=${QUEUE_PAGE_SIZE}`;
+}
 
-export const casesKey = (filter: CaseFilter) => [...moderationKey, 'cases', filter] as const;
-export const caseKey = (id: string) => [...moderationKey, 'case', id] as const;
-
-export function fetchCases(filter: CaseFilter, signal?: AbortSignal) {
+export function fetchCases(filter: CaseFilter) {
   return api.get<AdminPage<AdminCaseItem>>(`${BASE}/cases`, {
-    query: { status: filter.status, reason: filter.reason, page: filter.page, size: filter.size },
-    signal,
+    query: { ...filter, size: QUEUE_PAGE_SIZE },
   });
 }
 
-export function useCases(filter: CaseFilter) {
-  return useQuery({
-    queryKey: casesKey(filter),
-    queryFn: ({ signal }) => fetchCases(filter, signal),
-    // Paging keeps the old page on screen; another tab or reason starts from a skeleton.
-    placeholderData: (previous, previousQuery) => {
-      const before = previousQuery?.queryKey[3] as CaseFilter | undefined;
-      return before?.status === filter.status && before.reason === filter.reason
-        ? previous
-        : undefined;
-    },
+/** Open cases for the tab counter: only `total` of a one-item page is read. */
+export const OPEN_COUNT_KEY = `${BASE}/cases?status=OPEN&page=0&size=1`;
+
+export async function fetchOpenCount(): Promise<number> {
+  const page = await api.get<AdminPage<unknown>>(`${BASE}/cases`, {
+    query: { status: 'OPEN', page: 0, size: 1 },
   });
+  return page.total;
 }
 
-function fetchCase(id: string, signal?: AbortSignal) {
-  return api.get<ModerationCase>(`${BASE}/cases/${encodeURIComponent(id)}`, { signal });
+export function caseKey(id: string): string {
+  return `${BASE}/cases/${id}`;
 }
 
-export function useCase(id: string | null) {
-  return useQuery({
-    queryKey: caseKey(id ?? ''),
-    queryFn: ({ signal }) => fetchCase(id ?? '', signal),
-    enabled: id !== null,
-  });
+export function fetchCase(id: string) {
+  return api.get<ModerationCase>(`${BASE}/cases/${encodeURIComponent(id)}`);
 }
 
-/** Warms the next case in the queue so J and auto-advance open it at once. */
-export function prefetchCase(client: QueryClient, id: string) {
-  return client.prefetchQuery({
-    queryKey: caseKey(id),
-    queryFn: ({ signal }) => fetchCase(id, signal),
-  });
+/** Warms the next case of the queue so that J and the move after a decision open it at once. */
+export function prefetchCase(id: string): void {
+  if (cached(caseKey(id))) return;
+  revalidate(
+    caseKey(id),
+    () => fetchCase(id),
+    () => undefined,
+  ).catch(() => undefined);
 }
 
-export function useDecision(caseId: string) {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (request: DecisionRequest) =>
-      api.post<ModerationCase>(`${BASE}/cases/${encodeURIComponent(caseId)}/decisions`, request),
-    onSuccess: async (updated) => {
-      client.setQueryData(caseKey(updated.id), updated);
-      await client.invalidateQueries({
-        queryKey: moderationKey,
-        predicate: (query) => query.queryKey[2] !== 'case' || query.queryKey[3] !== updated.id,
-      });
-    },
-    // A case closed by someone else: show its current state.
-    onError: () => client.invalidateQueries({ queryKey: caseKey(caseId) }),
-  });
+/** A decision keeps the returned case in the cache and drops the rest of the section. */
+export async function decide(caseId: string, request: DecisionRequest): Promise<ModerationCase> {
+  const updated = await api.post<ModerationCase>(
+    `${BASE}/cases/${encodeURIComponent(caseId)}/decisions`,
+    request,
+  );
+  forget(BASE);
+  await revalidate(
+    caseKey(updated.id),
+    () => Promise.resolve(updated),
+    () => undefined,
+  );
+  return updated;
 }
 
 export interface RestrictionFilter {
   isu: number | null;
   active: boolean;
   page: number;
-  size: number;
 }
 
-export const restrictionsKey = (filter: RestrictionFilter) =>
-  [...moderationKey, 'restrictions', filter] as const;
+export function restrictionsKey(filter: RestrictionFilter): string {
+  return `${BASE}/restrictions?isu=${filter.isu ?? ''}&active=${filter.active}&page=${filter.page}&size=${RESTRICTIONS_PAGE_SIZE}`;
+}
 
-export function useRestrictions(filter: RestrictionFilter) {
-  return useQuery({
-    queryKey: restrictionsKey(filter),
-    queryFn: ({ signal }) =>
-      api.get<AdminPage<AdminRestriction>>(`${BASE}/restrictions`, {
-        query: {
-          isu: filter.isu,
-          active: filter.active,
-          page: filter.page,
-          size: filter.size,
-        },
-        signal,
-      }),
-    placeholderData: keepPreviousData,
+export function fetchRestrictions(filter: RestrictionFilter) {
+  return api.get<AdminPage<AdminRestriction>>(`${BASE}/restrictions`, {
+    query: { ...filter, size: RESTRICTIONS_PAGE_SIZE },
   });
+}
+
+/** Revoking also changes user cards, which list restrictions too. */
+export async function revokeRestriction(id: string): Promise<void> {
+  await api.post<null>(`${BASE}/restrictions/${encodeURIComponent(id)}/revoke`);
+  forget(BASE);
+  forget('/api/admin/users');
 }

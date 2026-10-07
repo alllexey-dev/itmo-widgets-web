@@ -1,34 +1,40 @@
-import type { BadgeTone } from '../../ui';
+import type { Tone } from '@alllexey/ui';
 import type {
-  AdminSummaryStatus,
   ReviewsSyncOutcome,
   SummaryConfidence,
   SummaryLevel,
   SummaryRunOutcome,
+  SummaryRunTrigger,
   SummaryScaleKind,
   SummaryScaleValue,
+  SummaryStatus,
 } from './types';
 
-export const OUTCOMES: Record<ReviewsSyncOutcome, { label: string; tone: BadgeTone }> = {
-  UNCHANGED: { label: 'Без изменений', tone: 'neutral' },
-  UPDATED: { label: 'Обновлено', tone: 'success' },
-  FAILED: { label: 'Ошибка', tone: 'error' },
+export const SYNC_OUTCOMES: Record<ReviewsSyncOutcome, { label: string; tone: Tone }> = {
+  UNCHANGED: { label: 'Без изменений', tone: 'ok' },
+  UPDATED: { label: 'Обновлено', tone: 'ok' },
+  FAILED: { label: 'Ошибка', tone: 'bad' },
 };
 
-export const SUMMARY_OUTCOMES: Record<SummaryRunOutcome, { label: string; tone: BadgeTone }> = {
-  COMPLETED: { label: 'Готово', tone: 'success' },
-  BUDGET_EXHAUSTED: { label: 'Лимит исчерпан', tone: 'warning' },
-  RATE_LIMITED: { label: 'Ограничение Google', tone: 'warning' },
-  NO_KEY: { label: 'Нет ключа', tone: 'error' },
-  AUTH_FAILED: { label: 'Ключ не принят', tone: 'error' },
-  FAILED: { label: 'Ошибка', tone: 'error' },
+export const RUN_OUTCOMES: Record<SummaryRunOutcome, { label: string; tone: Tone }> = {
+  COMPLETED: { label: 'Готово', tone: 'ok' },
+  BUDGET_EXHAUSTED: { label: 'Лимит исчерпан', tone: 'warn' },
+  RATE_LIMITED: { label: 'Ограничение Google', tone: 'warn' },
+  NO_KEY: { label: 'Нет ключа', tone: 'bad' },
+  AUTH_FAILED: { label: 'Ключ не принят', tone: 'bad' },
+  FAILED: { label: 'Ошибка', tone: 'bad' },
 };
 
-export const SUMMARY_STATUSES: Record<AdminSummaryStatus, { label: string; tone: BadgeTone }> = {
-  READY: { label: 'Готова', tone: 'success' },
-  PENDING: { label: 'В очереди', tone: 'neutral' },
-  FAILED: { label: 'Ошибка', tone: 'error' },
-  HIDDEN: { label: 'Скрыта', tone: 'warning' },
+export const RUN_TRIGGERS: Record<SummaryRunTrigger, string> = {
+  SCHEDULE: 'по расписанию',
+  ADMIN: 'администратором',
+};
+
+export const SUMMARY_STATUSES: Record<SummaryStatus, { label: string; pill: string }> = {
+  READY: { label: 'Готова', pill: 'ok' },
+  PENDING: { label: 'В очереди', pill: 'neutral' },
+  FAILED: { label: 'Ошибка', pill: 'bad' },
+  HIDDEN: { label: 'Скрыта', pill: 'warn' },
 };
 
 /** The same words as in the Android app. */
@@ -40,7 +46,6 @@ export const SUMMARY_LEVELS: Record<SummaryLevel, string> = {
   VERY_POSITIVE: 'В основном положительные',
 };
 
-/** The app shows the tone only with `MEDIUM` or `HIGH` confidence. */
 export const SUMMARY_CONFIDENCES: Record<SummaryConfidence, string> = {
   LOW: 'низкая',
   MEDIUM: 'средняя',
@@ -75,7 +80,7 @@ export const SUMMARY_SCALE_VALUES: Record<SummaryScaleKind, Record<SummaryScaleV
   WORKLOAD: AMOUNTS,
 };
 
-export const SUMMARY_TAGS: ReadonlyMap<string, string> = new Map([
+const SUMMARY_TAGS: ReadonlyMap<string, string> = new Map([
   ['AUTOMAT', 'Автомат'],
   ['MANY_LABS', 'Много лаб'],
   ['HEAVY_HOMEWORK', 'Много домашки'],
@@ -103,7 +108,7 @@ export function summaryTagLabel(code: string): string {
   return SUMMARY_TAGS.get(code) ?? code;
 }
 
-/** «Имя · ИСУ n», or «ИСУ n» while the name is unknown. */
+/** "Имя · ИСУ n", or "ИСУ n" while the name is unknown. */
 export function teacherLabel(row: { teacherIsu: number; teacherName: string | null }): string {
   const isu = `ИСУ ${row.teacherIsu}`;
   return row.teacherName ? `${row.teacherName} · ${isu}` : isu;

@@ -6,29 +6,28 @@ type Schemas = components['schemas'];
 type ModerationAuthor = Omit<Schemas['UserData'], 'capabilities'> &
   Partial<Pick<Schemas['UserData'], 'capabilities'>>;
 
+export type AdminPage<T> = Omit<Schemas['AdminPageAdminCaseItem'], 'items'> & { items: T[] };
+export type AdminUserSummary = Schemas['AdminUserSummary'];
+export type AdminRestriction = Schemas['AdminRestriction'];
+export type RestrictionCapability = Schemas['AdminRestriction']['capability'];
+
 export type TargetType = Schemas['ModerationCase']['targetType'];
 export type CaseStatus = Schemas['ModerationCase']['status'];
 export type CaseReason = Schemas['ModerationCase']['reason'];
 export type LinkCategory = Schemas['SubjectLinkRevision']['category'];
 export type LinkVisibility = Schemas['SubjectLinkRevision']['visibility'];
-export type RevisionStatus = Schemas['SubjectLinkRevision']['status'];
 export type ReportReason = Schemas['ModerationReport']['reason'];
-export type TeacherReviewStatus = Schemas['ModeratedTeacherReview']['status'];
 export type ReviewVerification = Schemas['ModeratedTeacherReview']['verification'];
 export type ModerationAction = Schemas['ModerationDecision']['action'];
 export type SubjectLinkRevision = Schemas['SubjectLinkRevision'];
-export type AdminLinkSummary = Schemas['AdminLinkSummary'];
-export type AdminReviewSummary = Schemas['AdminReviewSummary'];
 export type AdminCaseItem = Schemas['AdminCaseItem'];
 export type ModerationReport = Schemas['ModerationReport'];
 export type UserRestriction = Schemas['UserRestriction'];
 export type SubmitterHistory = Schemas['SubmitterHistory'];
-export type TeacherReviewRevision = Schemas['TeacherReviewRevision'];
-export type ModeratedTeacherReview = Schemas['ModeratedTeacherReview'];
+export type ModerationDecision = Schemas['ModerationDecision'];
 export type TeacherReviewTarget = Omit<Schemas['TeacherReviewTarget'], 'author'> & {
   author: ModerationAuthor;
 };
-export type ModerationDecision = Schemas['ModerationDecision'];
 export type SubjectLink = Omit<
   Schemas['SubjectLink'],
   'author' | 'isMine' | 'myVote' | 'reportedByMe'
@@ -41,7 +40,6 @@ export type SubjectLinkTarget = Omit<Schemas['SubjectLinkTarget'], 'link' | 'aut
   author: ModerationAuthor;
 };
 export type CaseTarget = SubjectLinkTarget | TeacherReviewTarget;
-export type RestrictionRequest = Schemas['DecisionRestriction'];
 export type ModerationCase = Omit<Schemas['ModerationCase'], 'target'> & {
   target: CaseTarget | null;
 };

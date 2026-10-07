@@ -1,82 +1,65 @@
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
-import reactHooks from 'eslint-plugin-react-hooks';
-import reactRefresh from 'eslint-plugin-react-refresh';
+import svelte from 'eslint-plugin-svelte';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import { readdirSync } from 'node:fs';
 import tseslint from 'typescript-eslint';
+import svelteConfig from './svelte.config.js';
 
-const boundaryMessage =
-  'Use the feature itself, api, ui, shared or auth/session and auth/useSession.';
-const authSession = 'auth/(?:session|useSession)(?:\\.[cm]?[jt]sx?)?$';
+const sources = '**/*.{ts,svelte}';
 
-// Per-directory rules preserve nested same-feature parent imports.
-function featureBoundaries(directory = new URL('./src/features/', import.meta.url), parts = []) {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    if (!entry.isDirectory()) return [];
-    const path = [...parts, entry.name];
-    const [feature] = path;
-    const depth = path.length - 1;
-    const local = [
-      '\\./',
-      ...Array.from({ length: depth }, (_, i) => `(?:\\.\\./){${i + 1}}(?!\\.\\./)`),
-    ];
-    const featurePath = `${feature}(?:/|$)|${authSession}`;
-    const sharedPath = `(?:api|ui|shared)(?:/|$)|features/(?:${featurePath})`;
-    const allowed = [
-      ...local,
-      `(?:\\.\\./){${depth + 1}}(?:${featurePath})`,
-      `(?:\\.\\./){${depth + 2}}(?:${sharedPath})`,
-      `(?:\\.\\./){${depth + 3}}src/(?:${sharedPath})`,
-      `(?:src|@|~)/(?:${sharedPath})`,
-      `features/(?:${featurePath})`,
-    ].join('|');
-    return [
-      {
-        files: [`src/features/${path.join('/')}/*.{ts,tsx}`],
-        rules: {
-          'no-restricted-imports': [
-            'error',
-            {
-              patterns: [
-                {
-                  regex: `^(?!(?:${allowed}))(?:\\.{1,2}/|(?:src|@|~|features|[@#](?:features|app))/)`,
-                  message: boundaryMessage,
-                },
-                // Non-canonical paths can hide traversal after an otherwise allowed prefix.
-                {
-                  regex: '(?:^|/)[^./][^/]*/\\.\\.(?:/|$)|/\\./|^\\./\\.\\./',
-                  message: 'Use a canonical import path.',
-                },
-              ],
-            },
-          ],
-        },
+// A feature imports itself, lib and api; features never import each other.
+function featureBoundaries() {
+  const root = new URL('./src/features/', import.meta.url);
+  return readdirSync(root, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => ({
+      files: [`src/features/${entry.name}/**/*.{ts,svelte}`],
+      ignores: ['**/*.test.ts'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                regex: `^(?:\\.\\./)+(?:features/)?(?!${entry.name}(?:/|$)|lib(?:/|$)|api(?:/|$))[^./][^/]*(?:/|$)`,
+                message: 'A feature imports only itself, lib and api.',
+              },
+              {
+                regex: '(?:^|/)[^./][^/]*/\\.\\.(?:/|$)|/\\./|^\\./\\.\\./',
+                message: 'Use a canonical import path.',
+              },
+            ],
+          },
+        ],
       },
-      ...featureBoundaries(new URL(`${entry.name}/`, directory), path),
-    ];
-  });
+    }));
 }
 
 export default defineConfig(
-  globalIgnores(['dist', 'coverage', 'node_modules']),
+  globalIgnores(['dist', 'coverage', 'node_modules', 'public']),
+  js.configs.recommended,
+  ...tseslint.configs.strict,
+  ...tseslint.configs.stylistic,
+  ...svelte.configs.recommended,
   {
-    files: ['**/*.{ts,tsx}'],
-    extends: [js.configs.recommended, tseslint.configs.strict, tseslint.configs.stylistic],
+    languageOptions: { ecmaVersion: 2022, globals: { ...globals.browser, ...globals.node } },
+  },
+  {
+    files: ['**/*.svelte', '**/*.svelte.ts'],
     languageOptions: {
-      ecmaVersion: 2022,
-      globals: { ...globals.browser, ...globals.node },
+      parserOptions: {
+        projectService: true,
+        extraFileExtensions: ['.svelte'],
+        parser: tseslint.parser,
+        svelteConfig,
+      },
     },
-    plugins: {
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
-    },
-    rules: {
-      ...reactHooks.configs.recommended.rules,
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-      '@typescript-eslint/consistent-type-imports': 'error',
-    },
+  },
+  {
+    files: [sources],
+    rules: { '@typescript-eslint/consistent-type-imports': 'error' },
   },
   // The immutable generator output uses index signatures instead of Record.
   {
@@ -85,24 +68,23 @@ export default defineConfig(
   },
   ...featureBoundaries(),
   {
-    files: ['src/{ui,api,shared}/**/*.{ts,tsx}'],
+    files: ['src/{lib,api}/**/*.{ts,svelte}'],
+    ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
           patterns: [
             {
-              regex: '(?:^|/)[@#]?(?:features|app)(?:/|$)',
-              message: 'Shared layers cannot depend on features or app.',
+              regex: '(?:^|/)features(?:/|$)',
+              message:
+                'lib and api cannot depend on features; compose them in App.svelte and pages.ts.',
             },
           ],
         },
       ],
     },
   },
-  {
-    files: ['src/test/**', '**/*.test.{ts,tsx}'],
-    rules: { 'react-refresh/only-export-components': 'off', 'no-restricted-imports': 'off' },
-  },
+  ...svelte.configs.prettier,
   prettier,
 );

@@ -25,29 +25,32 @@ Outside input fields and dialogs: `J` selects the next case, `K` the previous,
 `KeyboardEvent.code` also supports Russian keyboard layouts. Ctrl, Cmd and Alt
 combinations do not trigger these shortcuts.
 
-## Target implementation
+## Implementation
+
+`src/features/moderation/`: `/admin/moderation` is the "Заявки" tab and
+`/admin/restrictions` the "Ограничения" tab of `ModerationPage`. From 1100 px
+the queue (`CaseList`) and the case (`CaseDetail`) stand side by side and the
+first case opens by itself; on a phone the list comes first and a case opens in
+its place.
 
 A case targets a subject link (`SUBJECT_RESOURCE`) or a teacher review
-(`TEACHER_REVIEW`); `types.ts` models both targets as a union on `targetType`,
-and a queue row carries `link` or `review` accordingly. `CaseList` builds the
-row texts per type (a link's title and host, a review's teacher ISU, subject and
-excerpt). `CaseDetail` picks per type the title (for a review the teacher's
-name from the backend, else `Преподаватель`, and the ISU), the preview
-(`LinkPreview` or `ReviewPreview` with anonymity, the ISU check, subject,
-version and score), the changes (`ChangesSection` or `ReviewChangesSection`),
-the reject presets (`LINK_REJECT_PRESETS`, `REVIEW_REJECT_PRESETS` in
-`labels.ts`), the default restriction (`SUBMIT_RESOURCES` or `WRITE_REVIEWS`),
-the "hide all" dialog texts (confirmed by typing the author's name) and the
-decision snackbars (`doneText`).
-`ReviewChangesSection` compares the reviewed revision with `review.shown`, the
-approved content: the subject goes into the usual `DiffView` table and the text
-into `TextDiff`, which renders `wordDiff(before, after)`, a word-level longest
-common subsequence diff that keeps whitespace, as `<del>` and `<ins>` with
-hidden "удалено"/"добавлено" labels for screen readers. A review never approved
-shows "Новый отзыв, одобренных версий ещё нет" instead.
+(`TEACHER_REVIEW`); `types.ts` models both targets as a union on `targetType`.
+`labels.ts` holds per type the texts, the reject presets
+(`LINK_REJECT_PRESETS`, `REVIEW_REJECT_PRESETS`), the default restriction
+(`SUBMIT_RESOURCES` or `WRITE_REVIEWS`) and the decision snackbars
+(`doneText`). The preview is `LinkPreview` or `ReviewPreview` (anonymity, the
+ISU check, subject, version and score). `CaseChanges` compares a review's
+revision with the approved one: the subject in `DiffView`, the text in
+`TextDiff`, which renders `wordDiff(before, after)`, a word-level longest common
+subsequence diff that keeps whitespace, as `<del>` and `<ins>` with hidden
+"удалено"/"добавлено" labels for screen readers. A review never approved shows
+"Новый отзыв, одобренных версий ещё нет".
 
-The next queue case is prefetched. A decision writes the returned case to the
-cache and invalidates the rest of the moderation area.
+Cache keys are the request paths. The next queue case is prefetched; a decision
+keeps the returned case in the cache and forgets the rest of
+`/api/admin/moderation`. Revoking a restriction also forgets
+`/api/admin/users`. Category and complaint labels are checked by
+`src/test/labelsDrift.test.ts` against the app catalog (`../architecture.md`).
 
 ## Shareable state
 
