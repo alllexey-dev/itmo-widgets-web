@@ -79,10 +79,13 @@ const sorted = (values) =>
       .map((key) => [key, values[key]]),
   );
 const fixture = { appSha: sha, strings: sorted(strings), icons: sorted(icons) };
-const output = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "../web/src/test/fixtures/app-labels.json",
-);
-mkdirSync(dirname(output), { recursive: true });
-writeFileSync(output, `${JSON.stringify(fixture, null, 2)}\n`);
-console.log(`Updated ${output} from app ${sha}`);
+// The React app and the Svelte app keep identical copies until WV-06 removes the React one.
+for (const target of ["web", "web-next"]) {
+  const output = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    `../${target}/src/test/fixtures/app-labels.json`,
+  );
+  mkdirSync(dirname(output), { recursive: true });
+  writeFileSync(output, `${JSON.stringify(fixture, null, 2)}\n`);
+  console.log(`Updated ${output} from app ${sha}`);
+}
