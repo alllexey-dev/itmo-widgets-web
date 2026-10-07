@@ -4,7 +4,7 @@
   // What only the app does: the site never reads My ITMO.
 </script>
 
-<section class="m3-card tertiary app" aria-labelledby="home-app">
+<section class="m3-card secondary app" aria-labelledby="home-app">
   <h2 id="home-app" class="m3-section-title">Всё остальное — в приложении</h2>
   <p class="m3-body-medium">
     Расписание, зачётка, QR-пропуск и виджеты работают в приложении на телефоне: сайт не обращается

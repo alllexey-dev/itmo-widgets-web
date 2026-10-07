@@ -40,6 +40,11 @@ which is dark on light in every theme because not every scanner reads an
 inverted code. `index.html` carries the package's default surface colours for
 `theme-color` until the theme repaints them.
 
+A tinted card surface (the app card on Главная) uses `m3-card secondary`: the
+secondary container stays dark in a dark scheme for every seed and variant. The
+tertiary container is a bright accent in both modes, so it marks only small
+shapes such as avatars, never a whole card.
+
 ## Styles and the CSP
 
 Component styles live in the component's `<style>` block (scoped by Svelte);
