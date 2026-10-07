@@ -1,7 +1,7 @@
-import { screen, within } from '@testing-library/svelte';
+import { screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
   aiSummariesOf,
   credentialsOf,
@@ -14,6 +14,16 @@ import {
 } from '../../test/admin';
 import { renderApp } from '../../test/render';
 import { fail, mockSession, ok, server, userOf } from '../../test/server';
+import {
+  autoEntryOf,
+  freeEntryOf,
+  inDays,
+  mockStudentSources,
+  privacyOf,
+  profileOf,
+  recorder,
+  sportLessonOf,
+} from '../../test/student';
 
 async function attention() {
   return screen.findByRole('region', { name: 'Требует внимания' });
@@ -26,20 +36,166 @@ async function attentionRows() {
 }
 
 describe('HomePage for a student', () => {
-  it('shows the profile and asks nothing of the admin API', async () => {
+  async function card(name: string) {
+    return screen.findByRole('region', { name });
+  }
+
+  it('shows the student cards and asks nothing of the admin API', async () => {
     mockSession(userOf([]));
+    const requested = mockStudentSources();
 
     renderApp('/');
 
-    const profile = await screen.findByRole('region', { name: 'Анна Смирнова' });
-    expect(profile).toHaveTextContent('ИСУ 400001');
-    expect(profile).toHaveTextContent('P3212 · 2 курс · ФПИиКТ');
+    expect(await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ')).toBeInTheDocument();
+    expect(
+      await within(await card('Заявки в друзья')).findByText('Новых заявок нет.'),
+    ).toBeVisible();
+    expect(
+      await within(await card('Очереди на спорт')).findByText('Вы не стоите в очередях.'),
+    ).toBeVisible();
     expect(screen.queryByRole('region', { name: 'Требует внимания' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'За 7 дней' })).not.toBeInTheDocument();
+    expect(requested.every((path) => !path.startsWith('/api/admin/'))).toBe(true);
+  });
+
+  it('accepts a friend request inline', async () => {
+    mockSession(userOf([]));
+    const timur = profileOf(400002, 'Тимур Абдуллаев', { relationship: 'INCOMING' });
+    let incoming = [timur, profileOf(400003, 'Софья Лебедева', { relationship: 'INCOMING' })];
+    mockStudentSources({ incoming });
+    const { calls, record } = recorder();
+    server.use(
+      http.get('*/api/friends/requests/incoming', () => ok(incoming)),
+      http.post('*/api/friends/:isu/accept', async ({ request, params }) => {
+        await record(request);
+        incoming = incoming.filter((item) => item.user.isu !== Number(params.isu));
+        return ok({ ...timur, relationship: 'FRIENDS' });
+      }),
+    );
+    renderApp('/');
+    const requests = await card('Заявки в друзья');
+
+    await userEvent.click(
+      await within(requests).findByRole('button', { name: 'Принять заявку: Тимур Абдуллаев' }),
+    );
+
+    expect(await screen.findByText('Тимур Абдуллаев теперь в друзьях')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(requests).queryByText('Тимур Абдуллаев')).not.toBeInTheDocument(),
+    );
+    expect(within(requests).getByText('Софья Лебедева')).toBeInTheDocument();
+    expect(calls).toEqual([{ method: 'POST', path: '/api/friends/400002/accept', csrf: '1' }]);
+  });
+
+  it('declines a friend request inline', async () => {
+    mockSession(userOf([]));
+    let incoming = [profileOf(400002, 'Тимур Абдуллаев', { relationship: 'INCOMING' })];
+    mockStudentSources({ incoming });
+    server.use(
+      http.get('*/api/friends/requests/incoming', () => ok(incoming)),
+      http.post('*/api/friends/400002/reject', () => {
+        incoming = [];
+        return ok(profileOf(400002, 'Тимур Абдуллаев', { relationship: 'NONE' }));
+      }),
+    );
+    renderApp('/');
+    const requests = await card('Заявки в друзья');
+
+    await userEvent.click(
+      await within(requests).findByRole('button', { name: 'Отклонить заявку: Тимур Абдуллаев' }),
+    );
+
+    expect(await screen.findByText('Заявка отклонена')).toBeInTheDocument();
+    expect(await within(requests).findByText('Новых заявок нет.')).toBeInTheDocument();
+  });
+
+  it('shows only the queues the student still stands in, soonest first', async () => {
+    mockSession(userOf([]));
+    mockStudentSources({
+      entries: [
+        freeEntryOf(1, sportLessonOf(11, 'Волейбол', inDays(2)), { position: 3, total: 8 }),
+        freeEntryOf(2, sportLessonOf(12, 'Настольный теннис', inDays(1)), {
+          status: 'NOTIFIED',
+        }),
+        freeEntryOf(3, sportLessonOf(13, 'Бокс', inDays(3)), { isCancelled: true }),
+        autoEntryOf(4, sportLessonOf(14, 'Плавание', inDays(-13)), { status: 'SATISFIED' }),
+      ],
+    });
+
+    renderApp('/');
+
+    const queues = await card('Очереди на спорт');
+    const rows = await within(queues).findAllByRole('listitem');
+    expect(rows.map((row) => row.querySelector('.headline')?.textContent)).toEqual([
+      'Настольный теннис',
+      'Волейбол',
+    ]);
+    expect(rows[0]).toHaveTextContent('Место освободилось');
+    expect(rows[1]).toHaveTextContent('3-й из 8');
+    expect(within(queues).getByRole('link', { name: 'Все очереди' })).toHaveAttribute(
+      'href',
+      '/app/sport',
+    );
+  });
+
+  it('summarises who sees the data and links to the profile', async () => {
+    mockSession(userOf([]));
+    mockStudentSources({ privacy: privacyOf({ scheduleVisibility: 'NOBODY' }) });
+
+    renderApp('/');
+
+    const audiences = await card('Кто видит ваши данные');
+    expect(await within(audiences).findByText('Никто')).toBeInTheDocument();
+    expect(within(audiences).getByText('Друзья')).toBeInTheDocument();
+    expect(within(audiences).getByText('Все')).toBeInTheDocument();
+    expect(
+      within(audiences).getByRole('link', { name: 'Изменить, кто видит ваши данные' }),
+    ).toHaveAttribute('href', '/app/me');
+  });
+
+  it('points to the app download on the landing', async () => {
+    mockSession(userOf([]));
+    mockStudentSources();
+
+    renderApp('/');
+
+    const app = await card('Всё остальное — в приложении');
+    // Let the other cards settle so no answer lands in the next test's cache.
+    expect(await within(await card('Кто видит ваши данные')).findByText('Все')).toBeVisible();
+    expect(
+      await within(await card('Заявки в друзья')).findByText('Новых заявок нет.'),
+    ).toBeVisible();
+    expect(
+      await within(await card('Очереди на спорт')).findByText('Вы не стоите в очередях.'),
+    ).toBeVisible();
+    expect(within(app).getByRole('link', { name: 'Скачать приложение' })).toHaveAttribute(
+      'href',
+      '/#download',
+    );
+  });
+
+  it('offers a retry in a card whose source failed and keeps the others', async () => {
+    mockSession(userOf([]));
+    mockStudentSources({ incoming: null });
+    renderApp('/');
+    const requests = await card('Заявки в друзья');
+    expect(await within(requests).findByText('Не удалось загрузить заявки')).toBeInTheDocument();
+    expect(await within(await card('Кто видит ваши данные')).findByText('Все')).toBeInTheDocument();
+    server.use(
+      http.get('*/api/friends/requests/incoming', () =>
+        ok([profileOf(400002, 'Тимур Абдуллаев', { relationship: 'INCOMING' })]),
+      ),
+    );
+
+    await userEvent.click(within(requests).getByRole('button', { name: 'Повторить' }));
+
+    expect(await within(requests).findByText('Тимур Абдуллаев')).toBeInTheDocument();
   });
 });
 
 describe('HomePage for a moderator', () => {
+  beforeEach(() => void mockStudentSources());
+
   it('checks only the queue and links the open cases to it', async () => {
     mockSession(userOf(['MODERATOR']));
     const requested = mockSources({ cases: 3 });
@@ -52,7 +208,6 @@ describe('HomePage for a moderator', () => {
     expect(rows[0]).toHaveAttribute('href', '/app/admin/moderation');
     expect(requested).toEqual(['/api/admin/moderation/cases']);
     expect(screen.queryByRole('region', { name: 'За 7 дней' })).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Анна Смирнова' })).toHaveTextContent('Модератор');
   });
 
   it('says that nothing needs attention when the queue is empty', async () => {
@@ -88,6 +243,8 @@ describe('HomePage for a moderator', () => {
 });
 
 describe('HomePage for the admin', () => {
+  beforeEach(() => void mockStudentSources());
+
   it('says that nothing needs attention when every source is healthy', async () => {
     mockSession(userOf(['ADMIN']));
     const requested = mockSources();

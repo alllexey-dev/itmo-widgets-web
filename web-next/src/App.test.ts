@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { api } from './api/client';
 import { mockStaffSources } from './test/admin';
 import { renderApp } from './test/render';
@@ -16,6 +16,10 @@ import {
   server,
   userOf,
 } from './test/server';
+import { mockStudentSources, profileOf } from './test/student';
+
+// Главная loads the student cards for everybody.
+beforeEach(() => void mockStudentSources());
 
 function rail() {
   return within(screen.getByRole('complementary', { name: 'Навигация' }));
@@ -61,19 +65,25 @@ describe('Shell', () => {
 
     renderApp('/');
 
-    expect(await screen.findByRole('heading', { name: 'Анна Смирнова' })).toBeInTheDocument();
-    expect(screen.getByText('ИСУ 400001')).toBeInTheDocument();
-    expect(screen.getByText('P3212 · 2 курс · ФПИиКТ')).toBeInTheDocument();
+    expect(await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ')).toBeInTheDocument();
+    expect(rail().getByText('Модератор')).toBeInTheDocument();
   });
 
-  it.each([
-    ['/u/400002', 'Друзья'],
-  ])('marks the section that hosts %s', async (path, section) => {
+  it.each([['/u/400002', 'Друзья']])('marks the section that hosts %s', async (path, section) => {
     mockSession(userOf(['ADMIN']));
+    server.use(
+      http.get('*/api/users/400002', () =>
+        ok(
+          profileOf(400002, 'Тимур Абдуллаев', {
+            capabilities: { canViewSchedule: false, canViewSport: false, canViewFriends: false },
+          }),
+        ),
+      ),
+    );
 
     renderApp(path);
 
-    await screen.findByText('Раздел скоро появится');
+    await screen.findByRole('heading', { name: 'Тимур Абдуллаев' });
     expect(rail().getByRole('link', { name: section })).toHaveAttribute('aria-current', 'page');
   });
 
@@ -97,8 +107,13 @@ describe('Shell', () => {
 
   it('switches sections through the rail', async () => {
     mockSession(userOf([]));
+    server.use(
+      http.get('*/api/sport/auto-sign/limits', () =>
+        ok({ limit: 3, available: 3, nextAvailableAt: new Date().toISOString() }),
+      ),
+    );
     renderApp('/');
-    await screen.findByRole('heading', { name: 'Анна Смирнова' });
+    await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ');
 
     await userEvent.click(rail().getByRole('link', { name: 'Спорт' }));
 
@@ -118,7 +133,7 @@ describe('Shell', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Повторить' }));
 
-    expect(await screen.findByRole('heading', { name: 'Анна Смирнова' })).toBeInTheDocument();
+    expect(await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ')).toBeInTheDocument();
   });
 });
 
@@ -153,7 +168,7 @@ describe('Session', () => {
     mockChallenges('ABCDEFGH');
     mockPoll();
     renderApp('/');
-    await screen.findByRole('heading', { name: 'Анна Смирнова' });
+    await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ');
 
     await api.get('/api/admin/users').catch(() => undefined);
 
@@ -193,7 +208,7 @@ describe('Session', () => {
     mockChallenges('ABCDEFGH');
     mockPoll();
     renderApp('/');
-    await screen.findByRole('heading', { name: 'Анна Смирнова' });
+    await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ');
 
     await userEvent.click(rail().getByRole('button', { name: 'Выйти' }));
 
@@ -206,7 +221,7 @@ describe('Session', () => {
     mockSession(userOf([]));
     server.use(http.post('*/api/web/auth/logout', () => fail(500, 'internal_server_error')));
     renderApp('/');
-    await screen.findByRole('heading', { name: 'Анна Смирнова' });
+    await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ');
 
     await userEvent.click(rail().getByRole('button', { name: 'Выйти' }));
 

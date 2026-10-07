@@ -1,14 +1,12 @@
 import type { PageTable } from './lib/navigation';
 
-const soon = (title: string, text: string) => ({ title, text });
-
-/** Every route of the shell and what renders it; the sections arrive card by card (WV-02..WV-05). */
+/** Every route of the shell and what renders it. */
 export const pages: PageTable = {
   home: { load: () => import('./features/home/HomePage.svelte') },
-  friends: soon('Друзья', 'Заявки в друзья и список друзей появятся здесь.'),
-  person: soon('Друзья', 'Расписание, спорт и друзья человека появятся здесь.'),
-  sport: soon('Спорт', 'Ваши очереди на занятия появятся здесь.'),
-  me: soon('Профиль', 'Настройки приватности и ограничения появятся здесь.'),
+  friends: { load: () => import('./features/friends/FriendsPage.svelte') },
+  person: { load: () => import('./features/people/PersonPage.svelte') },
+  sport: { load: () => import('./features/sport/SportPage.svelte') },
+  me: { load: () => import('./features/profile/ProfilePage.svelte') },
   moderation: { load: () => import('./features/moderation/ModerationPage.svelte') },
   restrictions: { load: () => import('./features/moderation/ModerationPage.svelte') },
   dashboard: { load: () => import('./features/dashboard/DashboardPage.svelte') },
