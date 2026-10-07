@@ -13,7 +13,8 @@ Cards, each requested only when the profile's `capabilities` open it:
 - Друзья: the person's friends.
 
 Missing `capabilities` (an older Backend) count as closed, and a 403 on a card
-shows it as "... скрыто" too. A relation change forgets `/api/friends`, the
+shows it as "... скрыто" too, unless it is a lost session (a bare 403 of
+Backend 1.7.0): then the card shows its load error under "Сессия истекла". A relation change forgets `/api/friends`, the
 profile and the person's schedule and sport keys.
 
 The site never calls My ITMO and shows nothing Backend has no data for: names of

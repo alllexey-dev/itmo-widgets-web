@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fail, mockSignedOut, ok, server } from '../test/server';
+import { fail, legacySessionLost, mockSignedOut, ok, server } from '../test/server';
 import { api, ApiError, onSessionLost } from './client';
 
 describe('api client', () => {
@@ -105,18 +105,35 @@ describe('api client', () => {
     },
   );
 
-  it.each(['forbidden', 'restricted', 'permission_denied'])(
+  it.each(['forbidden', 'restricted', 'permission_denied', 'access_denied', 'csrf'])(
     'keeps the session on 403 %s from other endpoints',
     async (code) => {
       const listener = vi.fn();
       unsubscribe = onSessionLost(listener);
       server.use(http.get('*/api/admin/dashboard', () => fail(403, code)));
 
-      await expect(api.get('/api/admin/dashboard')).rejects.toMatchObject({ status: 403, code });
+      const error = await api.get('/api/admin/dashboard').catch((caught: unknown) => caught);
 
+      expect(error).toMatchObject({ status: 403, code, isForbidden: true, sessionLost: false });
       expect(listener).not.toHaveBeenCalled();
     },
   );
+
+  it.each([
+    ['GET', () => api.get('/api/friends')],
+    ['POST', () => api.post('/api/friends/311111/request')],
+  ])('reports a lost session on a bare 403 of a Backend before BK-15 (%s)', async (_, call) => {
+    const listener = vi.fn();
+    unsubscribe = onSessionLost(listener);
+    server.use(http.all('*/api/friends*', legacySessionLost));
+
+    const error = await call().catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ status: 403, sessionLost: true, isForbidden: false });
+    expect((error as ApiError).isUnauthorized).toBe(true);
+    expect(listener).toHaveBeenCalledOnce();
+  });
 
   it('turns a failed connection into a network ApiError', async () => {
     server.use(http.get('*/api/admin/audit', () => HttpResponse.error()));

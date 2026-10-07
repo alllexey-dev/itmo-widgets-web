@@ -35,9 +35,10 @@ export function roleLabel(user: User): string | null {
 type Status = 'idle' | 'loading' | 'ready' | 'signedOut' | 'failed';
 
 /**
- * The signed-in user of this browser. A 401 anywhere or a 403 on `/me` means the cookie session is gone:
- * a visitor who never got in goes straight to the login page, a user who was signed in sees "Сессия
- * истекла" first. A 403 elsewhere is a page's access error and keeps the session.
+ * The signed-in user of this browser. A 401 anywhere, a 403 on `/me` or a 403 without an envelope
+ * (Backend 1.7.0) means the cookie session is gone: a visitor who never got in goes straight to the
+ * login page, a user who was signed in sees "Сессия истекла" first. An enveloped 403 elsewhere is a
+ * page's access error and keeps the session.
  */
 class Session {
   user = $state<User | null>(null);

@@ -60,16 +60,19 @@ history entry and drops empty values. Section documents list their parameters.
 - `hasAccess(user, access)` is the only role rule: `ADMIN` implies moderator
   rights. The backend enforces access; the UI only hides.
 - The API client reports a lost session (`onSessionLost`) on 401 from any
-  request and 403 from `/api/web/auth/me`. A visitor who never got in goes
+  request, 403 from `/api/web/auth/me` and a 403 without an `ApiResponse`
+  envelope from any request. A visitor who never got in goes
   straight to `/login`; a signed-in user sees the modal `Сессия истекла` with
   `Войти` first, so the page under it does not vanish. On `/login` the signal is
   ignored: the login page checks the session itself.
 - Backend BK-15 uses `401 unauthorized` for a missing or expired cookie session.
-  Keep the `403` compatibility branch for `/api/web/auth/me` while production
-  may still run the older Backend. It may be removed only after Backend 1.8.0
-  reaches production (gate R), in a later 2.3.x change.
-  A `403 forbidden` or `403 restricted` from another endpoint keeps the session
-  and shows the page's access error (`src/lib/LoadError.svelte`).
+  Backend 1.7.0 answers it with a bare 403 (empty body) on every route, while
+  every real denial (`permission_denied`, `access_denied`, `restricted`,
+  `csrf`) carries an envelope. Keep both `403` compatibility branches while
+  production may still run the older Backend. They may be removed only after
+  Backend 1.8.0 reaches production (gate R), in a later 2.3.x change.
+  An enveloped 403 from another endpoint keeps the session and shows the page's
+  access error (`src/lib/LoadError.svelte`).
 - `session.logout()` posts `/api/web/auth/logout`, forgets the user and every
   cached response and goes to `/login`.
 
@@ -102,8 +105,9 @@ All HTTP goes through `src/api/client.ts`:
   cookie sessions (CSRF, answer `403 csrf` otherwise).
 - The `ApiResponse` envelope `{success, data, error: {message, code}}` is
   unwrapped; the promise resolves with `data`.
-- Failures throw `ApiError(message, status, code)` with helpers `isUnauthorized`
-  (401), `isForbidden` (403) and `isNetwork` (status 0). Aborts rethrow the
+- Failures throw `ApiError(message, status, code)` with `sessionLost` and
+  helpers `isUnauthorized` (401 or a lost session), `isForbidden` (403 that is
+  not a lost session) and `isNetwork` (status 0). Aborts rethrow the
   `AbortError` untouched.
 
 Error codes:
@@ -205,7 +209,8 @@ Vitest runs in jsdom with `src/test/setup.ts`:
   constructable stylesheets), so they render as plain elements.
 - Helpers in `server.ts`: `ok(data)` and `fail(status, code)` build backend
   envelopes; `userOf(roles)`, `mockSession`, `mockSignedOut` (401 on `/me`,
-  matching Backend BK-15), `mockLegacySignedOut` (403 on `/me` before BK-15),
+  matching Backend BK-15), `mockLegacySignedOut` (bare 403 on `/me` before BK-15), `legacySessionLost`
+  (that bare 403 for any handler),
   `mockChallenges` and `mockPoll` for sign-in.
 - `src/test/admin.ts` holds synthetic admin answers (`pageOf`,
   `credentialsOf`, `sportStatusOf`, `aiSummariesOf`, `reviewsSyncOf`,

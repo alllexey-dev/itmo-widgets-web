@@ -38,20 +38,24 @@ export class ApiError extends Error {
   readonly status: number;
   /** Backend `ApiResponse.error.code`, e.g. `not_found`, `rate_limited`, `csrf`. */
   readonly code: string;
+  /** The cookie session is gone, whatever the status says (see `isSessionLost`). */
+  readonly sessionLost: boolean;
 
-  constructor(message: string, status: number, code: string) {
+  constructor(message: string, status: number, code: string, sessionLost = status === 401) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.sessionLost = sessionLost;
   }
 
   get isUnauthorized(): boolean {
-    return this.status === 401;
+    return this.status === 401 || this.sessionLost;
   }
 
+  /** An access error of the request itself; a lost session is not one. */
   get isForbidden(): boolean {
-    return this.status === 403;
+    return this.status === 403 && !this.sessionLost;
   }
 
   get isNetwork(): boolean {
@@ -79,8 +83,13 @@ function notifySessionLost(): void {
   if (!window.location.pathname.startsWith(loginPath)) window.location.assign(loginPath);
 }
 
-function isSessionLost(path: string, status: number): boolean {
-  return status === 401 || (status === 403 && path === SESSION_PATH);
+/**
+ * Backend 1.7.0 answers a missing or expired cookie session with a bare 403 on every route, Backend
+ * BK-15 with 401. Every real authorization denial (`permission_denied`, `access_denied`,
+ * `restricted`, `csrf`) carries an `ApiResponse` envelope, so a 403 without one is a lost session.
+ */
+function isSessionLost(path: string, status: number, payload: unknown): boolean {
+  return status === 401 || (status === 403 && (path === SESSION_PATH || !isEnvelope(payload)));
 }
 
 function buildUrl(path: string, query?: Record<string, QueryValue>): URL {
@@ -134,12 +143,14 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const payload = await readJson(response);
 
   if (!response.ok || (isEnvelope(payload) && !payload.success)) {
-    if (isSessionLost(path, response.status)) notifySessionLost();
+    const lost = isSessionLost(path, response.status, payload);
+    if (lost) notifySessionLost();
     const error = isEnvelope(payload) ? payload.error : null;
     throw new ApiError(
       error?.message ?? `HTTP ${response.status}`,
       response.status,
       error?.code ?? CLIENT_ERROR_CODES.http,
+      lost,
     );
   }
 
