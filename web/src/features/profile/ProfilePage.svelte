@@ -85,8 +85,13 @@
         <h2 id="profile-session" class="m3-section-title">Этот вход</h2>
         <p class="m3-body-large">Вы вошли на сайт, подтвердив вход в приложении.</p>
         <p class="m3-body-medium m3-muted">
-          Вход закончится после 2 часов без действий, а в любом случае — через 12 часов.
+          Вход закончится после 14 дней без действий, а в любом случае — через 60 дней.
         </p>
+        {#if role}
+          <p class="m3-body-medium m3-muted">
+            Для действий модератора и администратора вход нужно подтверждать раз в 12 часов.
+          </p>
+        {/if}
         <button class="m3-btn tonal out" disabled={leaving} onclick={logout}>
           <Icon name="logout" />
           Выйти

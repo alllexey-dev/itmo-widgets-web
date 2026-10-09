@@ -28,6 +28,9 @@ export interface RequestOptions {
 
 export const SESSION_PATH = '/api/web/auth/me';
 
+/** 401 on an admin or moderator route whose session is older than Backend allows there (BK-WS2). */
+export const REAUTH_REQUIRED = 'reauth_required';
+
 /** Error codes produced by the client itself rather than by the backend. */
 export const CLIENT_ERROR_CODES = {
   network: 'network',
@@ -50,7 +53,7 @@ export class ApiError extends Error {
   }
 
   get isUnauthorized(): boolean {
-    return this.status === 401 || this.sessionLost;
+    return this.sessionLost;
   }
 
   /** An access error of the request itself; a lost session is not one. */
@@ -63,15 +66,25 @@ export class ApiError extends Error {
   }
 }
 
-type SessionLostListener = () => void;
-const sessionLostListeners = new Set<SessionLostListener>();
+type Listener = () => void;
+const sessionLostListeners = new Set<Listener>();
+const reauthListeners = new Set<Listener>();
+
+function subscribe(listeners: Set<Listener>, listener: Listener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
 
 /** The app routes to the login page; without a listener the page reloads there. */
-export function onSessionLost(listener: SessionLostListener): () => void {
-  sessionLostListeners.add(listener);
-  return () => {
-    sessionLostListeners.delete(listener);
-  };
+export function onSessionLost(listener: Listener): () => void {
+  return subscribe(sessionLostListeners, listener);
+}
+
+/** A staff action needs a fresh sign-in; the session itself still works. */
+export function onReauthRequired(listener: Listener): () => void {
+  return subscribe(reauthListeners, listener);
 }
 
 function notifySessionLost(): void {
@@ -89,7 +102,12 @@ function notifySessionLost(): void {
  * `restricted`, `csrf`) carries an `ApiResponse` envelope, so a 403 without one is a lost session.
  */
 function isSessionLost(path: string, status: number, payload: unknown): boolean {
-  return status === 401 || (status === 403 && (path === SESSION_PATH || !isEnvelope(payload)));
+  if (status === 401) return errorCode(payload) !== REAUTH_REQUIRED;
+  return status === 403 && (path === SESSION_PATH || !isEnvelope(payload));
+}
+
+function errorCode(payload: unknown): string | null | undefined {
+  return isEnvelope(payload) ? payload.error?.code : undefined;
 }
 
 function buildUrl(path: string, query?: Record<string, QueryValue>): URL {
@@ -145,6 +163,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (!response.ok || (isEnvelope(payload) && !payload.success)) {
     const lost = isSessionLost(path, response.status, payload);
     if (lost) notifySessionLost();
+    else if (response.status === 401) reauthListeners.forEach((listener) => listener());
     const error = isEnvelope(payload) ? payload.error : null;
     throw new ApiError(
       error?.message ?? `HTTP ${response.status}`,

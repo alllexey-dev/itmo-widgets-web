@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- WV-08: Describe web sessions of 14 days idle and 60 days at most with 90-day retention, and answer a 401 reauth_required on staff actions with a re-login dialog that returns to the page and keeps the session.
 - WV-06-FIX2: Put the app card on Главная on the secondary container, as the package's tertiary container stays light in a dark scheme and the card showed as a light lavender block with a light blue button.
 - WV-06-FIX: Treat a 403 without an ApiResponse envelope as a lost session, as Backend 1.7.0 answers an expired web session on every route, so the web shows "Сессия истекла" instead of access errors or hidden person cards.
 - WV-06: Switch /app/ to the Svelte web v3: the React app is removed, web-next/ becomes web/ in the same image, nginx and CSP unchanged; the web docs describe the new router, session, data loading, design rules and every section.

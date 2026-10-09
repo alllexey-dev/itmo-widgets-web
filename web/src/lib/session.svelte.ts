@@ -1,7 +1,7 @@
 import { forget } from '@alllexey/ui';
-import { api, ApiError, onSessionLost, SESSION_PATH } from '../api/client';
+import { api, ApiError, onReauthRequired, onSessionLost, SESSION_PATH } from '../api/client';
 import type { components } from '../api/schema';
-import { router, type Access } from './router.svelte';
+import { BASE, router, type Access } from './router.svelte';
 
 export type Role = 'MODERATOR' | 'ADMIN';
 
@@ -46,10 +46,13 @@ class Session {
   error = $state<Error | null>(null);
   /** The session ended while the user was working; the shell shows the modal dialog. */
   lost = $state(false);
+  /** A staff action needs a fresh sign-in (401 `reauth_required`); the session still works. */
+  reauth = $state(false);
   #request: Promise<void> | null = null;
 
   constructor() {
     onSessionLost(() => this.#onLost());
+    onReauthRequired(() => (this.reauth = Boolean(this.user)));
   }
 
   /** Loads `/me` once; concurrent callers share the request. */
@@ -69,10 +72,17 @@ class Session {
     router.go('/login', { replace: true });
   }
 
-  /** "Войти" in the lost-session dialog. */
+  /** "Войти" in the lost-session dialog; the login page returns to this page. */
   signInAgain(): void {
+    const back = here();
     this.#signOut();
-    router.go('/login', { replace: true });
+    router.go(loginPath(back), { replace: true });
+  }
+
+  /** "Войти" in the re-login dialog: the session stays, so going back keeps the page working. */
+  reauthenticate(): void {
+    this.reauth = false;
+    router.go(loginPath(here()));
   }
 
   /** Forgets the user, e.g. right after the phone approved a new sign-in. */
@@ -81,6 +91,7 @@ class Session {
     this.status = 'idle';
     this.error = null;
     this.lost = false;
+    this.reauth = false;
   }
 
   async #load(): Promise<void> {
@@ -115,6 +126,15 @@ class Session {
     this.#signOut();
     router.go('/login', { replace: true });
   }
+}
+
+/** The current app path with its query, e.g. `/admin/moderation?case=1`. */
+function here(): string {
+  return location.pathname.slice(BASE.length) + location.search;
+}
+
+function loginPath(back: string): string {
+  return `/login?next=${encodeURIComponent(back)}`;
 }
 
 export const session = new Session();

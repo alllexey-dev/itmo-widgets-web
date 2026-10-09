@@ -139,6 +139,20 @@ describe('ProfilePage', () => {
     expect(await audience('Кто видит спорт')).toBeInTheDocument();
   });
 
+  it.each([
+    [[], false],
+    [['MODERATOR'], true],
+  ] as const)('tells %j about the sign-in lifetime', async (roles, staff) => {
+    mockSession(userOf([...roles]));
+    mockProfile();
+
+    renderApp('/me');
+
+    const card = await screen.findByRole('region', { name: 'Этот вход' });
+    expect(within(card).getByText(/после 14 дней без действий/)).toBeInTheDocument();
+    expect(within(card).queryByText(/раз в 12 часов/) !== null).toBe(staff);
+  });
+
   it('signs out from this sign-in card', async () => {
     let signedIn = true;
     server.use(

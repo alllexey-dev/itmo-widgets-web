@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fail, legacySessionLost, mockSignedOut, ok, server } from '../test/server';
-import { api, ApiError, onSessionLost } from './client';
+import { api, ApiError, onReauthRequired, onSessionLost } from './client';
 
 describe('api client', () => {
   let unsubscribe: (() => void) | undefined;
@@ -133,6 +133,26 @@ describe('api client', () => {
     expect(error).toMatchObject({ status: 403, sessionLost: true, isForbidden: false });
     expect((error as ApiError).isUnauthorized).toBe(true);
     expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it('asks for a fresh sign-in on 401 reauth_required and keeps the session', async () => {
+    const lost = vi.fn();
+    const reauth = vi.fn();
+    const unsubscribeLost = onSessionLost(lost);
+    unsubscribe = onReauthRequired(reauth);
+    server.use(
+      http.post('*/api/admin/moderation/cases/7/approve', () => fail(401, 'reauth_required')),
+    );
+
+    const error = await api
+      .post('/api/admin/moderation/cases/7/approve')
+      .catch((caught: unknown) => caught);
+    unsubscribeLost();
+
+    expect(error).toMatchObject({ status: 401, code: 'reauth_required', sessionLost: false });
+    expect((error as ApiError).isUnauthorized).toBe(false);
+    expect(reauth).toHaveBeenCalledOnce();
+    expect(lost).not.toHaveBeenCalled();
   });
 
   it('turns a failed connection into a network ApiError', async () => {

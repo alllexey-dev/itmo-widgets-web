@@ -1,9 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './api/client';
-import { mockStaffSources } from './test/admin';
+import { mockStaffSources, pageOf } from './test/admin';
 import { renderApp } from './test/render';
 import {
   fail,
@@ -21,6 +21,7 @@ import { mockStudentSources, profileOf } from './test/student';
 
 // Главная loads the student cards for everybody.
 beforeEach(() => void mockStudentSources());
+afterEach(() => vi.useRealTimers());
 
 function rail() {
   return within(screen.getByRole('complementary', { name: 'Навигация' }));
@@ -206,6 +207,51 @@ describe('Session', () => {
       expect(rail().getByRole('link', { name: /Анна Смирнова/ })).toBeInTheDocument();
     },
   );
+
+  it('asks a staff user with an old sign-in to sign in again and keeps the session', async () => {
+    mockSession(userOf(['ADMIN']));
+    server.use(http.get('*/api/admin/users', () => fail(401, 'reauth_required')));
+    renderApp('/admin/users');
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Для действий администратора войдите заново',
+    });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Не сейчас' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(location.pathname).toBe('/app/admin/users');
+    expect(rail().getByRole('link', { name: /Анна Смирнова/ })).toBeInTheDocument();
+  });
+
+  it('returns to the staff page after the fresh sign-in is approved', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let fresh = false;
+    mockSession(userOf(['ADMIN']));
+    server.use(
+      http.get('*/api/admin/users', ({ request }) =>
+        fresh ? ok(pageOf([], request)) : fail(401, 'reauth_required'),
+      ),
+    );
+    mockChallenges('ABCDEFGH');
+    mockPoll(() => {
+      fresh = true;
+      return 'APPROVED';
+    });
+    renderApp('/admin/users?q=P3212');
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Для действий администратора войдите заново',
+    });
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Войти' }));
+    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    await waitFor(() => expect(location.pathname).toBe('/app/admin/users'));
+    expect(location.search).toBe('?q=P3212');
+    expect(await rail().findByRole('link', { name: /Анна Смирнова/ })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 
   it('signs out through the rail and returns to the login page', async () => {
     let signedIn = true;

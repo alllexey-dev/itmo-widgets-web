@@ -137,6 +137,19 @@
       <button class="m3-btn" onclick={() => session.signInAgain()}>Войти</button>
     {/snippet}
   </Dialog>
+{:else if session.reauth}
+  <Dialog
+    title="Для действий администратора войдите заново"
+    text="Подтвердите вход в приложении, и эта страница откроется снова."
+    icon="lock"
+    shape="sunny"
+    onclose={() => (session.reauth = false)}
+  >
+    {#snippet actions()}
+      <button class="m3-btn text" onclick={() => (session.reauth = false)}>Не сейчас</button>
+      <button class="m3-btn" onclick={() => session.reauthenticate()}>Войти</button>
+    {/snippet}
+  </Dialog>
 {/if}
 
 <style>

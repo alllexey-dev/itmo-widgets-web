@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     EmptyState,
+    forget,
     Icon,
     LoadingIndicator,
     Shape,
@@ -19,20 +20,25 @@
   import QrCode from './QrCode.svelte';
 
   const scanned = $derived(parseLoginCode(router.query.get('code')));
+  // `?next=` comes from "Войти" in the shell's sign-in dialogs: a signed-in user asked to sign in again.
+  const requested = router.query.get('next');
+  const next = requested?.startsWith('/') && !requested.startsWith('/login') ? requested : null;
   let checking = $state(true);
   let settings = $state(false);
   let flow = $state<LoginFlow | null>(null);
 
   function approved() {
+    // Another phone may have approved: cached pages belong to the old user.
+    forget();
     session.reset();
-    router.go('/', { replace: true });
+    router.go(next ?? '/', { replace: true });
   }
 
   onMount(() => {
     let active = true;
     void session.ensure().then(() => {
       if (!active) return;
-      if (session.user) router.go('/', { replace: true });
+      if (session.user && !next) router.go('/', { replace: true });
       else checking = false;
     });
     return () => {

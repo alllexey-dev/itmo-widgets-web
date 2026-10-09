@@ -11,8 +11,9 @@
 
 The rail shows the sections the role opens; the signed-in user at its bottom
 links to Профиль, next to `Выйти`. `Оформление` sets the shared alllexey.dev
-theme (see `../design.md`). A session expires after 2 hours without requests or
-12 hours after sign-in. Only the phone app can approve sign-in; a web session
+theme (see `../design.md`). A session expires after 14 days without requests or
+60 days after sign-in; moderator and admin actions need a sign-in at most 12 hours
+old (Backend BK-WS2, see `../architecture.md`, Session). Only the phone app can approve sign-in; a web session
 cannot approve another browser. What happens when a session ends is described
 in `../architecture.md` (Session).
 
