@@ -73,6 +73,13 @@ history entry and drops empty values. Section documents list their parameters.
   Backend 1.8.0 reaches production (gate R), in a later 2.3.x change.
   An enveloped 403 from another endpoint keeps the session and shows the page's
   access error (`src/lib/LoadError.svelte`).
+- `401 reauth_required` (Backend BK-WS2: a moderator or admin route with a
+  session older than 12 hours) is not a lost session: the client calls
+  `onReauthRequired` instead, the shell shows the dismissible dialog
+  `Для действий администратора войдите заново`, and the student sections keep
+  working. Its `Войти` opens `/login?next=<path>` without signing out; the
+  lost-session `Войти` also passes `next`. After approval the login page forgets
+  cached responses and returns to `next` (an app path, never `/login`).
 - `session.logout()` posts `/api/web/auth/logout`, forgets the user and every
   cached response and goes to `/login`.
 

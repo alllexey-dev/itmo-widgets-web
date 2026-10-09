@@ -5,7 +5,8 @@
 //   npm run csp-preview -- --serve  build and keep serving on http://127.0.0.1:4176/app/ for a browser
 //                                   (PREVIEW_PORT=<port> picks another port)
 //
-// In --serve mode /qa/<signed-out|student|moderator|admin> switches the synthetic session and opens /app/.
+// In --serve mode /qa/<signed-out|student|moderator|admin|stale-admin> switches the synthetic session and opens
+// /app/; stale-admin gets 401 reauth_required from every admin route (a sign-in older than 12 hours).
 // Static synthetic data only: no proxy, no upstream request, no real account or cookie.
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -25,7 +26,7 @@ if (!csp || !permissions)
 if (!existsSync(resolve(dist, 'index.html'))) throw new Error('Build the app first: npm run build');
 
 const serve = process.argv.includes('--serve');
-const ROLES = { student: [], moderator: ['MODERATOR'], admin: ['ADMIN'] };
+const ROLES = { student: [], moderator: ['MODERATOR'], admin: ['ADMIN'], 'stale-admin': ['ADMIN'] };
 const ok = (data) => ({ success: true, data, error: null });
 const failure = (code, message) => ({ success: false, data: null, error: { code, message } });
 const userOf = (roles) => ({
@@ -242,7 +243,9 @@ async function api(request, response, url) {
   let body;
   const moderation = staff ? await moderationApi(request, url) : undefined;
   const student = ROLES[role] ? await studentApi(request, url) : undefined;
-  if (moderation) {
+  if (role === 'stale-admin' && path.startsWith('/api/admin/')) {
+    [status, body] = [401, failure('reauth_required', 'Synthetic old sign-in')];
+  } else if (moderation) {
     status = moderation[0];
     body = status === 200 ? ok(moderation[1]) : failure('not_found', 'No synthetic case');
   } else if (student) {
@@ -298,7 +301,7 @@ const server = createServer((request, response) => {
   const path = url.pathname;
   response.setHeader('Content-Security-Policy', csp);
   response.setHeader('Permissions-Policy', permissions);
-  const qa = /^\/qa\/(signed-out|student|moderator|admin)$/.exec(path);
+  const qa = /^\/qa\/(signed-out|student|moderator|admin|stale-admin)$/.exec(path);
   if (qa) {
     response.statusCode = 302;
     response.setHeader('Set-Cookie', `qa-role=${qa[1]}; Path=/`);
@@ -347,6 +350,7 @@ const PAGES = [
   ['admin', '/app/u/400002'],
   ['admin', '/app/sport'],
   ['admin', '/app/me'],
+  ['stale-admin', '/app/admin/users'],
 ];
 
 /** Any headless shell Playwright already downloaded, newest first; this script never downloads one. */
@@ -426,7 +430,7 @@ async function check(base) {
             onScreen?.click();
             return Boolean(onScreen);
           });
-        if (opened) await page.getByRole('dialog').waitFor();
+        if (opened) await page.getByRole('dialog', { name: 'Оформление' }).waitFor();
         await context.close();
       }
     }
