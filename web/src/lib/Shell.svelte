@@ -14,6 +14,7 @@
   import { onMount } from 'svelte';
   import { errorText } from '../api/errors';
   import Forbidden from './Forbidden.svelte';
+  import { track } from './lazy';
   import { RAIL, type LazyPage, type PageTable } from './navigation';
   import NotFound from './NotFound.svelte';
   import PlannedSection from './PlannedSection.svelte';
@@ -44,7 +45,7 @@
   $effect(() => {
     const name = router.route.name;
     if (!entry || !('load' in entry) || !allowed || loaded[name]) return;
-    void entry.load().then((module) => (loaded[name] = module.default));
+    void track(entry.load()).then((module) => (loaded[name] = module.default));
   });
   const PageComponent = $derived(loaded[router.route.name]);
 
@@ -67,7 +68,7 @@
       if (!session.user) return;
       Object.values(pages)
         .filter((page): page is LazyPage => 'load' in page)
-        .forEach((page) => void page.load());
+        .forEach((page) => void track(page.load()));
     };
     if ('requestIdleCallback' in window) {
       const id = requestIdleCallback(prefetch, { timeout: 3000 });
