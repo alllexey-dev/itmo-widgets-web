@@ -5,7 +5,7 @@
     Icon,
     LoadingIndicator,
     Shape,
-    ThemeSettings,
+    TopBar,
     WavyProgress,
     snackbars,
   } from '@alllexey/ui';
@@ -14,7 +14,6 @@
   import { errorText } from '../../api/errors';
   import { router } from '../../lib/router.svelte';
   import { session } from '../../lib/session.svelte';
-  import { theme } from '../../lib/theme.svelte';
   import { LoginFlow } from './challenge.svelte';
   import { formatLoginCode, loginUrl, parseLoginCode } from './login';
   import QrCode from './QrCode.svelte';
@@ -24,7 +23,6 @@
   const requested = router.query.get('next');
   const next = requested?.startsWith('/') && !requested.startsWith('/login') ? requested : null;
   let checking = $state(true);
-  let settings = $state(false);
   let flow = $state<LoginFlow | null>(null);
 
   function approved() {
@@ -74,15 +72,7 @@
 </script>
 
 <div class="page">
-  <header class="top">
-    <a class="brand m3-title-medium m3-emphasized" href="/">
-      <img src="{import.meta.env.BASE_URL}favicon.png" alt="" width="32" height="32" />
-      ITMO.Widgets
-    </a>
-    <button class="m3-icon-btn" onclick={() => (settings = true)} aria-label="Оформление">
-      <Icon name="palette" />
-    </button>
-  </header>
+  <TopBar brand="ITMO.Widgets" brandHref="/" />
 
   {#if checking}
     <main class="center">
@@ -91,12 +81,7 @@
   {:else if scanned}
     <main class="center">
       <section class="m3-card scanned" aria-labelledby="scanned-title">
-        <Shape
-          shape="cookie9"
-          size={56}
-          color="var(--md-secondary-container)"
-          fg="var(--md-on-secondary-container)"
-        >
+        <Shape shape="cookie9" size={56} tone="secondary">
           <Icon name="smartphone" size={32} />
         </Shape>
         <h1 id="scanned-title" class="m3-title-large">
@@ -120,12 +105,7 @@
         <ol class="steps">
           {#each ['Откройте ITMO.Widgets на телефоне', 'Профиль → Вход на сайт', 'Отсканируйте QR или введите код'] as step, index (step)}
             <li>
-              <Shape
-                shape="cookie6"
-                size={40}
-                color="var(--md-secondary-container)"
-                fg="var(--md-on-secondary-container)"
-              >
+              <Shape shape="cookie6" size={40} tone="secondary">
                 <b>{index + 1}</b>
               </Shape>
               <span>{step}</span>
@@ -213,40 +193,19 @@
   {/if}
 </div>
 
-{#if settings}<ThemeSettings {theme} onclose={() => (settings = false)} />{/if}
-
 <style>
   .page {
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
-    padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right))
-      env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
-  }
-  .top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 64px;
-    max-width: 1040px;
-    width: 100%;
-    margin: 0 auto;
-  }
-  .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    color: inherit;
-    text-decoration: none;
-  }
-  .brand img {
-    border-radius: var(--md-shape-sm);
+    /* TopBar keeps its own 16 px and the top inset. */
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
   .center {
     flex: 1;
     display: grid;
     place-items: center;
-    padding: 24px 0 64px;
+    padding: 24px 16px 64px;
   }
   .layout {
     flex: 1;
@@ -254,8 +213,7 @@
     grid-template-columns: 1.1fr 1fr;
     gap: 48px;
     align-items: center;
-    max-width: 1040px;
-    width: 100%;
+    width: min(1040px, calc(100% - 32px));
     margin: 0 auto;
     padding: 24px 0 64px;
   }

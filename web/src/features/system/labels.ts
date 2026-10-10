@@ -1,4 +1,4 @@
-import type { GroupOption, Tone } from '@alllexey/ui';
+import type { GroupOption, StatusTone } from '@alllexey/ui';
 import type {
   CredentialSource,
   Platform,
@@ -15,7 +15,7 @@ export const PLATFORMS: GroupOption<Platform>[] = [
   { value: 'IOS', label: PLATFORM_NAMES.IOS, icon: 'smartphone' },
 ];
 
-export const SPORT_OUTCOMES: Record<SportOutcome, { label: string; tone: Tone }> = {
+export const SPORT_OUTCOMES: Record<SportOutcome, { label: string; tone: StatusTone }> = {
   SUCCESS: { label: 'Успешно', tone: 'ok' },
   PARTIAL: { label: 'Частично', tone: 'warn' },
   FAILED: { label: 'Сбой', tone: 'bad' },
@@ -51,9 +51,12 @@ export const CREDENTIAL_HINTS: Partial<Record<ServiceCredentialKey, string>> = {
   GEMINI_API_KEY: 'Ключ из Google AI Studio',
 };
 
-export const CREDENTIAL_STATUSES: Record<ServiceCredentialStatus, { label: string; tone: Tone }> = {
+export const CREDENTIAL_STATUSES: Record<
+  ServiceCredentialStatus,
+  { label: string; tone: StatusTone }
+> = {
   OK: { label: 'Работает', tone: 'ok' },
-  UNKNOWN: { label: 'Не проверено', tone: 'off' },
+  UNKNOWN: { label: 'Не проверено', tone: 'neutral' },
   EXPIRED: { label: 'Истекло', tone: 'bad' },
   FAILED: { label: 'Ошибка', tone: 'bad' },
   MISSING: { label: 'Нет значения', tone: 'warn' },

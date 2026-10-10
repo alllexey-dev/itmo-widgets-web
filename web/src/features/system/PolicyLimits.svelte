@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { snackbars } from '@alllexey/ui';
+  import { snackbars, TextField } from '@alllexey/ui';
   import { untrack } from 'svelte';
   import { errorText } from '../../api/errors';
-  import TextField from './TextField.svelte';
   import type { ModerationPolicy } from './types';
 
   // The thresholds of one policy; the card remounts it when the saved policy changes.
@@ -110,6 +109,8 @@
       <TextField
         label={field.label}
         inputmode="numeric"
+        autocomplete="off"
+        spellcheck="false"
         bind:value={values[field.key]}
         hint={field.hint}
         error={errors[field.key]}

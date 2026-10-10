@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { LoadingIndicator } from '@alllexey/ui';
+  import { Loadable, Resource } from '@alllexey/ui';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { fetchVerification, VERIFICATION_PATH } from './api';
   import { formatNumber } from './format';
   import type { ReviewVerificationCounts } from './types';
@@ -14,30 +13,31 @@
 <section class="m3-card" aria-labelledby="reviews-verification">
   <h2 class="m3-section-title" id="reviews-verification">Проверка по ИСУ</h2>
   <p class="m3-body-medium m3-muted lead">Вёл ли преподаватель у автора отзыва</p>
-  {#if verification.data}
-    <dl class="stats">
-      <div>
-        <dt>на проверке</dt>
-        <dd class="m3-num">{formatNumber(verification.data.pending)}</dd>
-      </div>
-      <div>
-        <dt>подтверждено</dt>
-        <dd class="m3-num">{formatNumber(verification.data.verified)}</dd>
-      </div>
-      <div>
-        <dt>не подтверждено</dt>
-        <dd class="m3-num">{formatNumber(verification.data.unverified)}</dd>
-      </div>
-    </dl>
-  {:else if verification.error}
-    <LoadError
-      error={verification.error}
-      title="Не удалось загрузить проверку"
-      onretry={() => verification.load()}
-    />
-  {:else}
-    <LoadingIndicator label="Загружаем проверку" />
-  {/if}
+  <Loadable resource={verification} loadingLabel="Загружаем проверку">
+    {#snippet children(data)}
+      <dl class="stats">
+        <div>
+          <dt>на проверке</dt>
+          <dd class="m3-num">{formatNumber(data.pending)}</dd>
+        </div>
+        <div>
+          <dt>подтверждено</dt>
+          <dd class="m3-num">{formatNumber(data.verified)}</dd>
+        </div>
+        <div>
+          <dt>не подтверждено</dt>
+          <dd class="m3-num">{formatNumber(data.unverified)}</dd>
+        </div>
+      </dl>
+    {/snippet}
+    {#snippet failed(error)}
+      <LoadError
+        {error}
+        title="Не удалось загрузить проверку"
+        onretry={() => verification.load()}
+      />
+    {/snippet}
+  </Loadable>
 </section>
 
 <style>

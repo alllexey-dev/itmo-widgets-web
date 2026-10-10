@@ -88,10 +88,4 @@
     gap: 2px;
     min-width: 0;
   }
-  input:disabled {
-    cursor: not-allowed;
-  }
-  .m3-switch:has(input:disabled) {
-    opacity: 0.6;
-  }
 </style>

@@ -1,12 +1,10 @@
 <script lang="ts">
-  import { Icon, LoadingIndicator, PageHeader, snackbars } from '@alllexey/ui';
+  import { Avatar, Icon, LoadingIndicator, PageHeader, Resource, snackbars } from '@alllexey/ui';
   import { errorText } from '../../api/errors';
   import { formatDate } from '../../lib/format';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { displayName, roleLabel, session } from '../../lib/session.svelte';
   import { restrictions, RESTRICTIONS_PATH } from './api';
-  import Avatar from './Avatar.svelte';
   import { groupLine, RESTRICTED } from './labels';
   import PrivacyCard from './PrivacyCard.svelte';
 
@@ -38,7 +36,7 @@
   <div class="grid">
     <div class="stack">
       <section class="m3-card identity" aria-labelledby="profile-name">
-        <Avatar {name} src={user.pictureUrl} size={72} />
+        <Avatar {name} src={user.pictureUrl ?? ''} size={72} decorative />
         <div class="who">
           <h2 id="profile-name" class="m3-title-large">{name}</h2>
           {#each user.groups as group (group.name)}

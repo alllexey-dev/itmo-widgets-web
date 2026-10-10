@@ -17,19 +17,19 @@ components directly instead of rebuilding them. Entries:
   `src/main.ts` imports it once. Never import it a second time.
 - `@alllexey/ui/elements` - registers the custom elements; `src/main.ts`
   imports it once. `src/lib/elements.d.ts` types them for Svelte markup.
-- `@alllexey/ui` - the components (`AppShell`, `Account`, `Page`,
+- `@alllexey/ui` - the components (`AppShell`, `TopBar`, `Account`, `Page`,
   `PageHeader`, `Dialog`, `ConfirmDialog`, `EmptyState`, `LoadingIndicator`,
-  `LoadingOverlay`, `ButtonGroup`, `Switch`, `Search`, `Meter`,
-  `WavyProgress`, `Shape`, `StatusShape`, `Icon`, `Snackbars`,
-  `ThemeSettings`), `snackbars`, `defineIcons`, `createTheme` and the response
-  cache (`revalidate`, `cached`, `forget`).
+  `LoadingOverlay`, `Loadable`, `ButtonGroup`, `Tabs`, `Chips`, `Switch`,
+  `Search`, `TextField`, `Meter`, `WavyProgress`, `Shape`, `StatusShape`,
+  `Avatar`, `Icon`, `Snackbars`), `snackbars`, `defineIcons`, `statusRole`,
+  `Resource` and the response cache (`revalidate`, `cached`, `forget`).
 - `@alllexey/ui/chart` - the uPlot chart of Статистика, loaded only with that
   page.
 
 Simple controls are the package's classes on plain elements (`m3-btn`,
-`m3-icon-btn`, `m3-chip`, `m3-pill`, `m3-tabs`, `m3-table`, `m3-field`,
+`m3-icon-btn`, `m3-chip`, `m3-pill`, `m3-segmented`, `m3-table`, `m3-field`,
 `m3-card`, `m3-section-title`, `m3-num`). App-specific pieces are built on the
-same tokens inside their feature: avatars, `DiffView` and `TextDiff`,
+same tokens inside their feature: `DiffView` and `TextDiff`,
 pagination (`src/lib/Pagination.svelte`), the QR code.
 
 Colours, type, shapes, elevation and motion are the package's `--md-*`
@@ -39,11 +39,6 @@ colour literals; the only exception is `white` and `black` for the QR code,
 which is dark on light in every theme because not every scanner reads an
 inverted code. `index.html` carries the package's default surface colours for
 `theme-color` until the theme repaints them.
-
-A tinted card surface (the app card on Главная) uses `m3-card secondary`: the
-secondary container stays dark in a dark scheme for every seed and variant. The
-tertiary container is a bright accent in both modes, so it marks only small
-shapes such as avatars, never a whole card.
 
 ## Styles and the CSP
 
@@ -61,15 +56,16 @@ directives, which Svelte sets through the CSSOM and the CSP allows.
 
 ## Theme
 
-`createTheme()` (`src/lib/theme.svelte.ts`) reads and writes the shared choice
-in the `alllexey-theme` cookie (`mode|seed|variant` on `.alllexey.dev`,
-host-only on localhost), so it follows the user across every alllexey.dev site,
-and follows the system light/dark preference when the mode is `auto`. The
+The package's `AppShell` (every signed-in page) and `TopBar` (the login page)
+apply the theme themselves and carry the `Оформление` button; the app has no
+theme code of its own. The theme is the shared choice in the `alllexey-theme` cookie (`mode|seed|variant` on `.alllexey.dev`,
+host-only on localhost), so it follows the user across every alllexey.dev site, and
+follows the system light/dark preference when the mode is `auto`. The
 default is the package's: the calm (`tonal`) palette from `#0061a4`, following
 the system. `public/theme-init.js` sets `data-theme` from the cookie before the
-first paint, so a manual dark choice does not flash. `Оформление`
-(`ThemeSettings`) changes mode, seed and palette; it is in the rail, the phone
-top bar and on the login page. The landing still uses its own `iw-theme`
+first paint, so a manual dark choice does not flash (the package does not ship
+such a script yet). `Оформление` changes mode, seed and palette; it is in the
+rail, the phone top bar and on the login page's top bar. The landing still uses its own `iw-theme`
 until WB-16b moves it to the package.
 
 ## Fonts and icons
@@ -86,11 +82,12 @@ per symbol.
 
 ## UX rules as applied
 
-- Every data card has the four states: `LoadingIndicator` on the first load,
-  data, `EmptyState` with a clear title, `LoadError` with `Повторить`. Cached
-  data shows at once and is replaced under `LoadingOverlay`; no blank screens,
-  no skeletons, no spinners inside buttons (a running action only disables its
-  button). Cards of one page load and fail independently.
+- Every data card has the four states through `Loadable`:
+  `LoadingIndicator block` on the first load, data, `EmptyState` with a clear
+  title, `LoadError` with `Повторить`. Cached data shows at once and is
+  replaced under `LoadingOverlay`; no blank screens, no skeletons, no spinners
+  inside buttons (a running action only disables its button). Cards of one
+  page load and fail independently.
 - Actions: safe ones run at once and confirm with a snackbar in the past tense
   (`Версия сохранена`); noticeable ones ask `ConfirmDialog` with a verb
   (`Выключить`, `Снять роль`, `Удалить из друзей`); `Скрыть всё у автора`

@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { EmptyState, Icon, LoadingIndicator, LoadingOverlay } from '@alllexey/ui';
+  import { EmptyState, Icon, Loadable, Resource, Tabs, type TabOption } from '@alllexey/ui';
   import { untrack } from 'svelte';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { router } from '../../lib/router.svelte';
   import { PAGE_SIZE, teachersRequest } from './api';
   import { formatDateTime, formatNumber } from './format';
@@ -23,8 +22,8 @@
     onchanged: () => void;
   } = $props();
 
-  const FILTERS: { value: SummaryStatus | null; label: string }[] = [
-    { value: null, label: 'Все' },
+  const FILTERS: TabOption<SummaryStatus | 'ALL'>[] = [
+    { value: 'ALL', label: 'Все' },
     { value: 'READY', label: 'Готовы' },
     { value: 'PENDING', label: 'В очереди' },
     { value: 'FAILED', label: 'Ошибки' },
@@ -32,15 +31,15 @@
   ];
 
   const status = $derived(
-    FILTERS.find((filter) => filter.value !== null && filter.value === router.query.get('status'))
-      ?.value ?? null,
+    FILTERS.find((filter) => filter.value !== 'ALL' && filter.value === router.query.get('status'))
+      ?.value ?? 'ALL',
   );
   const page = $derived(Math.max(0, Math.floor(Number(router.query.get('page'))) || 0));
 
   const first = teachersRequest(null, 0);
   const teachers = new Resource<TeacherPage>(first.key, first.fetch);
   $effect(() => {
-    const next = teachersRequest(status, page);
+    const next = teachersRequest(status === 'ALL' ? null : status, page);
     void teachers.load(next.key, next.fetch);
   });
 
@@ -60,43 +59,20 @@
     void teachers.load();
   }
 
-  function pick(next: SummaryStatus | null) {
-    router.setQuery({ status: next, page: null });
+  function pick(next: SummaryStatus | 'ALL') {
+    router.setQuery({ status: next === 'ALL' ? null : next, page: null });
   }
 
   function turn(next: number) {
     router.setQuery({ page: next > 0 ? next : null });
   }
-
-  function onTabKey(event: KeyboardEvent, index: number) {
-    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-    if (!step) return;
-    event.preventDefault();
-    const next = FILTERS[(index + step + FILTERS.length) % FILTERS.length];
-    if (!next) return;
-    pick(next.value);
-    const tabs = (event.currentTarget as HTMLElement).parentElement?.querySelectorAll('button');
-    tabs?.[(index + step + FILTERS.length) % FILTERS.length]?.focus();
-  }
 </script>
 
 <section class="m3-card flush" aria-labelledby="reviews-teachers">
   <h2 class="m3-section-title title" id="reviews-teachers">Сводки преподавателей</h2>
-  <div class="m3-tabs tabs" role="tablist" aria-label="Статус сводки">
-    {#each FILTERS as filter, index (filter.label)}
-      <button
-        role="tab"
-        aria-selected={filter.value === status}
-        tabindex={filter.value === status ? 0 : -1}
-        class:active={filter.value === status}
-        onclick={() => pick(filter.value)}
-        onkeydown={(event) => onTabKey(event, index)}>{filter.label}</button
-      >
-    {/each}
-  </div>
-  {#if teachers.data}
-    {@const list = teachers.data}
-    <LoadingOverlay loading={teachers.loading}>
+  <Tabs label="Статус сводки" options={FILTERS} value={status} onchange={pick} />
+  <Loadable resource={teachers} loadingLabel="Загружаем сводки преподавателей">
+    {#snippet children(list)}
       {#if list.items.length === 0}
         <EmptyState icon="inbox" title="Сводок пока нет" />
       {:else}
@@ -151,18 +127,15 @@
           >
         </nav>
       {/if}
-    </LoadingOverlay>
-  {:else if teachers.error}
-    <div class="pad">
+    {/snippet}
+    {#snippet failed(error)}
       <LoadError
-        error={teachers.error}
+        {error}
         title="Не удалось загрузить сводки преподавателей"
         onretry={() => teachers.load()}
       />
-    </div>
-  {:else}
-    <div class="pad"><LoadingIndicator label="Загружаем сводки преподавателей" /></div>
-  {/if}
+    {/snippet}
+  </Loadable>
 </section>
 
 {#if open}
@@ -172,13 +145,6 @@
 <style>
   .title {
     padding: 20px 24px 0;
-  }
-  .tabs {
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .tabs button {
-    flex: none;
   }
   .tr {
     grid-template-columns: minmax(200px, 2fr) 104px 80px minmax(150px, 1.4fr) 128px minmax(

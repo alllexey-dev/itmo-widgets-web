@@ -100,11 +100,3 @@
 .mod-field small.error {
   color: var(--md-error);
 }
-
-/* @alllexey/ui 0.2.0 declares `.m3-btn.danger` after `.m3-btn:disabled`, so a disabled danger button
-   (an empty reason, a name not typed yet) would look active. */
-.m3-btn.danger:disabled,
-.m3-btn.danger-tonal:disabled {
-  background: color-mix(in srgb, var(--md-on-surface) 10%, transparent);
-  color: color-mix(in srgb, var(--md-on-surface) 38%, transparent);
-}

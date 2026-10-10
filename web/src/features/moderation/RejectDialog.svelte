@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Dialog, Icon } from '@alllexey/ui';
+  import { Chips, Dialog } from '@alllexey/ui';
   import type { DecisionRequest } from './types';
 
   // The reason is required: the author sees it in the app instead of the Backend's technical fallback.
@@ -28,19 +28,11 @@
 </script>
 
 <Dialog {title} text="Автор увидит причину в приложении." onclose={() => !saving && onclose()}>
-  <div class="presets" role="group" aria-label="Частые причины">
-    {#each presets as preset (preset)}
-      {@const selected = trimmed === preset}
-      <button
-        class="m3-chip"
-        class:selected
-        aria-pressed={selected}
-        onclick={() => (note = preset)}
-      >
-        {#if selected}<Icon name="check" size={18} />{/if}{preset}
-      </button>
-    {/each}
-  </div>
+  <Chips
+    label="Частые причины"
+    options={presets.map((preset) => ({ value: preset, label: preset }))}
+    bind:value={() => (presets.includes(trimmed) ? trimmed : ''), (next) => next && (note = next)}
+  />
   <div class="mod-field">
     <label for="reject-note">Причина</label>
     <!-- svelte-ignore a11y_autofocus -->
@@ -60,11 +52,3 @@
     <button class="m3-btn danger" disabled={!valid || saving} onclick={submit}>Отклонить</button>
   {/snippet}
 </Dialog>
-
-<style>
-  .presets {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-</style>

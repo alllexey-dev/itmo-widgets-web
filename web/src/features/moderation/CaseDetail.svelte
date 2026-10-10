@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { ConfirmDialog, EmptyState, Icon, LoadingIndicator, snackbars } from '@alllexey/ui';
+  import { ConfirmDialog, EmptyState, Icon, Loadable, Resource, snackbars } from '@alllexey/ui';
   import { ApiError } from '../../api/client';
   import { errorText } from '../../api/errors';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { hasAccess, session } from '../../lib/session.svelte';
   import { caseKey, decide, fetchCase } from './api';
   import AuthorSection from './AuthorSection.svelte';
@@ -88,173 +87,169 @@
 </script>
 
 <div class="detail">
-  {#if !data}
-    {#if onback}
-      <button class="m3-icon-btn back" aria-label="К списку" onclick={onback}>
-        <Icon name="arrow_back" />
-      </button>
-    {/if}
-    {#if missing}
-      <EmptyState icon="search_off" title="Заявка не найдена" text="Возможно, её уже удалили." />
-    {:else if detail.error}
-      <LoadError
-        error={detail.error}
-        title="Не удалось загрузить заявку"
-        onretry={() => detail.load()}
-      />
-    {:else}
-      <div class="waiting"><LoadingIndicator label="Загружаем заявку" /></div>
-    {/if}
-  {:else}
-    {@const reason = REASONS[data.reason]}
-    {@const status = CASE_STATUSES[data.status]}
-    <article class="case" aria-labelledby="case-title">
-      <header class="head">
-        {#if onback}
-          <button class="m3-icon-btn back" aria-label="К списку" onclick={onback}>
-            <Icon name="arrow_back" />
-          </button>
-        {/if}
-        <div class="head-text">
-          <div class="badges">
-            <span class="m3-pill {reason.tone}">{reason.label}</span>
-            {#if data.status !== 'OPEN'}<span class="m3-pill {status.tone}">{status.label}</span
-              >{/if}
-            <span class="m3-body-small m3-muted" title={formatDateTime(data.openedAt)}>
-              открыта {formatRelative(data.openedAt)}
-            </span>
-          </div>
-          <h2 id="case-title" class="title">{target ? titleOf(target) : texts?.deleted}</h2>
-          {#if target?.targetType === 'SUBJECT_RESOURCE'}
-            <p class="m3-muted period">{periodLabel(target.link.periodKey)}</p>
+  {#if !data && onback}
+    <button class="m3-icon-btn back" aria-label="К списку" onclick={onback}>
+      <Icon name="arrow_back" />
+    </button>
+  {/if}
+  <Loadable resource={detail} loadingLabel="Загружаем заявку">
+    {#snippet children(data)}
+      {@const reason = REASONS[data.reason]}
+      {@const status = CASE_STATUSES[data.status]}
+      <article class="case" aria-labelledby="case-title">
+        <header class="head">
+          {#if onback}
+            <button class="m3-icon-btn back" aria-label="К списку" onclick={onback}>
+              <Icon name="arrow_back" />
+            </button>
           {/if}
-        </div>
-      </header>
+          <div class="head-text">
+            <div class="badges">
+              <span class="m3-pill {reason.tone}">{reason.label}</span>
+              {#if data.status !== 'OPEN'}<span class="m3-pill {status.tone}">{status.label}</span
+                >{/if}
+              <span class="m3-body-small m3-muted" title={formatDateTime(data.openedAt)}>
+                открыта {formatRelative(data.openedAt)}
+              </span>
+            </div>
+            <h2 id="case-title" class="title">{target ? titleOf(target) : texts?.deleted}</h2>
+            {#if target?.targetType === 'SUBJECT_RESOURCE'}
+              <p class="m3-muted period">{periodLabel(target.link.periodKey)}</p>
+            {/if}
+          </div>
+        </header>
 
-      {#if target && texts}
-        {#if open}
-          <div class="actions" role="group" aria-label="Действия">
-            <button
-              class="m3-btn"
-              disabled={pending !== null}
-              aria-keyshortcuts="A"
-              onclick={() => submit({ action: 'APPROVE' })}
-            >
-              <Icon name="check" />Одобрить
-            </button>
-            <button
-              class="m3-btn danger-tonal"
-              disabled={pending !== null}
-              aria-keyshortcuts="R"
-              onclick={() => (dialog = 'reject')}
-            >
-              <Icon name="close" />Отклонить
-            </button>
-            {#if hidden}
+        {#if target && texts}
+          {#if open}
+            <div class="actions" role="group" aria-label="Действия">
+              <button
+                class="m3-btn"
+                disabled={pending !== null}
+                aria-keyshortcuts="A"
+                onclick={() => submit({ action: 'APPROVE' })}
+              >
+                <Icon name="check" />Одобрить
+              </button>
+              <button
+                class="m3-btn danger-tonal"
+                disabled={pending !== null}
+                aria-keyshortcuts="R"
+                onclick={() => (dialog = 'reject')}
+              >
+                <Icon name="close" />Отклонить
+              </button>
+              {#if hidden}
+                <button
+                  class="m3-btn text"
+                  disabled={pending !== null}
+                  onclick={() => submit({ action: 'RESTORE' })}
+                >
+                  <Icon name="visibility" />Вернуть
+                </button>
+              {:else}
+                <button
+                  class="m3-btn text"
+                  disabled={pending !== null}
+                  onclick={() => submit({ action: 'HIDE' })}
+                >
+                  <Icon name="visibility_off" />Скрыть
+                </button>
+              {/if}
+              {#if target.reports.length > 0}
+                <button
+                  class="m3-btn text"
+                  disabled={pending !== null}
+                  onclick={() => submit({ action: 'DISMISS' })}
+                >
+                  <Icon name="flag" />Отклонить жалобы
+                </button>
+              {/if}
               <button
                 class="m3-btn text"
+                disabled={pending !== null}
+                onclick={() => (dialog = 'restrict')}
+              >
+                <Icon name="block" />Ограничить
+              </button>
+              <button
+                class="m3-btn text error"
+                disabled={pending !== null}
+                onclick={() => (dialog = 'hideAll')}
+              >
+                <Icon name="hide_source" />Скрыть всё у автора
+              </button>
+            </div>
+          {:else if hidden}
+            <div class="actions" role="group" aria-label="Действия">
+              <button
+                class="m3-btn tonal"
                 disabled={pending !== null}
                 onclick={() => submit({ action: 'RESTORE' })}
               >
                 <Icon name="visibility" />Вернуть
               </button>
-            {:else}
-              <button
-                class="m3-btn text"
-                disabled={pending !== null}
-                onclick={() => submit({ action: 'HIDE' })}
-              >
-                <Icon name="visibility_off" />Скрыть
-              </button>
-            {/if}
-            {#if target.reports.length > 0}
-              <button
-                class="m3-btn text"
-                disabled={pending !== null}
-                onclick={() => submit({ action: 'DISMISS' })}
-              >
-                <Icon name="flag" />Отклонить жалобы
-              </button>
-            {/if}
-            <button
-              class="m3-btn text"
-              disabled={pending !== null}
-              onclick={() => (dialog = 'restrict')}
-            >
-              <Icon name="block" />Ограничить
-            </button>
-            <button
-              class="m3-btn text error"
-              disabled={pending !== null}
-              onclick={() => (dialog = 'hideAll')}
-            >
-              <Icon name="hide_source" />Скрыть всё у автора
-            </button>
-          </div>
-        {:else if hidden}
-          <div class="actions" role="group" aria-label="Действия">
-            <button
-              class="m3-btn tonal"
-              disabled={pending !== null}
-              onclick={() => submit({ action: 'RESTORE' })}
-            >
-              <Icon name="visibility" />Вернуть
-            </button>
-          </div>
-        {/if}
+            </div>
+          {/if}
 
-        {#if target.targetType === 'SUBJECT_RESOURCE'}
-          <LinkPreview {target} />
-        {:else}
-          <ReviewPreview {target} />
+          {#if target.targetType === 'SUBJECT_RESOURCE'}
+            <LinkPreview {target} />
+          {:else}
+            <ReviewPreview {target} />
+          {/if}
+          <CaseChanges {target} />
+          <AuthorSection
+            author={target.author}
+            history={target.submitterHistory}
+            {canOpenProfile}
+          />
+        {:else if texts}
+          <p class="mod-note">{texts.deletedNote}</p>
         {/if}
-        <CaseChanges {target} />
-        <AuthorSection author={target.author} history={target.submitterHistory} {canOpenProfile} />
-      {:else if texts}
-        <p class="mod-note">{texts.deletedNote}</p>
+        <CaseHistory reports={target?.reports ?? null} decisions={data.decisions} />
+      </article>
+
+      {#if target && texts && dialog === 'reject'}
+        <RejectDialog
+          title={texts.rejectTitle}
+          presets={texts.rejectPresets}
+          saving={pending !== null}
+          onsubmit={submit}
+          onclose={() => (dialog = null)}
+        />
+      {:else if target && texts && dialog === 'restrict'}
+        <RestrictDialog
+          authorName={target.author.name}
+          defaultCapability={texts.restriction}
+          saving={pending !== null}
+          onsubmit={submit}
+          onclose={() => (dialog = null)}
+        />
+      {:else if target && texts && dialog === 'hideAll'}
+        <ConfirmDialog
+          title={texts.hideAllTitle}
+          text={texts.hideAllText(target.author.name)}
+          confirmLabel="Скрыть всё"
+          danger
+          requireText={target.author.name}
+          onconfirm={() => submit({ action: 'HIDE_ALL_BY_USER' })}
+          oncancel={() => !pending && (dialog = null)}
+        />
       {/if}
-      <CaseHistory reports={target?.reports ?? null} decisions={data.decisions} />
-    </article>
-
-    {#if target && texts && dialog === 'reject'}
-      <RejectDialog
-        title={texts.rejectTitle}
-        presets={texts.rejectPresets}
-        saving={pending !== null}
-        onsubmit={submit}
-        onclose={() => (dialog = null)}
-      />
-    {:else if target && texts && dialog === 'restrict'}
-      <RestrictDialog
-        authorName={target.author.name}
-        defaultCapability={texts.restriction}
-        saving={pending !== null}
-        onsubmit={submit}
-        onclose={() => (dialog = null)}
-      />
-    {:else if target && texts && dialog === 'hideAll'}
-      <ConfirmDialog
-        title={texts.hideAllTitle}
-        text={texts.hideAllText(target.author.name)}
-        confirmLabel="Скрыть всё"
-        danger
-        requireText={target.author.name}
-        onconfirm={() => submit({ action: 'HIDE_ALL_BY_USER' })}
-        oncancel={() => !pending && (dialog = null)}
-      />
-    {/if}
-  {/if}
+    {/snippet}
+    {#snippet failed(error)}
+      {#if missing}
+        <EmptyState icon="search_off" title="Заявка не найдена" text="Возможно, её уже удалили." />
+      {:else}
+        <LoadError {error} title="Не удалось загрузить заявку" onretry={() => detail.load()} />
+      {/if}
+    {/snippet}
+  </Loadable>
 </div>
 
 <style>
   .detail {
     display: grid;
     gap: 20px;
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 240px;
   }
   .case {
     display: grid;

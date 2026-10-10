@@ -4,8 +4,9 @@
     EmptyState,
     forget,
     Icon,
-    LoadingIndicator,
+    Loadable,
     PageHeader,
+    Resource,
     snackbars,
   } from '@alllexey/ui';
   import { api, ApiError } from '../../api/client';
@@ -13,7 +14,6 @@
   import { buildLabel, channelLabel } from '../../lib/appBuild';
   import { formatDate, formatDateTime, formatNumber, formatRelative } from '../../lib/format';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href, router } from '../../lib/router.svelte';
   import type { Role } from '../../lib/session.svelte';
   import {
@@ -64,94 +64,130 @@
   Пользователи
 </a>
 
-{#if user.data}
-  {@const detail = user.data}
-  {@const current = detail.user.groups[0]}
-  <div class="head">
-    <PageHeader
-      title={detail.user.name}
-      text={`ИСУ ${detail.user.isu}${current ? ` · ${groupLine(current)}` : ''}`}
-    >
-      {#snippet actions()}<RoleBadges roles={detail.roles} />{/snippet}
-    </PageHeader>
-  </div>
+<Loadable resource={user} loadingLabel="Загружаем пользователя">
+  {#snippet children(data)}
+    {@const detail = data}
+    {@const current = detail.user.groups[0]}
+    <div class="head">
+      <PageHeader
+        title={detail.user.name}
+        text={`ИСУ ${detail.user.isu}${current ? ` · ${groupLine(current)}` : ''}`}
+      >
+        {#snippet actions()}<RoleBadges roles={detail.roles} />{/snippet}
+      </PageHeader>
+    </div>
 
-  <div class="layout">
-    <section class="m3-card" aria-labelledby="user-access">
-      <h2 id="user-access" class="m3-section-title">Доступ</h2>
-      <ModeratorSwitch
-        isu={detail.user.isu}
-        name={detail.user.name}
-        roles={detail.roles}
-        onchanged={rolesChanged}
-      />
-    </section>
-
-    <dl class="stats">
-      <div class="m3-card">
-        <dt>Последняя активность</dt>
-        <dd>{detail.lastSeen ? formatRelative(detail.lastSeen) : '—'}</dd>
-        {#if detail.lastSeen}<dd class="m3-muted caption">
-            {formatDateTime(detail.lastSeen)}
-          </dd>{/if}
-      </div>
-      <div class="m3-card">
-        <dt>Регистрация</dt>
-        <dd>{formatDate(detail.createdAt)}</dd>
-      </div>
-      <div class="m3-card">
-        <dt>Друзья</dt>
-        <dd class="m3-num">{formatNumber(detail.friendsCount)}</dd>
-      </div>
-      <div class="m3-card">
-        <dt>Ссылки</dt>
-        <dd class="m3-num">{formatNumber(detail.linksCount)}</dd>
-      </div>
-    </dl>
-
-    <div class="columns">
-      <section class="m3-card" aria-labelledby="user-devices">
-        <h2 id="user-devices" class="m3-section-title">Устройства</h2>
-        {#if detail.devices.length === 0}
-          <p class="m3-muted">Нет устройств</p>
-        {:else}
-          <p class="m3-muted counts">{platformCounts(detail.devices)}</p>
-          <ul class="m3-list divided plain" aria-label="Устройства">
-            {#each detail.devices as device, index (`${device.name}-${device.lastLogin}-${index}`)}
-              <li class="m3-list-item device">
-                <span class="lead"><Icon name="smartphone" /></span>
-                <span class="main">
-                  <span class="headline">{device.name}</span>
-                  <span class="support">
-                    {platformLabel(device)} · {device.appVersion
-                      ? buildLabel(device.appVersion, device.appBuild)
-                      : 'версия: нет данных'}{device.appDistribution
-                      ? ` · ${channelLabel(device.appDistribution)}`
-                      : ''}
-                  </span>
-                  {#if device.appVersionSeenAt}
-                    <span class="support" title={formatDateTime(device.appVersionSeenAt)}>
-                      Активно {formatRelative(device.appVersionSeenAt)}
-                    </span>
-                  {/if}
-                </span>
-                <span class="trail">{formatDateTime(device.lastLogin)}</span>
-              </li>
-            {/each}
-          </ul>
-        {/if}
+    <div class="layout">
+      <section class="m3-card" aria-labelledby="user-access">
+        <h2 id="user-access" class="m3-section-title">Доступ</h2>
+        <ModeratorSwitch
+          isu={detail.user.isu}
+          name={detail.user.name}
+          roles={detail.roles}
+          onchanged={rolesChanged}
+        />
       </section>
 
-      <section class="m3-card" aria-labelledby="user-groups">
-        <h2 id="user-groups" class="m3-section-title">Группы</h2>
-        {#if detail.groups.length === 0}
-          <p class="m3-muted">Групп нет</p>
+      <dl class="stats">
+        <div class="m3-card">
+          <dt>Последняя активность</dt>
+          <dd>{detail.lastSeen ? formatRelative(detail.lastSeen) : '—'}</dd>
+          {#if detail.lastSeen}<dd class="m3-muted caption">
+              {formatDateTime(detail.lastSeen)}
+            </dd>{/if}
+        </div>
+        <div class="m3-card">
+          <dt>Регистрация</dt>
+          <dd>{formatDate(detail.createdAt)}</dd>
+        </div>
+        <div class="m3-card">
+          <dt>Друзья</dt>
+          <dd class="m3-num">{formatNumber(detail.friendsCount)}</dd>
+        </div>
+        <div class="m3-card">
+          <dt>Ссылки</dt>
+          <dd class="m3-num">{formatNumber(detail.linksCount)}</dd>
+        </div>
+      </dl>
+
+      <div class="columns">
+        <section class="m3-card" aria-labelledby="user-devices">
+          <h2 id="user-devices" class="m3-section-title">Устройства</h2>
+          {#if detail.devices.length === 0}
+            <p class="m3-muted">Нет устройств</p>
+          {:else}
+            <p class="m3-muted counts">{platformCounts(detail.devices)}</p>
+            <ul class="m3-list divided plain" aria-label="Устройства">
+              {#each detail.devices as device, index (`${device.name}-${device.lastLogin}-${index}`)}
+                <li class="m3-list-item device">
+                  <span class="lead"><Icon name="smartphone" /></span>
+                  <span class="main">
+                    <span class="headline">{device.name}</span>
+                    <span class="support">
+                      {platformLabel(device)} · {device.appVersion
+                        ? buildLabel(device.appVersion, device.appBuild)
+                        : 'версия: нет данных'}{device.appDistribution
+                        ? ` · ${channelLabel(device.appDistribution)}`
+                        : ''}
+                    </span>
+                    {#if device.appVersionSeenAt}
+                      <span class="support" title={formatDateTime(device.appVersionSeenAt)}>
+                        Активно {formatRelative(device.appVersionSeenAt)}
+                      </span>
+                    {/if}
+                  </span>
+                  <span class="trail">{formatDateTime(device.lastLogin)}</span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </section>
+
+        <section class="m3-card" aria-labelledby="user-groups">
+          <h2 id="user-groups" class="m3-section-title">Группы</h2>
+          {#if detail.groups.length === 0}
+            <p class="m3-muted">Групп нет</p>
+          {:else}
+            <ul class="m3-list plain">
+              {#each detail.groups as group (group.name)}
+                <li class="m3-list-item">
+                  <span class="lead"><Icon name="school" /></span>
+                  <span class="main"><span class="headline">{groupLine(group)}</span></span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </section>
+      </div>
+
+      <section class="m3-card" aria-labelledby="user-restrictions">
+        <h2 id="user-restrictions" class="m3-section-title">Ограничения</h2>
+        {#if detail.restrictions.length === 0}
+          <p class="m3-muted">Ограничений не было</p>
         {:else}
-          <ul class="m3-list plain">
-            {#each detail.groups as group (group.name)}
-              <li class="m3-list-item">
-                <span class="lead"><Icon name="school" /></span>
-                <span class="main"><span class="headline">{groupLine(group)}</span></span>
+          <ul class="m3-list divided plain" aria-label="Ограничения пользователя">
+            {#each detail.restrictions as restriction (restriction.id)}
+              {@const state = restrictionState(restriction)}
+              {@const end = restriction.revokedAt ?? restriction.expiresAt}
+              <li class="m3-list-item restriction">
+                <span class="lead"><Icon name="block" /></span>
+                <span class="main">
+                  <span class="headline">{CAPABILITIES[restriction.capability]}</span>
+                  <span class="support">{restriction.reason}</span>
+                  <span class="support">
+                    {end
+                      ? `${formatDate(restriction.startsAt)} — ${formatDate(end)}`
+                      : `с ${formatDate(restriction.startsAt)}, бессрочно`}
+                  </span>
+                </span>
+                <span class="trail actions">
+                  <span class="m3-pill {state.tone}">{state.label}</span>
+                  {#if restriction.active}
+                    <button class="m3-btn text" onclick={() => (revoking = restriction)}
+                      >Снять</button
+                    >
+                  {/if}
+                </span>
               </li>
             {/each}
           </ul>
@@ -159,64 +195,28 @@
       </section>
     </div>
 
-    <section class="m3-card" aria-labelledby="user-restrictions">
-      <h2 id="user-restrictions" class="m3-section-title">Ограничения</h2>
-      {#if detail.restrictions.length === 0}
-        <p class="m3-muted">Ограничений не было</p>
-      {:else}
-        <ul class="m3-list divided plain" aria-label="Ограничения пользователя">
-          {#each detail.restrictions as restriction (restriction.id)}
-            {@const state = restrictionState(restriction)}
-            {@const end = restriction.revokedAt ?? restriction.expiresAt}
-            <li class="m3-list-item restriction">
-              <span class="lead"><Icon name="block" /></span>
-              <span class="main">
-                <span class="headline">{CAPABILITIES[restriction.capability]}</span>
-                <span class="support">{restriction.reason}</span>
-                <span class="support">
-                  {end
-                    ? `${formatDate(restriction.startsAt)} — ${formatDate(end)}`
-                    : `с ${formatDate(restriction.startsAt)}, бессрочно`}
-                </span>
-              </span>
-              <span class="trail actions">
-                <span class="m3-pill {state.tone}">{state.label}</span>
-                {#if restriction.active}
-                  <button class="m3-btn text" onclick={() => (revoking = restriction)}>Снять</button
-                  >
-                {/if}
-              </span>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    </section>
-  </div>
-
-  {#if revoking}
-    <ConfirmDialog
-      title="Снять ограничение?"
-      text={`${detail.user.name} снова сможет: ${CAPABILITIES[revoking.capability].toLowerCase()}.`}
-      confirmLabel="Снять"
-      onconfirm={revoke}
-      oncancel={() => (revoking = null)}
-    />
-  {/if}
-{:else if missing}
-  <section class="m3-card">
-    <EmptyState icon="person_off" title="Пользователь не найден" text="Проверьте номер ИСУ" />
-  </section>
-{:else if user.error}
-  <section class="m3-card">
-    <LoadError
-      error={user.error}
-      title="Не удалось загрузить пользователя"
-      onretry={() => user.load()}
-    />
-  </section>
-{:else}
-  <div class="waiting"><LoadingIndicator label="Загружаем пользователя" /></div>
-{/if}
+    {#if revoking}
+      <ConfirmDialog
+        title="Снять ограничение?"
+        text={`${detail.user.name} снова сможет: ${CAPABILITIES[revoking.capability].toLowerCase()}.`}
+        confirmLabel="Снять"
+        onconfirm={revoke}
+        oncancel={() => (revoking = null)}
+      />
+    {/if}
+  {/snippet}
+  {#snippet failed(error)}
+    {#if missing}
+      <section class="m3-card">
+        <EmptyState icon="person_off" title="Пользователь не найден" text="Проверьте номер ИСУ" />
+      </section>
+    {:else}
+      <section class="m3-card">
+        <LoadError {error} title="Не удалось загрузить пользователя" onretry={() => user.load()} />
+      </section>
+    {/if}
+  {/snippet}
+</Loadable>
 
 <style>
   .back {

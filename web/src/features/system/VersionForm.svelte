@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { snackbars } from '@alllexey/ui';
+  import { snackbars, TextField } from '@alllexey/ui';
   import { untrack } from 'svelte';
   import { errorText } from '../../api/errors';
   import { saveVersion } from './api';
   import { formatDateTime } from './format';
-  import TextField from './TextField.svelte';
   import type { AppVersion, Platform } from './types';
   import { compareVersions, NOTE_LIMIT, versionError } from './version';
 
@@ -68,12 +67,25 @@
 
 <form class="form" onsubmit={submit}>
   <div class="row">
-    <TextField label="Последняя" bind:value={latest} error={dirty ? latestError : ''} />
-    <TextField label="Минимальная" bind:value={minimum} error={dirty ? minimumError : ''} />
+    <TextField
+      label="Последняя"
+      autocomplete="off"
+      spellcheck="false"
+      bind:value={latest}
+      error={dirty ? latestError : ''}
+    />
+    <TextField
+      label="Минимальная"
+      autocomplete="off"
+      spellcheck="false"
+      bind:value={minimum}
+      error={dirty ? minimumError : ''}
+    />
   </div>
   <TextField
     label="Что нового"
     multiline
+    rows={3}
     bind:value={note}
     maxlength={NOTE_LIMIT}
     error={noteError}

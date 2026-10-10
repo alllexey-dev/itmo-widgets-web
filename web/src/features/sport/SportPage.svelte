@@ -3,16 +3,16 @@
     ConfirmDialog,
     EmptyState,
     forget,
+    Loadable,
     LoadingIndicator,
-    LoadingOverlay,
     Meter,
     PageHeader,
+    Resource,
     snackbars,
   } from '@alllexey/ui';
   import { errorText } from '../../api/errors';
   import { counted } from '../../lib/format';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { autoSignLimits, ENTRIES_KEY, leaveQueue, LIMITS_PATH, myEntries } from './api';
   import EntryRow from './EntryRow.svelte';
   import { activeEntries, formatDay, lessonOf, pastEntries } from './labels';
@@ -62,73 +62,63 @@
       В очереди
       {#if entries.data}<span class="count m3-num">{active.length}</span>{/if}
     </h2>
-    {#if entries.data}
-      <LoadingOverlay loading={entries.loading}>
-        {#if active.length > 0}
-          <ul class="m3-segmented tiles" aria-label="Очереди">
-            {#each active as entry (`${entry.type}-${entry.id}`)}
-              <EntryRow {entry} busy={pending === entry.id} onleave={(item) => (leaving = item)} />
-            {/each}
-          </ul>
-          <p class="m3-body-small m3-muted note">
-            Когда место освобождается, приложение записывает вас само — телефон должен быть в сети.
-          </p>
-        {:else}
-          <EmptyState
-            icon="fitness_center"
-            title="Вы не стоите в очередях"
-            text="Встать в очередь на занятие можно в приложении."
-          />
-        {/if}
-      </LoadingOverlay>
-    {:else if entries.error}
-      <LoadError
-        error={entries.error}
-        title="Не удалось загрузить очереди"
-        onretry={() => entries.load()}
-      />
-    {:else}
-      <div class="waiting"><LoadingIndicator label="Загружаем очереди" /></div>
-    {/if}
+    <Loadable resource={entries} loadingLabel="Загружаем очереди">
+      {#if active.length > 0}
+        <ul class="m3-segmented" aria-label="Очереди">
+          {#each active as entry (`${entry.type}-${entry.id}`)}
+            <EntryRow {entry} busy={pending === entry.id} onleave={(item) => (leaving = item)} />
+          {/each}
+        </ul>
+        <p class="m3-body-small m3-muted note">
+          Когда место освобождается, приложение записывает вас само — телефон должен быть в сети.
+        </p>
+      {:else}
+        <EmptyState
+          icon="fitness_center"
+          title="Вы не стоите в очередях"
+          text="Встать в очередь на занятие можно в приложении."
+        />
+      {/if}
+      {#snippet failed(error)}
+        <LoadError {error} title="Не удалось загрузить очереди" onretry={() => entries.load()} />
+      {/snippet}
+    </Loadable>
   </section>
 
   <div class="stack">
     <section class="m3-card" aria-labelledby="sport-limits">
       <h2 id="sport-limits" class="m3-section-title">Автозапись</h2>
-      {#if limits.data}
-        {@const used = Math.max(0, limits.data.limit - limits.data.available)}
-        <div class="spread">
-          <span class="m3-body-large">Занято {used} из {limits.data.limit}</span>
-          {#if limits.data.available === 0}
-            <span class="m3-body-medium m3-muted">
-              следующая — около {formatDay(new Date(limits.data.nextAvailableAt))}
-            </span>
-          {:else}
-            <span class="m3-body-medium m3-muted">
-              свободно {counted(limits.data.available, ['место', 'места', 'мест'])}
-            </span>
-          {/if}
-        </div>
-        <div class="meter"><Meter value={used} max={Math.max(1, limits.data.limit)} /></div>
-        <p class="m3-body-small m3-muted note">
-          Считаются очереди, которые ждут, и попытки записи за 30 дней.
-        </p>
-      {:else if limits.error}
-        <LoadError
-          error={limits.error}
-          title="Не удалось загрузить лимит"
-          onretry={() => limits.load()}
-        />
-      {:else}
-        <div class="waiting small"><LoadingIndicator label="Загружаем лимит" /></div>
-      {/if}
+      <Loadable resource={limits} loadingLabel="Загружаем лимит">
+        {#snippet children(data)}
+          {@const used = Math.max(0, data.limit - data.available)}
+          <div class="spread">
+            <span class="m3-body-large">Занято {used} из {data.limit}</span>
+            {#if data.available === 0}
+              <span class="m3-body-medium m3-muted">
+                следующая — около {formatDay(new Date(data.nextAvailableAt))}
+              </span>
+            {:else}
+              <span class="m3-body-medium m3-muted">
+                свободно {counted(data.available, ['место', 'места', 'мест'])}
+              </span>
+            {/if}
+          </div>
+          <div class="meter"><Meter value={used} max={Math.max(1, data.limit)} /></div>
+          <p class="m3-body-small m3-muted note">
+            Считаются очереди, которые ждут, и попытки записи за 30 дней.
+          </p>
+        {/snippet}
+        {#snippet failed(error)}
+          <LoadError {error} title="Не удалось загрузить лимит" onretry={() => limits.load()} />
+        {/snippet}
+      </Loadable>
     </section>
 
     <section class="m3-card" aria-labelledby="sport-recent">
       <h2 id="sport-recent" class="m3-section-title">Недавние</h2>
       {#if entries.data}
         {#if recent.length > 0}
-          <ul class="m3-segmented tiles" aria-label="Недавние очереди">
+          <ul class="m3-segmented" aria-label="Недавние очереди">
             {#each recent as entry (`${entry.type}-${entry.id}`)}
               <EntryRow {entry} />
             {/each}
@@ -180,17 +170,6 @@
   .count {
     font: var(--md-label-large);
     color: var(--md-on-surface-variant);
-  }
-  .tiles {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .tiles > :global(*) {
-    background: var(--md-surface-container-lowest);
-  }
-  :global([data-theme='dark']) .tiles > :global(*) {
-    background: var(--md-surface-container-high);
   }
   .note {
     margin: 12px 4px 0;

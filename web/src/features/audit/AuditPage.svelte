@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { EmptyState, Icon, LoadingIndicator, LoadingOverlay, PageHeader } from '@alllexey/ui';
+  import { EmptyState, Icon, Loadable, PageHeader, Resource } from '@alllexey/ui';
   import { api } from '../../api/client';
   import { formatDateTime } from '../../lib/format';
   import LoadError from '../../lib/LoadError.svelte';
   import Pagination from '../../lib/Pagination.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href, router } from '../../lib/router.svelte';
   import { ACTIONS, detailsOf, targetOf, type AuditEntry } from './labels';
 
@@ -35,9 +34,8 @@
   text="Кто и когда менял роли, правила модерации, версию приложения и учётные данные или запускал синхронизацию и ИИ-сводки"
 />
 
-{#if audit.data}
-  {@const list = audit.data}
-  <LoadingOverlay loading={audit.loading}>
+<Loadable resource={audit} loadingLabel="Загружаем журнал">
+  {#snippet children(list)}
     <section class="m3-card flush">
       {#if list.items.length === 0}
         <EmptyState icon="history" title="Записей пока нет" />
@@ -90,18 +88,11 @@
         onchange={(next) => router.setQuery({ page: next > 0 ? next : null })}
       />
     </section>
-  </LoadingOverlay>
-{:else if audit.error}
-  <section class="m3-card">
-    <LoadError
-      error={audit.error}
-      title="Не удалось загрузить журнал"
-      onretry={() => audit.load()}
-    />
-  </section>
-{:else}
-  <div class="waiting"><LoadingIndicator label="Загружаем журнал" /></div>
-{/if}
+  {/snippet}
+  {#snippet failed(error)}
+    <LoadError {error} title="Не удалось загрузить журнал" onretry={() => audit.load()} />
+  {/snippet}
+</Loadable>
 
 <style>
   .tr {
@@ -131,10 +122,5 @@
   }
   .details {
     overflow-wrap: anywhere;
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 40vh;
   }
 </style>

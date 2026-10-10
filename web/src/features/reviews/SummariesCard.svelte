@@ -1,8 +1,14 @@
 <script lang="ts">
-  import { ConfirmDialog, Icon, LoadingIndicator, snackbars, StatusShape } from '@alllexey/ui';
+  import {
+    ConfirmDialog,
+    Icon,
+    Loadable,
+    type Resource,
+    snackbars,
+    StatusShape,
+  } from '@alllexey/ui';
   import { errorText } from '../../api/errors';
   import LoadError from '../../lib/LoadError.svelte';
-  import type { Resource } from '../../lib/resource.svelte';
   import { href } from '../../lib/router.svelte';
   import { startSummaries } from './api';
   import { formatDateTime, formatDay, formatNumber } from './format';
@@ -35,9 +41,9 @@
   const health = $derived.by(() => {
     const state = summaries.data;
     if (!state) return null;
-    if (!state.enabled) return { tone: 'off' as const, label: 'Выключены на сервере' };
+    if (!state.enabled) return { tone: 'neutral' as const, label: 'Выключены на сервере' };
     if (state.running) return { tone: 'warn' as const, label: 'Идёт пересчёт' };
-    if (!state.lastOutcome) return { tone: 'off' as const, label: 'Ещё не запускался' };
+    if (!state.lastOutcome) return { tone: 'neutral' as const, label: 'Ещё не запускался' };
     return RUN_OUTCOMES[state.lastOutcome];
   });
   const remaining = $derived(
@@ -66,71 +72,67 @@
       </button>
     {/if}
   </header>
-  {#if summaries.data}
-    {@const state = summaries.data}
-    {@const failedRun = state.lastOutcome !== null && state.lastOutcome !== 'COMPLETED'}
-    {@const keyBroken = state.keyStatus === 'FAILED' || state.keyStatus === 'EXPIRED'}
-    <p class="state">
-      {#if health}<span class="m3-label-large status"
-          ><StatusShape tone={health.tone} />{health.label}</span
-        >{/if}
-      {#if state.lastStartedAt}
-        <span class="m3-body-small m3-muted">
-          Запуск {formatDateTime(state.lastStartedAt)}{state.lastTrigger
-            ? ` · ${RUN_TRIGGERS[state.lastTrigger]}`
-            : ''}
-        </span>
+  <Loadable resource={summaries} loadingLabel="Загружаем сводки">
+    {#snippet children(state)}
+      {@const failedRun = state.lastOutcome !== null && state.lastOutcome !== 'COMPLETED'}
+      {@const keyBroken = state.keyStatus === 'FAILED' || state.keyStatus === 'EXPIRED'}
+      <p class="state">
+        {#if health}<span class="m3-label-large"
+            ><StatusShape tone={health.tone}>{health.label}</StatusShape></span
+          >{/if}
+        {#if state.lastStartedAt}
+          <span class="m3-body-small m3-muted">
+            Запуск {formatDateTime(state.lastStartedAt)}{state.lastTrigger
+              ? ` · ${RUN_TRIGGERS[state.lastTrigger]}`
+              : ''}
+          </span>
+        {/if}
+      </p>
+      {#if !state.running && failedRun && state.lastError}
+        <code class="m3-mono m3-body-small error">{state.lastError}</code>
       {/if}
-    </p>
-    {#if !state.running && failedRun && state.lastError}
-      <code class="m3-mono m3-body-small error">{state.lastError}</code>
-    {/if}
-    {#if state.keyStatus === 'MISSING' || keyBroken}
-      <p class="m3-card warning notice">
-        <Icon name="key" size={20} />
-        <span>{keyBroken ? 'Ключ Gemini не принят' : 'Ключ Gemini не задан'}</span>
-        <a href={href('/admin/system')}>Ключи и доступы</a>
-      </p>
-    {/if}
-    <dl class="stats">
-      <div>
-        <dt>готовы</dt>
-        <dd class="m3-num">{formatNumber(state.ready)}</dd>
-      </div>
-      <div>
-        <dt>в очереди</dt>
-        <dd class="m3-num">{formatNumber(state.pending)}</dd>
-      </div>
-      <div>
-        <dt>ошибки</dt>
-        <dd class="m3-num">{formatNumber(state.failed)}</dd>
-      </div>
-      <div>
-        <dt>скрыты</dt>
-        <dd class="m3-num">{formatNumber(state.hidden)}</dd>
-      </div>
-      <div>
-        <dt>запросов за {formatDay(state.budgetDay)}</dt>
-        <dd class="m3-num">
-          {formatNumber(state.budgetUsed)} из {formatNumber(state.dailyBudget)}
-        </dd>
-      </div>
-    </dl>
-    {#if state.lastFinishedAt}
-      <p class="m3-body-small m3-muted last">
-        Последний запуск: построено {formatNumber(state.lastGenerated)}, отклонено
-        {formatNumber(state.lastFailed)}, запросов {formatNumber(state.lastRequests)}
-      </p>
-    {/if}
-  {:else if summaries.error}
-    <LoadError
-      error={summaries.error}
-      title="Не удалось загрузить сводки"
-      onretry={() => summaries.load()}
-    />
-  {:else}
-    <LoadingIndicator label="Загружаем сводки" />
-  {/if}
+      {#if state.keyStatus === 'MISSING' || keyBroken}
+        <p class="m3-card warning notice">
+          <Icon name="key" size={20} />
+          <span>{keyBroken ? 'Ключ Gemini не принят' : 'Ключ Gemini не задан'}</span>
+          <a href={href('/admin/system')}>Ключи и доступы</a>
+        </p>
+      {/if}
+      <dl class="stats">
+        <div>
+          <dt>готовы</dt>
+          <dd class="m3-num">{formatNumber(state.ready)}</dd>
+        </div>
+        <div>
+          <dt>в очереди</dt>
+          <dd class="m3-num">{formatNumber(state.pending)}</dd>
+        </div>
+        <div>
+          <dt>ошибки</dt>
+          <dd class="m3-num">{formatNumber(state.failed)}</dd>
+        </div>
+        <div>
+          <dt>скрыты</dt>
+          <dd class="m3-num">{formatNumber(state.hidden)}</dd>
+        </div>
+        <div>
+          <dt>запросов за {formatDay(state.budgetDay)}</dt>
+          <dd class="m3-num">
+            {formatNumber(state.budgetUsed)} из {formatNumber(state.dailyBudget)}
+          </dd>
+        </div>
+      </dl>
+      {#if state.lastFinishedAt}
+        <p class="m3-body-small m3-muted last">
+          Последний запуск: построено {formatNumber(state.lastGenerated)}, отклонено
+          {formatNumber(state.lastFailed)}, запросов {formatNumber(state.lastRequests)}
+        </p>
+      {/if}
+    {/snippet}
+    {#snippet failed(error)}
+      <LoadError {error} title="Не удалось загрузить сводки" onretry={() => summaries.load()} />
+    {/snippet}
+  </Loadable>
 </section>
 
 {#if confirming}
@@ -166,11 +168,6 @@
     align-items: center;
     gap: 4px 16px;
     margin: 0 0 12px;
-  }
-  .status {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
   }
   .error {
     display: block;

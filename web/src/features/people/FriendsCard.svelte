@@ -1,12 +1,10 @@
 <script lang="ts">
-  import { LoadingIndicator, LoadingOverlay } from '@alllexey/ui';
+  import { Avatar, Loadable, Resource } from '@alllexey/ui';
   import { untrack } from 'svelte';
   import { ApiError } from '../../api/client';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href } from '../../lib/router.svelte';
   import { friendsOf, friendsPath } from './api';
-  import Avatar from './Avatar.svelte';
   import { firstNameOf, nameOf } from './labels';
 
   // The person's accepted friends; each face opens that person.
@@ -32,34 +30,40 @@
   </h2>
   {#if denied}
     <p class="m3-muted">Список друзей скрыт.</p>
-  {:else if friends.data}
-    <LoadingOverlay loading={friends.loading}>
-      {#if friends.data.length === 0}
-        <p class="m3-muted">Друзей пока нет.</p>
-      {:else}
-        <ul class="faces" aria-label="Друзья">
-          {#each shown as friend (friend.user.isu)}
-            <li>
-              <a class="face" href={href(`/u/${friend.user.isu}`)} aria-label={nameOf(friend.user)}>
-                <Avatar name={nameOf(friend.user)} src={friend.user.pictureUrl} size={48} />
-                <span class="m3-body-small m3-clip" aria-hidden="true"
-                  >{firstNameOf(friend.user)}</span
-                >
-              </a>
-            </li>
-          {/each}
-        </ul>
-        {#if more > 0}<p class="m3-body-small m3-muted more">И ещё {more}</p>{/if}
-      {/if}
-    </LoadingOverlay>
-  {:else if friends.error}
-    <LoadError
-      error={friends.error}
-      title="Не удалось загрузить друзей"
-      onretry={() => friends.load()}
-    />
   {:else}
-    <div class="waiting"><LoadingIndicator label="Загружаем друзей" /></div>
+    <Loadable resource={friends} loadingLabel="Загружаем друзей">
+      {#snippet children(data)}
+        {#if data.length === 0}
+          <p class="m3-muted">Друзей пока нет.</p>
+        {:else}
+          <ul class="faces" aria-label="Друзья">
+            {#each shown as friend (friend.user.isu)}
+              <li>
+                <a
+                  class="face"
+                  href={href(`/u/${friend.user.isu}`)}
+                  aria-label={nameOf(friend.user)}
+                >
+                  <Avatar
+                    name={nameOf(friend.user)}
+                    src={friend.user.pictureUrl ?? ''}
+                    size={48}
+                    decorative
+                  />
+                  <span class="m3-body-small m3-clip" aria-hidden="true"
+                    >{firstNameOf(friend.user)}</span
+                  >
+                </a>
+              </li>
+            {/each}
+          </ul>
+          {#if more > 0}<p class="m3-body-small m3-muted more">И ещё {more}</p>{/if}
+        {/if}
+      {/snippet}
+      {#snippet failed(error)}
+        <LoadError {error} title="Не удалось загрузить друзей" onretry={() => friends.load()} />
+      {/snippet}
+    </Loadable>
   {/if}
 </section>
 
@@ -110,10 +114,5 @@
   }
   .more {
     margin: 8px 4px 0;
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 96px;
   }
 </style>

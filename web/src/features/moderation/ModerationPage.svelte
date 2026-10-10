@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { PageHeader } from '@alllexey/ui';
+  import { PageHeader, Resource, Tabs, type TabOption } from '@alllexey/ui';
   import { MediaQuery } from 'svelte/reactivity';
-  import { Resource } from '../../lib/resource.svelte';
   import { router } from '../../lib/router.svelte';
   import { fetchOpenCount, OPEN_COUNT_KEY } from './api';
   import CasesTab from './CasesTab.svelte';
@@ -17,10 +16,15 @@
   const openCount = new Resource(OPEN_COUNT_KEY, fetchOpenCount);
   void openCount.load();
 
-  const TABS = [
-    { id: 'cases', label: 'Заявки', path: '/admin/moderation' },
-    { id: 'restrictions', label: 'Ограничения', path: '/admin/restrictions' },
-  ] as const;
+  type Tab = 'cases' | 'restrictions';
+  const PATHS: Record<Tab, string> = {
+    cases: '/admin/moderation',
+    restrictions: '/admin/restrictions',
+  };
+  const tabs = $derived<TabOption<Tab>[]>([
+    { value: 'cases', label: 'Заявки', badge: openCount.data || undefined },
+    { value: 'restrictions', label: 'Ограничения' },
+  ]);
 </script>
 
 <PageHeader title="Модерация" text="Новые ссылки и отзывы, жалобы и низкий рейтинг">
@@ -36,25 +40,9 @@
   {/snippet}
 </PageHeader>
 
-<div class="m3-tabs" role="tablist" aria-label="Модерация">
-  {#each TABS as item (item.id)}
-    <button
-      role="tab"
-      id="tab-{item.id}"
-      class:active={tab === item.id}
-      aria-selected={tab === item.id}
-      aria-controls="panel-{item.id}"
-      onclick={() => tab !== item.id && router.go(item.path)}
-    >
-      {item.label}
-      {#if item.id === 'cases' && openCount.data}
-        <span class="count m3-num">{openCount.data}</span>
-      {/if}
-    </button>
-  {/each}
-</div>
+<Tabs label="Модерация" options={tabs} value={tab} onchange={(next) => router.go(PATHS[next])} />
 
-<div role="tabpanel" id="panel-{tab}" aria-labelledby="tab-{tab}">
+<div role="tabpanel" aria-label={tab === 'cases' ? 'Заявки' : 'Ограничения'}>
   {#if tab === 'cases'}
     <CasesTab wide={wide.current} ondecided={() => openCount.load()} />
   {:else}
@@ -75,9 +63,5 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-  }
-  .count {
-    font: var(--md-label-large);
-    color: var(--md-on-surface-variant);
   }
 </style>

@@ -1,23 +1,23 @@
 <script lang="ts">
   import {
+    Avatar,
     EmptyState,
     forget,
     Icon,
-    LoadingIndicator,
-    LoadingOverlay,
+    Loadable,
     PageHeader,
+    Resource,
     Search,
     snackbars,
+    Tabs,
   } from '@alllexey/ui';
   import { errorText } from '../../api/errors';
   import { counted } from '../../lib/format';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href, router } from '../../lib/router.svelte';
   import { session } from '../../lib/session.svelte';
   import AddFriendDialog from './AddFriendDialog.svelte';
   import { act, list, LIST_PATHS, type Tab } from './api';
-  import Avatar from './Avatar.svelte';
   import { groupLine, matches, nameOf } from './labels';
   import type { FriendAction, UserProfile } from './types';
 
@@ -122,111 +122,91 @@
 
 <div class="toolbar">
   <div class="tabs-scroll">
-    <div class="m3-tabs" role="tablist" aria-label="Друзья и заявки">
-      {#each TABS as item (item.id)}
-        <button
-          role="tab"
-          id="tab-{item.id}"
-          class:active={tab === item.id}
-          aria-selected={tab === item.id}
-          aria-controls="panel-friends"
-          onclick={() => select(item.id)}
-        >
-          {item.label}
-          {#if lists[item.id].data}
-            <span class="count m3-num">{lists[item.id].data?.length}</span>
-          {/if}
-        </button>
-      {/each}
-    </div>
+    <Tabs
+      label="Друзья и заявки"
+      options={TABS.map((item) => ({
+        value: item.id,
+        label: item.label,
+        badge: lists[item.id].data?.length,
+      }))}
+      value={tab}
+      onchange={select}
+    />
   </div>
   {#if tab === 'friends' && (lists.friends.data?.length ?? 0) > 0}
     <div class="search"><Search bind:value={query} placeholder="Поиск по имени" /></div>
   {/if}
 </div>
 
-<div role="tabpanel" id="panel-friends" aria-labelledby="tab-{tab}">
-  {#if current.data}
-    <LoadingOverlay loading={current.loading}>
-      {#if shown.length > 0}
-        <ul class="m3-segmented list" aria-label={TABS.find((item) => item.id === tab)?.label}>
-          {#each shown as profile (profile.user.isu)}
-            {@const user = profile.user}
-            {@const name = nameOf(user)}
-            {@const group = user.groups[0]}
-            {#if tab === 'friends'}
-              <li>
-                <a class="m3-list-item" href={href(`/u/${user.isu}`)}>
-                  <span class="lead"><Avatar {name} src={user.pictureUrl} /></span>
-                  <span class="main">
-                    <span class="headline">{name}</span>
-                    {#if group}<span class="support">{groupLine(group)}</span>{/if}
-                  </span>
-                  <span class="trail"><Icon name="chevron_right" /></span>
-                </a>
-              </li>
-            {:else}
-              <li class="m3-list-item request">
-                <span class="lead"><Avatar {name} src={user.pictureUrl} /></span>
+<div role="tabpanel" aria-label={TABS.find((item) => item.id === tab)?.label}>
+  <Loadable resource={current} loadingLabel="Загружаем друзей">
+    {#if shown.length > 0}
+      <ul class="m3-segmented list" aria-label={TABS.find((item) => item.id === tab)?.label}>
+        {#each shown as profile (profile.user.isu)}
+          {@const user = profile.user}
+          {@const name = nameOf(user)}
+          {@const group = user.groups[0]}
+          {#if tab === 'friends'}
+            <li>
+              <a class="m3-list-item" href={href(`/u/${user.isu}`)}>
+                <span class="lead"><Avatar {name} src={user.pictureUrl ?? ''} decorative /></span>
                 <span class="main">
-                  <a class="headline person" href={href(`/u/${user.isu}`)}>{name}</a>
+                  <span class="headline">{name}</span>
                   {#if group}<span class="support">{groupLine(group)}</span>{/if}
                 </span>
-                <span class="trail actions">
-                  {#if tab === 'incoming'}
-                    <button
-                      class="m3-btn tonal small"
-                      disabled={pending === user.isu}
-                      onclick={() => answer(profile, 'accept')}
-                      aria-label="Принять заявку: {name}">Принять</button
-                    >
-                    <button
-                      class="m3-icon-btn"
-                      disabled={pending === user.isu}
-                      onclick={() => answer(profile, 'reject')}
-                      aria-label="Отклонить заявку: {name}"
-                      title="Отклонить"
-                    >
-                      <Icon name="close" />
-                    </button>
-                  {:else}
-                    <button
-                      class="m3-btn outlined small"
-                      disabled={pending === user.isu}
-                      onclick={() => answer(profile, 'cancel')}
-                      aria-label="Отменить заявку: {name}">Отменить</button
-                    >
-                  {/if}
-                </span>
-              </li>
-            {/if}
-          {/each}
-        </ul>
-      {:else if query && tab === 'friends'}
-        <section class="m3-card">
-          <EmptyState
-            icon="search_off"
-            title="Никого не нашли"
-            text="Поиск идёт по вашим друзьям."
-          />
-        </section>
-      {:else}
-        <section class="m3-card">
-          <EmptyState icon={EMPTY[tab].icon} title={EMPTY[tab].title} text={EMPTY[tab].text} />
-        </section>
-      {/if}
-    </LoadingOverlay>
-  {:else if current.error}
-    <section class="m3-card">
-      <LoadError
-        error={current.error}
-        title="Не удалось загрузить список"
-        onretry={() => current.load()}
-      />
-    </section>
-  {:else}
-    <div class="waiting"><LoadingIndicator label="Загружаем друзей" /></div>
-  {/if}
+                <span class="trail"><Icon name="chevron_right" /></span>
+              </a>
+            </li>
+          {:else}
+            <li class="m3-list-item request">
+              <span class="lead"><Avatar {name} src={user.pictureUrl ?? ''} decorative /></span>
+              <span class="main">
+                <a class="headline person" href={href(`/u/${user.isu}`)}>{name}</a>
+                {#if group}<span class="support">{groupLine(group)}</span>{/if}
+              </span>
+              <span class="trail actions">
+                {#if tab === 'incoming'}
+                  <button
+                    class="m3-btn tonal small"
+                    disabled={pending === user.isu}
+                    onclick={() => answer(profile, 'accept')}
+                    aria-label="Принять заявку: {name}">Принять</button
+                  >
+                  <button
+                    class="m3-icon-btn"
+                    disabled={pending === user.isu}
+                    onclick={() => answer(profile, 'reject')}
+                    aria-label="Отклонить заявку: {name}"
+                    title="Отклонить"
+                  >
+                    <Icon name="close" />
+                  </button>
+                {:else}
+                  <button
+                    class="m3-btn outlined small"
+                    disabled={pending === user.isu}
+                    onclick={() => answer(profile, 'cancel')}
+                    aria-label="Отменить заявку: {name}">Отменить</button
+                  >
+                {/if}
+              </span>
+            </li>
+          {/if}
+        {/each}
+      </ul>
+    {:else if query && tab === 'friends'}
+      <section class="m3-card">
+        <EmptyState icon="search_off" title="Никого не нашли" text="Поиск идёт по вашим друзьям." />
+      </section>
+    {:else}
+      <section class="m3-card">
+        <EmptyState icon={EMPTY[tab].icon} title={EMPTY[tab].title} text={EMPTY[tab].text} />
+      </section>
+    {/if}
+    {#snippet failed(error)}
+      <LoadError {error} title="Не удалось загрузить список" onretry={() => current.load()} />
+    {/snippet}
+  </Loadable>
 </div>
 
 {#if adding && session.user}
@@ -246,13 +226,6 @@
     max-width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
-  }
-  .tabs-scroll .m3-tabs {
-    min-width: max-content;
-  }
-  .count {
-    font: var(--md-label-large);
-    color: var(--md-on-surface-variant);
   }
   .search {
     width: min(360px, 100%);
@@ -279,11 +252,6 @@
     display: flex;
     align-items: center;
     gap: 4px;
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 40vh;
   }
   @media (max-width: 520px) {
     .request {

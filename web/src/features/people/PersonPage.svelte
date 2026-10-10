@@ -1,20 +1,20 @@
 <script lang="ts">
   import {
+    Avatar,
     ConfirmDialog,
     EmptyState,
     forget,
     Icon,
-    LoadingIndicator,
+    Loadable,
+    Resource,
     snackbars,
   } from '@alllexey/ui';
   import { ApiError } from '../../api/client';
   import { errorText } from '../../api/errors';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href, router } from '../../lib/router.svelte';
   import { session } from '../../lib/session.svelte';
   import { act, profile, profilePath } from './api';
-  import Avatar from './Avatar.svelte';
   import FriendsCard from './FriendsCard.svelte';
   import { can, groupLine, nameOf } from './labels';
   import ScheduleCard from './ScheduleCard.svelte';
@@ -77,92 +77,95 @@
   Друзья
 </a>
 
-{#if person.data}
-  {@const user = person.data.user}
-  {@const name = nameOf(user)}
-  {@const relationship = person.data.relationship}
-  <header class="hero">
-    <Avatar {name} src={user.pictureUrl} size={88} />
-    <div class="who">
-      <h1 class="m3-headline-medium">{name}</h1>
-      {#each user.groups as group (group.name)}
-        <p class="m3-muted">{groupLine(group)}</p>
-      {/each}
-      <div class="relation">
-        {#if self}
-          <span class="m3-pill neutral">Это вы</span>
-          <a class="m3-btn outlined small" href={href('/me')}>Ваш профиль</a>
-        {:else if relationship === 'FRIENDS'}
-          <span class="m3-pill ok"><Icon name="check" size={16} />В друзьях</span>
-          <button
-            class="m3-btn outlined small"
-            disabled={pending}
-            onclick={() => (removing = true)}
-          >
-            Удалить из друзей
-          </button>
-        {:else if relationship === 'INCOMING'}
-          <span class="m3-pill primary">Хочет добавить вас в друзья</span>
-          <button class="m3-btn tonal small" disabled={pending} onclick={() => change('accept')}>
-            Принять
-          </button>
-          <button class="m3-btn text small" disabled={pending} onclick={() => change('reject')}>
-            Отклонить
-          </button>
-        {:else if relationship === 'OUTGOING'}
-          <span class="m3-pill neutral">Заявка отправлена</span>
-          <button class="m3-btn outlined small" disabled={pending} onclick={() => change('cancel')}>
-            Отменить заявку
-          </button>
-        {:else}
-          <button class="m3-btn tonal small" disabled={pending} onclick={() => change('request')}>
-            <Icon name="person_add" />
-            Добавить в друзья
-          </button>
-        {/if}
+<Loadable resource={person} loadingLabel="Загружаем профиль">
+  {#snippet children(data)}
+    {@const user = data.user}
+    {@const name = nameOf(user)}
+    {@const relationship = data.relationship}
+    <header class="hero">
+      <Avatar {name} src={user.pictureUrl ?? ''} size={88} decorative />
+      <div class="who">
+        <h1 class="m3-headline-medium">{name}</h1>
+        {#each user.groups as group (group.name)}
+          <p class="m3-muted">{groupLine(group)}</p>
+        {/each}
+        <div class="relation">
+          {#if self}
+            <span class="m3-pill neutral">Это вы</span>
+            <a class="m3-btn outlined small" href={href('/me')}>Ваш профиль</a>
+          {:else if relationship === 'FRIENDS'}
+            <span class="m3-pill ok"><Icon name="check" size={16} />В друзьях</span>
+            <button
+              class="m3-btn outlined small"
+              disabled={pending}
+              onclick={() => (removing = true)}
+            >
+              Удалить из друзей
+            </button>
+          {:else if relationship === 'INCOMING'}
+            <span class="m3-pill primary">Хочет добавить вас в друзья</span>
+            <button class="m3-btn tonal small" disabled={pending} onclick={() => change('accept')}>
+              Принять
+            </button>
+            <button class="m3-btn text small" disabled={pending} onclick={() => change('reject')}>
+              Отклонить
+            </button>
+          {:else if relationship === 'OUTGOING'}
+            <span class="m3-pill neutral">Заявка отправлена</span>
+            <button
+              class="m3-btn outlined small"
+              disabled={pending}
+              onclick={() => change('cancel')}
+            >
+              Отменить заявку
+            </button>
+          {:else}
+            <button class="m3-btn tonal small" disabled={pending} onclick={() => change('request')}>
+              <Icon name="person_add" />
+              Добавить в друзья
+            </button>
+          {/if}
+        </div>
       </div>
-    </div>
-  </header>
+    </header>
 
-  {#key `${version}:${can(user, 'canViewSchedule')}:${can(user, 'canViewSport')}:${can(user, 'canViewFriends')}`}
-    <div class="grid">
-      <ScheduleCard {isu} allowed={can(user, 'canViewSchedule')} />
-      <div class="stack">
-        <SportCard {isu} allowed={can(user, 'canViewSport')} />
-        <FriendsCard {isu} allowed={can(user, 'canViewFriends')} />
+    {#key `${version}:${can(user, 'canViewSchedule')}:${can(user, 'canViewSport')}:${can(user, 'canViewFriends')}`}
+      <div class="grid">
+        <ScheduleCard {isu} allowed={can(user, 'canViewSchedule')} />
+        <div class="stack">
+          <SportCard {isu} allowed={can(user, 'canViewSport')} />
+          <FriendsCard {isu} allowed={can(user, 'canViewFriends')} />
+        </div>
       </div>
-    </div>
-  {/key}
+    {/key}
 
-  {#if removing}
-    <ConfirmDialog
-      title="Удалить из друзей?"
-      text={`${name} перестанет видеть то, что вы открыли только друзьям.`}
-      confirmLabel="Удалить"
-      danger
-      onconfirm={() => change('remove')}
-      oncancel={() => (removing = false)}
-    />
-  {/if}
-{:else if missing}
-  <section class="m3-card">
-    <EmptyState
-      icon="person_off"
-      title="Пользователь не найден"
-      text="Этого человека нет в ITMO.Widgets."
-    />
-  </section>
-{:else if person.error}
-  <section class="m3-card">
-    <LoadError
-      error={person.error}
-      title="Не удалось загрузить профиль"
-      onretry={() => person.load()}
-    />
-  </section>
-{:else}
-  <div class="waiting"><LoadingIndicator label="Загружаем профиль" /></div>
-{/if}
+    {#if removing}
+      <ConfirmDialog
+        title="Удалить из друзей?"
+        text={`${name} перестанет видеть то, что вы открыли только друзьям.`}
+        confirmLabel="Удалить"
+        danger
+        onconfirm={() => change('remove')}
+        oncancel={() => (removing = false)}
+      />
+    {/if}
+  {/snippet}
+  {#snippet failed(error)}
+    {#if missing}
+      <section class="m3-card">
+        <EmptyState
+          icon="person_off"
+          title="Пользователь не найден"
+          text="Этого человека нет в ITMO.Widgets."
+        />
+      </section>
+    {:else}
+      <section class="m3-card">
+        <LoadError {error} title="Не удалось загрузить профиль" onretry={() => person.load()} />
+      </section>
+    {/if}
+  {/snippet}
+</Loadable>
 
 <style>
   .back {
@@ -210,11 +213,6 @@
   .stack {
     display: grid;
     gap: 16px;
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 40vh;
   }
   /* On a phone the name gets the full width under the avatar. */
   @media (max-width: 520px) {

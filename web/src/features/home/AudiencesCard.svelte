@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { LoadingIndicator } from '@alllexey/ui';
+  import { Loadable, Resource } from '@alllexey/ui';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href } from '../../lib/router.svelte';
   import { AUDIENCE, privacy } from './student';
 
@@ -17,30 +16,27 @@
       >Изменить</a
     >
   </div>
-  {#if settings.data}
-    <dl class="audiences">
-      <div>
-        <dt>Расписание</dt>
-        <dd>{AUDIENCE[settings.data.scheduleVisibility]}</dd>
-      </div>
-      <div>
-        <dt>Спорт</dt>
-        <dd>{AUDIENCE[settings.data.sportVisibility]}</dd>
-      </div>
-      <div>
-        <dt>Список друзей</dt>
-        <dd>{AUDIENCE[settings.data.friendsVisibility]}</dd>
-      </div>
-    </dl>
-  {:else if settings.error}
-    <LoadError
-      error={settings.error}
-      title="Не удалось загрузить настройки"
-      onretry={() => settings.load()}
-    />
-  {:else}
-    <div class="waiting"><LoadingIndicator label="Загружаем настройки" /></div>
-  {/if}
+  <Loadable resource={settings} loadingLabel="Загружаем настройки">
+    {#snippet children(data)}
+      <dl class="audiences">
+        <div>
+          <dt>Расписание</dt>
+          <dd>{AUDIENCE[data.scheduleVisibility]}</dd>
+        </div>
+        <div>
+          <dt>Спорт</dt>
+          <dd>{AUDIENCE[data.sportVisibility]}</dd>
+        </div>
+        <div>
+          <dt>Список друзей</dt>
+          <dd>{AUDIENCE[data.friendsVisibility]}</dd>
+        </div>
+      </dl>
+    {/snippet}
+    {#snippet failed(error)}
+      <LoadError {error} title="Не удалось загрузить настройки" onretry={() => settings.load()} />
+    {/snippet}
+  </Loadable>
 </section>
 
 <style>
@@ -75,11 +71,6 @@
   dd {
     margin: 2px 0 0;
     font: var(--md-title-medium);
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 72px;
   }
   @media (max-width: 520px) {
     .audiences {
