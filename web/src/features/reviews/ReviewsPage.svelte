@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { PageHeader, revalidate } from '@alllexey/ui';
-  import { Resource } from '../../lib/resource.svelte';
+  import { PageHeader, Resource } from '@alllexey/ui';
   import { fetchSummaries, POLL_MILLIS, SUMMARIES_PATH } from './api';
   import './icons';
   import SummariesCard from './SummariesCard.svelte';
@@ -13,16 +12,10 @@
   const summaries = new Resource<AiSummariesState>(SUMMARIES_PATH, fetchSummaries);
   void summaries.load();
 
-  let failedPolls = $state(0);
+  // Quietly re-read the state while a run goes.
+  const polling = $derived(summaries.data?.running ?? false);
   $effect(() => {
-    void failedPolls;
-    if (!summaries.data?.running) return;
-    const timer = setTimeout(() => {
-      revalidate(SUMMARIES_PATH, fetchSummaries, (data) => (summaries.data = data)).catch(
-        () => (failedPolls += 1),
-      );
-    }, POLL_MILLIS);
-    return () => clearTimeout(timer);
+    if (polling) return summaries.poll(POLL_MILLIS);
   });
 </script>
 

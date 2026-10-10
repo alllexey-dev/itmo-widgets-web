@@ -10,16 +10,6 @@ export function firstNameOf(user: Pick<UserData, 'isu' | 'name'>): string {
   return user.name.trim().split(/\s+/)[0] || `ИСУ ${user.isu}`;
 }
 
-export function initialsOf(name: string): string {
-  const letters = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word.slice(0, 1).toUpperCase());
-  return letters.join('') || '?';
-}
-
 export function groupLine({ name, course, facultyShortName }: GroupData): string {
   return [name, course > 0 ? `${course} курс` : null, facultyShortName].filter(Boolean).join(' · ');
 }

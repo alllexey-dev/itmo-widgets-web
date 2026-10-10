@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { EmptyState, Icon, LoadingIndicator, LoadingOverlay, PageHeader } from '@alllexey/ui';
+  import { EmptyState, Loadable, PageHeader, Resource, Search } from '@alllexey/ui';
   import { onDestroy } from 'svelte';
   import { api } from '../../api/client';
   import { counted, formatDate } from '../../lib/format';
   import LoadError from '../../lib/LoadError.svelte';
   import Pagination from '../../lib/Pagination.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href, router } from '../../lib/router.svelte';
   import RoleBadges from './RoleBadges.svelte';
   import type { UserPage } from './types';
@@ -36,34 +35,22 @@
     clearTimeout(timer);
     timer = setTimeout(() => router.setQuery({ q: value.trim(), page: null }), DEBOUNCE_MS);
   }
-  function clear() {
-    clearTimeout(timer);
-    text = '';
-    router.setQuery({ q: null, page: null });
-  }
   onDestroy(() => clearTimeout(timer));
 </script>
 
 <PageHeader title="Пользователи" text="Поиск по ИСУ, имени или группе" />
 
 <div class="toolbar">
-  <label class="m3-search search">
-    <Icon name="search" />
-    <input
-      type="search"
-      aria-label="Поиск"
+  <div class="search">
+    <Search
+      value={text}
+      label="Поиск"
       placeholder="ИСУ, имя или группа"
       autocomplete="off"
       maxlength={QUERY_LIMIT}
-      value={text}
-      oninput={(event) => search(event.currentTarget.value)}
+      oninput={search}
     />
-    {#if text}
-      <button class="m3-icon-btn small" aria-label="Очистить" onclick={clear}>
-        <Icon name="close" size={20} />
-      </button>
-    {/if}
-  </label>
+  </div>
   {#if users.data}
     <span class="total m3-muted" aria-live="polite">
       {counted(users.data.total, ['пользователь', 'пользователя', 'пользователей'])}
@@ -71,9 +58,8 @@
   {/if}
 </div>
 
-{#if users.data}
-  {@const list = users.data}
-  <LoadingOverlay loading={users.loading}>
+<Loadable resource={users} loadingLabel="Загружаем пользователей">
+  {#snippet children(list)}
     <section class="m3-card flush">
       {#if list.items.length === 0}
         <EmptyState
@@ -112,18 +98,11 @@
         onchange={(next) => router.setQuery({ page: next > 0 ? next : null })}
       />
     </section>
-  </LoadingOverlay>
-{:else if users.error}
-  <section class="m3-card">
-    <LoadError
-      error={users.error}
-      title="Не удалось загрузить пользователей"
-      onretry={() => users.load()}
-    />
-  </section>
-{:else}
-  <div class="waiting"><LoadingIndicator label="Загружаем пользователей" /></div>
-{/if}
+  {/snippet}
+  {#snippet failed(error)}
+    <LoadError {error} title="Не удалось загрузить пользователей" onretry={() => users.load()} />
+  {/snippet}
+</Loadable>
 
 <style>
   .toolbar {
@@ -136,9 +115,6 @@
   .search {
     flex: 1 1 320px;
     max-width: 560px;
-  }
-  .search input::-webkit-search-cancel-button {
-    display: none;
   }
   .tr {
     grid-template-columns: minmax(180px, 2fr) 88px minmax(80px, 1fr) minmax(150px, 1.4fr) 112px;
@@ -211,10 +187,5 @@
   }
   .end {
     text-align: right;
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 40vh;
   }
 </style>

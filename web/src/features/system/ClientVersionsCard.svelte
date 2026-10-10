@@ -2,15 +2,14 @@
   import {
     ButtonGroup,
     EmptyState,
-    LoadingIndicator,
-    LoadingOverlay,
+    Loadable,
     Meter,
+    Resource,
     type GroupOption,
   } from '@alllexey/ui';
   import { buildLabel, channelLabel, isPrerelease } from '../../lib/appBuild';
   import { formatNumber } from '../../lib/format';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { CLIENT_VERSIONS_PATH, fetchClientVersions } from './api';
   import { groupBuilds, type VersionGroup } from './clientVersions';
   import { PLATFORM_NAMES } from './labels';
@@ -51,8 +50,9 @@
   <p class="m3-body-medium m3-muted lead">
     Устройства, активные за период, по последней версии, с которой они заходили
   </p>
-  {#if shown}
-    <LoadingOverlay loading={versions.loading}>
+  <Loadable resource={versions} loadingLabel="Загружаем версии">
+    {#snippet children(data)}
+      {@const shown = data[period]}
       {#if shown.activeDevices === 0}
         <EmptyState
           icon="smartphone"
@@ -76,7 +76,7 @@
             <dd class="caption">≤ 2.2 или не обновлялись</dd>
           </div>
         </dl>
-        <ul class="m3-segmented builds" aria-label="Устройства по версиям">
+        <ul class="m3-segmented" aria-label="Устройства по версиям">
           {#each groups as group (group.key)}
             <li class="build">
               <span class="line">
@@ -114,16 +114,11 @@
           {/if}
         </ul>
       {/if}
-    </LoadingOverlay>
-  {:else if versions.error}
-    <LoadError
-      error={versions.error}
-      title="Не удалось загрузить версии"
-      onretry={() => versions.load()}
-    />
-  {:else}
-    <LoadingIndicator label="Загружаем версии" />
-  {/if}
+    {/snippet}
+    {#snippet failed(error)}
+      <LoadError {error} title="Не удалось загрузить версии" onretry={() => versions.load()} />
+    {/snippet}
+  </Loadable>
 </section>
 
 <style>
@@ -166,16 +161,10 @@
     font: var(--md-body-small);
     color: var(--md-on-surface-variant);
   }
-  .builds {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
   .build {
     display: grid;
     gap: 6px;
     padding: 12px 16px;
-    background: var(--md-surface-container-high);
   }
   /* On a phone a long version wraps instead of losing its build number. */
   .line {

@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { Icon, LoadingIndicator, LoadingOverlay, Meter, PageHeader } from '@alllexey/ui';
+  import { Icon, Loadable, LoadingOverlay, Meter, PageHeader, Resource } from '@alllexey/ui';
   import { api } from '../../api/client';
   import { formatDate, formatNumber } from '../../lib/format';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href } from '../../lib/router.svelte';
   import TrendCard from './TrendCard.svelte';
   import type { Dashboard, DayMetric, LinkStatus } from './types';
@@ -38,112 +37,106 @@
   const newestFirst = $derived(data ? [...data.days].reverse() : []);
 </script>
 
-<a class="m3-btn text back" href={href('/')}>
-  <Icon name="arrow_back" size={18} />
-  Главная
-</a>
-<PageHeader title="Статистика" text="Итоги и последние 30 дней" />
+<PageHeader
+  title="Статистика"
+  text="Итоги и последние 30 дней"
+  back={{ href: href('/'), label: 'Главная' }}
+/>
 
-{#if data}
-  {@const totals = data.totals}
-  <LoadingOverlay loading={dashboard.loading}>
-    <div class="tiles">
-      <div class="m3-card tile" role="group" aria-label="Пользователи">
-        <span class="m3-label-large m3-muted">Пользователи</span>
-        <p class="value m3-num">{formatNumber(totals.users)}</p>
-        <p class="m3-muted">+{formatNumber(totals.newUsers7d)} за 7 дней</p>
-      </div>
-      <div class="m3-card tile" role="group" aria-label="Активные устройства">
-        <span class="m3-label-large m3-muted">Активные устройства</span>
-        <p class="value m3-num">{formatNumber(totals.activeDevices7d)}</p>
-        <p class="m3-muted">за 7 дней · {formatNumber(totals.activeDevices30d)} за 30</p>
-      </div>
-      <div class="m3-card tile" role="group" aria-label="Входы на сайт">
-        <span class="m3-label-large m3-muted">Входы на сайт</span>
-        <p class="value m3-num">{formatNumber(totals.webSessions7d)}</p>
-        <p class="m3-muted">за 7 дней</p>
-      </div>
-      <div class="m3-card tile" role="group" aria-label="Дружбы">
-        <span class="m3-label-large m3-muted">Дружбы</span>
-        <p class="value m3-num">{formatNumber(totals.friendships)}</p>
-      </div>
-      <div class="m3-card tile" role="group" aria-label="Очереди спорта">
-        <span class="m3-label-large m3-muted">Очереди спорта</span>
-        <p class="value m3-num">
-          {formatNumber(totals.activeAutoSignEntries + totals.activeFreeSignEntries)}
-        </p>
-        <p class="m3-muted">
-          авто {formatNumber(totals.activeAutoSignEntries)} · свободная
-          {formatNumber(totals.activeFreeSignEntries)}
-        </p>
-      </div>
-      <a class="m3-card primary tile cases" href={href('/admin/moderation')}>
-        <span class="m3-label-large">Открытые заявки</span>
-        <span class="value m3-num">{formatNumber(totals.openCases)}</span>
-        <span class="go">В очередь <Icon name="arrow_forward" size={18} /></span>
-      </a>
-    </div>
-
-    <div class="charts">
-      {#each TRENDS as trend (trend.metric)}
-        <TrendCard days={data.days} metric={trend.metric} title={trend.title} />
-      {/each}
-      <section class="m3-card" aria-label="Ссылки по состоянию">
-        <h2 class="m3-title-medium">Ссылки по состоянию</h2>
-        <p class="m3-muted m3-num sub">{formatNumber(linksTotal)} всего</p>
-        <ul class="bars">
-          {#each links as item (item.status)}
-            <li>
-              <span class="label">{item.label}</span>
-              <span class="meter" aria-hidden="true"
-                ><Meter value={item.count} max={linksMax} /></span
-              >
-              <span class="m3-num count">{formatNumber(item.count)}</span>
-            </li>
-          {/each}
-        </ul>
-      </section>
-    </div>
-
-    <details class="m3-card days">
-      <summary class="m3-title-small">
-        <Icon name="table" size={20} />
-        Данные по дням
-      </summary>
-      <div class="m3-table" role="table" aria-label="Данные по дням">
-        <div class="tr th" role="row">
-          <span role="columnheader">День</span>
-          {#each TRENDS as trend (trend.metric)}
-            <span role="columnheader" class="end">{trend.title}</span>
-          {/each}
+<Loadable resource={dashboard} loadingLabel="Загружаем статистику">
+  {#snippet children(data)}
+    {@const totals = data.totals}
+    <LoadingOverlay loading={dashboard.loading}>
+      <div class="tiles">
+        <div class="m3-card tile" role="group" aria-label="Пользователи">
+          <span class="m3-label-large m3-muted">Пользователи</span>
+          <p class="value m3-num">{formatNumber(totals.users)}</p>
+          <p class="m3-muted">+{formatNumber(totals.newUsers7d)} за 7 дней</p>
         </div>
-        {#each newestFirst as day (day.date)}
-          <div class="tr" role="row">
-            <span role="cell">{formatDate(day.date)}</span>
+        <div class="m3-card tile" role="group" aria-label="Активные устройства">
+          <span class="m3-label-large m3-muted">Активные устройства</span>
+          <p class="value m3-num">{formatNumber(totals.activeDevices7d)}</p>
+          <p class="m3-muted">за 7 дней · {formatNumber(totals.activeDevices30d)} за 30</p>
+        </div>
+        <div class="m3-card tile" role="group" aria-label="Входы на сайт">
+          <span class="m3-label-large m3-muted">Входы на сайт</span>
+          <p class="value m3-num">{formatNumber(totals.webSessions7d)}</p>
+          <p class="m3-muted">за 7 дней</p>
+        </div>
+        <div class="m3-card tile" role="group" aria-label="Дружбы">
+          <span class="m3-label-large m3-muted">Дружбы</span>
+          <p class="value m3-num">{formatNumber(totals.friendships)}</p>
+        </div>
+        <div class="m3-card tile" role="group" aria-label="Очереди спорта">
+          <span class="m3-label-large m3-muted">Очереди спорта</span>
+          <p class="value m3-num">
+            {formatNumber(totals.activeAutoSignEntries + totals.activeFreeSignEntries)}
+          </p>
+          <p class="m3-muted">
+            авто {formatNumber(totals.activeAutoSignEntries)} · свободная
+            {formatNumber(totals.activeFreeSignEntries)}
+          </p>
+        </div>
+        <a class="m3-card primary tile cases" href={href('/admin/moderation')}>
+          <span class="m3-label-large">Открытые заявки</span>
+          <span class="value m3-num">{formatNumber(totals.openCases)}</span>
+          <span class="go">В очередь <Icon name="arrow_forward" size={18} /></span>
+        </a>
+      </div>
+
+      <div class="charts">
+        {#each TRENDS as trend (trend.metric)}
+          <TrendCard days={data.days} metric={trend.metric} title={trend.title} />
+        {/each}
+        <section class="m3-card" aria-label="Ссылки по состоянию">
+          <h2 class="m3-title-medium">Ссылки по состоянию</h2>
+          <p class="m3-muted m3-num sub">{formatNumber(linksTotal)} всего</p>
+          <ul class="bars">
+            {#each links as item (item.status)}
+              <li>
+                <span class="label">{item.label}</span>
+                <span class="meter" aria-hidden="true"
+                  ><Meter value={item.count} max={linksMax} /></span
+                >
+                <span class="m3-num count">{formatNumber(item.count)}</span>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      </div>
+
+      <details class="m3-card days">
+        <summary class="m3-title-small">
+          <Icon name="table" size={20} />
+          Данные по дням
+        </summary>
+        <div class="m3-table" role="table" aria-label="Данные по дням">
+          <div class="tr th" role="row">
+            <span role="columnheader">День</span>
             {#each TRENDS as trend (trend.metric)}
-              <span role="cell" class="end m3-num">{formatNumber(day[trend.metric])}</span>
+              <span role="columnheader" class="end">{trend.title}</span>
             {/each}
           </div>
-        {/each}
-      </div>
-    </details>
-  </LoadingOverlay>
-{:else if dashboard.error}
-  <section class="m3-card">
-    <LoadError
-      error={dashboard.error}
-      title="Не удалось загрузить статистику"
-      onretry={() => dashboard.load()}
-    />
-  </section>
-{:else}
-  <div class="waiting"><LoadingIndicator label="Загружаем статистику" /></div>
-{/if}
+          {#each newestFirst as day (day.date)}
+            <div class="tr" role="row">
+              <span role="cell">{formatDate(day.date)}</span>
+              {#each TRENDS as trend (trend.metric)}
+                <span role="cell" class="end m3-num">{formatNumber(day[trend.metric])}</span>
+              {/each}
+            </div>
+          {/each}
+        </div>
+      </details>
+    </LoadingOverlay>
+  {/snippet}
+  {#snippet failed(error)}
+    <section class="m3-card">
+      <LoadError {error} title="Не удалось загрузить статистику" onretry={() => dashboard.load()} />
+    </section>
+  {/snippet}
+</Loadable>
 
 <style>
-  .back {
-    margin: -8px 0 8px -12px;
-  }
   .tiles {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
@@ -222,10 +215,5 @@
   }
   .end {
     text-align: right;
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 40vh;
   }
 </style>

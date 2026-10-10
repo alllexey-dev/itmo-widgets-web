@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { LoadingIndicator, LoadingOverlay, StatusShape } from '@alllexey/ui';
+  import { Loadable, Resource, StatusShape } from '@alllexey/ui';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { fetchSport, SPORT_PATH } from './api';
   import { formatDateTime, formatDuration, formatNumber, formatRelative } from './format';
   import { SPORT_ERRORS, SPORT_HEALTH, SPORT_OUTCOMES } from './labels';
@@ -57,18 +56,19 @@
       Автозапись на спорт
     </h2>
     {#if sport.data}
-      <span class="state m3-label-large">
+      <span class="m3-label-large">
         {#if latest}
-          <StatusShape tone={SPORT_OUTCOMES[latest.outcome].tone} />{SPORT_HEALTH[latest.outcome]}
+          <StatusShape tone={SPORT_OUTCOMES[latest.outcome].tone}
+            >{SPORT_HEALTH[latest.outcome]}</StatusShape
+          >
         {:else}
-          <StatusShape tone="off" />Запусков не было
+          <StatusShape tone="neutral">Запусков не было</StatusShape>
         {/if}
       </span>
     {/if}
   </header>
-  {#if sport.data}
-    {@const status = sport.data}
-    <LoadingOverlay loading={sport.loading}>
+  <Loadable resource={sport} loadingLabel="Загружаем автозапись">
+    {#snippet children(status)}
       <dl class="stats">
         <div>
           <dt>последний успешный запуск</dt>
@@ -110,7 +110,7 @@
       {#if status.runs.length === 0}
         <p class="m3-muted">Запусков ещё не было</p>
       {:else}
-        <ul class="m3-segmented runs" aria-label="Последние запуски">
+        <ul class="m3-segmented" aria-label="Последние запуски">
           {#each shown as run (run.id)}
             {@const outcome = SPORT_OUTCOMES[run.outcome]}
             <li class="run">
@@ -130,16 +130,11 @@
           </button>
         {/if}
       {/if}
-    </LoadingOverlay>
-  {:else if sport.error}
-    <LoadError
-      error={sport.error}
-      title="Не удалось загрузить автозапись"
-      onretry={() => sport.load()}
-    />
-  {:else}
-    <LoadingIndicator label="Загружаем автозапись" />
-  {/if}
+    {/snippet}
+    {#snippet failed(error)}
+      <LoadError {error} title="Не удалось загрузить автозапись" onretry={() => sport.load()} />
+    {/snippet}
+  </Loadable>
 </section>
 
 <style>
@@ -159,11 +154,6 @@
     outline: 3px solid var(--md-secondary);
     outline-offset: 4px;
     border-radius: var(--md-shape-sm);
-  }
-  .state {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
   }
   .stats {
     display: grid;
@@ -186,17 +176,11 @@
     font: var(--md-body-small);
     color: var(--md-on-surface-variant);
   }
-  .runs {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
   .run {
     display: flex;
     align-items: center;
     gap: 16px;
     padding: 12px 16px;
-    background: var(--md-surface-container-high);
   }
   .main {
     display: grid;

@@ -1,7 +1,13 @@
 <script lang="ts">
-  import { ButtonGroup, EmptyState, Icon, LoadingIndicator, LoadingOverlay } from '@alllexey/ui';
+  import {
+    ButtonGroup,
+    type ChipOption,
+    Chips,
+    EmptyState,
+    Loadable,
+    Resource,
+  } from '@alllexey/ui';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { router } from '../../lib/router.svelte';
   import { casesKey, fetchCases, prefetchCase, QUEUE_PAGE_SIZE, type CaseFilter } from './api';
   import CaseDetail from './CaseDetail.svelte';
@@ -17,6 +23,10 @@
   let { wide, ondecided }: { wide: boolean; ondecided: () => void } = $props();
 
   const REASON_VALUES = Object.keys(REASONS) as CaseReason[];
+  const REASON_OPTIONS: ChipOption<CaseReason | 'ALL'>[] = [
+    { value: 'ALL', label: 'Все' },
+    ...REASON_VALUES.map((value) => ({ value, label: REASONS[value].label })),
+  ];
   const STATUS_OPTIONS: { value: CaseStatus; label: string }[] = [
     { value: 'OPEN', label: 'Открытые' },
     { value: 'RESOLVED', label: 'Решённые' },
@@ -87,32 +97,19 @@
     value={status}
     onchange={(value) => setFilter({ status: value === 'OPEN' ? null : value })}
   />
-  <div class="chips" role="group" aria-label="Причина">
-    <button
-      class="m3-chip"
-      class:selected={reason === null}
-      aria-pressed={reason === null}
-      onclick={() => setFilter({ reason: null })}
-    >
-      {#if reason === null}<Icon name="check" size={18} />{/if}Все
-    </button>
-    {#each REASON_VALUES as value (value)}
-      <button
-        class="m3-chip"
-        class:selected={reason === value}
-        aria-pressed={reason === value}
-        onclick={() => setFilter({ reason: value })}
-      >
-        {#if reason === value}<Icon name="check" size={18} />{/if}{REASONS[value].label}
-      </button>
-    {/each}
-  </div>
+  <Chips
+    label="Причина"
+    options={REASON_OPTIONS}
+    bind:value={
+      () => reason ?? 'ALL', (next) => next && setFilter({ reason: next === 'ALL' ? null : next })
+    }
+  />
 </div>
 
 <div class="layout" class:wide class:showing={selectedId !== null}>
   <section class="queue" aria-label="Очередь">
-    {#if cases.data}
-      <LoadingOverlay loading={cases.loading}>
+    <Loadable resource={cases} loadingLabel="Загружаем заявки">
+      {#snippet children(data)}
         {#if items.length === 0}
           <div class="m3-card">
             <EmptyState
@@ -126,22 +123,15 @@
           <Pagination
             {page}
             size={QUEUE_PAGE_SIZE}
-            total={cases.data.total}
+            total={data.total}
             onchange={(next) => router.setQuery({ page: next > 0 ? next : null, case: null })}
           />
         {/if}
-      </LoadingOverlay>
-    {:else if cases.error}
-      <div class="m3-card">
-        <LoadError
-          error={cases.error}
-          title="Не удалось загрузить заявки"
-          onretry={() => cases.load()}
-        />
-      </div>
-    {:else}
-      <div class="waiting"><LoadingIndicator label="Загружаем заявки" /></div>
-    {/if}
+      {/snippet}
+      {#snippet failed(error)}
+        <LoadError {error} title="Не удалось загрузить заявки" onretry={() => cases.load()} />
+      {/snippet}
+    </Loadable>
   </section>
 
   {#if wide || selectedId}
@@ -172,11 +162,6 @@
     gap: 12px 24px;
     margin: 16px 0;
   }
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
   .layout {
     display: grid;
     gap: 16px;
@@ -199,11 +184,6 @@
   .pane {
     min-width: 0;
     padding: 20px 24px 28px;
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 240px;
   }
   @media (max-width: 600px) {
     .pane {

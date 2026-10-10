@@ -66,10 +66,10 @@ exit 2 means Docker is unavailable. It never starts colima. CI runs `full`.
 - All HTTP goes through `web/src/api/client.ts`: same-origin cookie session,
   `X-Web-Request: 1` on every non-GET request, the backend `ApiResponse`
   envelope unwrapped, failures as `ApiError` with the backend error code.
-- Server data through `Resource` (`src/lib/resource.svelte.ts`) on the
-  package's `revalidate`; cache keys are request paths and a mutation calls
-  `forget(prefix)` for what it changed. No global stores besides `session` and
-  `router`.
+- Server data through the package's `Resource`, rendered with `Loadable`
+  (`LoadError` in its `failed` snippet); cache keys are request paths and a
+  mutation calls `forget(prefix)` for what it changed. No global stores
+  besides `session` and `router`.
 - Role-based visibility uses `hasAccess(user, 'user' | 'moderator' | 'admin')`;
   `ADMIN` implies moderator rights. The backend enforces access; the UI only hides.
 - Tests: Vitest + Testing Library queries by role and accessible name; HTTP mocked

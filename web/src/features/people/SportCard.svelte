@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { LoadingIndicator, LoadingOverlay } from '@alllexey/ui';
+  import { Loadable, Resource } from '@alllexey/ui';
   import { untrack } from 'svelte';
   import { ApiError } from '../../api/client';
   import { counted } from '../../lib/format';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { bookingsOf, bookingsPath } from './api';
   import { entryLesson, entryStatus } from './labels';
 
@@ -26,61 +25,47 @@
   <h2 id="person-sport" class="m3-section-title">Спорт</h2>
   {#if denied}
     <p class="m3-muted">Спорт скрыт.</p>
-  {:else if bookings.data}
-    {@const { entries, lessonIds } = bookings.data}
-    <LoadingOverlay loading={bookings.loading}>
-      {#if entries.length === 0 && lessonIds.length === 0}
-        <p class="m3-muted">Записей на спорт нет.</p>
-      {:else}
-        {#if entries.length > 0}
-          <ul class="m3-segmented tiles" aria-label="Очереди на спорт">
-            {#each entries as entry (`${entry.type}-${entry.id}`)}
-              {@const lesson = entryLesson(entry)}
-              <li class="m3-list-item">
-                <span class="main">
-                  <span class="headline">{lesson.section}</span>
-                  <span class="support">{lesson.when} · {entryStatus(entry)}</span>
-                </span>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-        {#if lessonIds.length > 0}
-          <p class="m3-body-medium confirmed" class:alone={entries.length === 0}>
-            {entries.length > 0 ? 'И ещё ' : ''}{counted(lessonIds.length, [
-              'подтверждённая запись',
-              'подтверждённые записи',
-              'подтверждённых записей',
-            ])}
-          </p>
-        {/if}
-      {/if}
-    </LoadingOverlay>
-  {:else if bookings.error}
-    <LoadError
-      error={bookings.error}
-      title="Не удалось загрузить спорт"
-      onretry={() => bookings.load()}
-    />
   {:else}
-    <div class="waiting"><LoadingIndicator label="Загружаем спорт" /></div>
+    <Loadable resource={bookings} loadingLabel="Загружаем спорт">
+      {#snippet children(data)}
+        {@const { entries, lessonIds } = data}
+        {#if entries.length === 0 && lessonIds.length === 0}
+          <p class="m3-muted">Записей на спорт нет.</p>
+        {:else}
+          {#if entries.length > 0}
+            <ul class="m3-segmented" aria-label="Очереди на спорт">
+              {#each entries as entry (`${entry.type}-${entry.id}`)}
+                {@const lesson = entryLesson(entry)}
+                <li class="m3-list-item">
+                  <span class="main">
+                    <span class="headline">{lesson.section}</span>
+                    <span class="support">{lesson.when} · {entryStatus(entry)}</span>
+                  </span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+          {#if lessonIds.length > 0}
+            <p class="m3-body-medium confirmed" class:alone={entries.length === 0}>
+              {entries.length > 0 ? 'И ещё ' : ''}{counted(lessonIds.length, [
+                'подтверждённая запись',
+                'подтверждённые записи',
+                'подтверждённых записей',
+              ])}
+            </p>
+          {/if}
+        {/if}
+      {/snippet}
+      {#snippet failed(error)}
+        <LoadError {error} title="Не удалось загрузить спорт" onretry={() => bookings.load()} />
+      {/snippet}
+    </Loadable>
   {/if}
 </section>
 
 <style>
   p {
     margin: 0;
-  }
-  .tiles {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .tiles > :global(*) {
-    background: var(--md-surface-container-lowest);
-  }
-  :global([data-theme='dark']) .tiles > :global(*) {
-    background: var(--md-surface-container-high);
   }
   .confirmed {
     margin: 12px 4px 0;
@@ -89,10 +74,5 @@
   .confirmed.alone {
     margin: 0;
     color: inherit;
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 96px;
   }
 </style>

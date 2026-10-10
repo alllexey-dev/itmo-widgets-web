@@ -1,4 +1,4 @@
-import type { Tone } from '@alllexey/ui';
+import type { StatusTone } from '@alllexey/ui';
 import type {
   ReviewsSyncOutcome,
   SummaryConfidence,
@@ -10,13 +10,13 @@ import type {
   SummaryStatus,
 } from './types';
 
-export const SYNC_OUTCOMES: Record<ReviewsSyncOutcome, { label: string; tone: Tone }> = {
+export const SYNC_OUTCOMES: Record<ReviewsSyncOutcome, { label: string; tone: StatusTone }> = {
   UNCHANGED: { label: 'Без изменений', tone: 'ok' },
   UPDATED: { label: 'Обновлено', tone: 'ok' },
   FAILED: { label: 'Ошибка', tone: 'bad' },
 };
 
-export const RUN_OUTCOMES: Record<SummaryRunOutcome, { label: string; tone: Tone }> = {
+export const RUN_OUTCOMES: Record<SummaryRunOutcome, { label: string; tone: StatusTone }> = {
   COMPLETED: { label: 'Готово', tone: 'ok' },
   BUDGET_EXHAUSTED: { label: 'Лимит исчерпан', tone: 'warn' },
   RATE_LIMITED: { label: 'Ограничение Google', tone: 'warn' },

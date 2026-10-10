@@ -9,16 +9,6 @@ export function groupLine({ name, course, facultyShortName }: GroupData): string
   return [name, course > 0 ? `${course} курс` : null, facultyShortName].filter(Boolean).join(' · ');
 }
 
-export function initialsOf(name: string): string {
-  const letters = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word.slice(0, 1).toUpperCase());
-  return letters.join('') || '?';
-}
-
 /** Local search over the loaded friends: name, ISU or group. */
 export function matches(user: UserData, query: string): boolean {
   const needle = query.trim().toLowerCase();

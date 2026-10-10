@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { LoadingIndicator, LoadingOverlay } from '@alllexey/ui';
+  import { Loadable, Resource } from '@alllexey/ui';
   import { untrack } from 'svelte';
   import { ApiError } from '../../api/client';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { lessonsOf, lessonsPath } from './api';
   import { byDay, clock, formatDayTitle, lessonPlace, nextDays } from './labels';
   import type { Lesson } from './types';
@@ -35,14 +34,14 @@
   </div>
   {#if denied}
     <p class="m3-muted">Расписание скрыто.</p>
-  {:else if lessons.data}
-    <LoadingOverlay loading={lessons.loading}>
+  {:else}
+    <Loadable resource={lessons} loadingLabel="Загружаем расписание">
       {#if days.length === 0}
         <p class="m3-muted">На ближайшие 7 дней занятий нет.</p>
       {:else}
         {#each days as day (day.date)}
           <h3 class="day m3-title-small">{formatDayTitle(day.date)}</h3>
-          <ul class="m3-segmented tiles" aria-label={formatDayTitle(day.date)}>
+          <ul class="m3-segmented" aria-label={formatDayTitle(day.date)}>
             {#each day.lessons as lesson (lesson.pairId)}
               <li class="m3-list-item lesson">
                 <span class="lead time m3-num">
@@ -58,15 +57,10 @@
           </ul>
         {/each}
       {/if}
-    </LoadingOverlay>
-  {:else if lessons.error}
-    <LoadError
-      error={lessons.error}
-      title="Не удалось загрузить расписание"
-      onretry={() => lessons.load()}
-    />
-  {:else}
-    <div class="waiting"><LoadingIndicator label="Загружаем расписание" /></div>
+      {#snippet failed(error)}
+        <LoadError {error} title="Не удалось загрузить расписание" onretry={() => lessons.load()} />
+      {/snippet}
+    </Loadable>
   {/if}
 </section>
 
@@ -86,17 +80,6 @@
   .day:first-child {
     margin-top: 4px;
   }
-  .tiles {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .tiles > :global(*) {
-    background: var(--md-surface-container-lowest);
-  }
-  :global([data-theme='dark']) .tiles > :global(*) {
-    background: var(--md-surface-container-high);
-  }
   .time {
     display: flex;
     flex-direction: column;
@@ -110,10 +93,5 @@
   .lesson .headline,
   .lesson .support {
     white-space: normal;
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 120px;
   }
 </style>

@@ -19,7 +19,7 @@
     "csp-preview": "vite build && node scripts/csp-preview.mjs"
   },
   "dependencies": {
-    "@alllexey/ui": "0.2.0",
+    "@alllexey/ui": "0.4.0",
     "@material-symbols/svg-400": "0.47.6",
     "uplot": "1.6.32",
     "uqr": "0.1.3"

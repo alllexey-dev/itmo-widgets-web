@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { ButtonGroup, ConfirmDialog, LoadingIndicator, snackbars, Switch } from '@alllexey/ui';
+  import { ButtonGroup, ConfirmDialog, Loadable, Resource, snackbars, Switch } from '@alllexey/ui';
   import { errorText } from '../../api/errors';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { fetchSettings, saveSettings, SETTINGS_PATH } from './api';
   import PolicyLimits from './PolicyLimits.svelte';
   import type { ModerationPolicy, ModerationSettings, PolicyKey } from './types';
@@ -78,50 +77,47 @@
     <h2 class="m3-section-title" id="system-rules">Правила модерации</h2>
     <ButtonGroup small label="Правила" options={POLICIES} bind:value={policy} />
   </header>
-  {#if settings.data}
-    {#each POLICIES as option (option.value)}
-      {@const saved = settings.data.policies[option.value]}
-      <div class="policy" hidden={policy !== option.value}>
-        {#if !saved}
-          <p class="m3-muted">Сервер не прислал эти правила</p>
-        {:else}
-          {#if option.value === 'SUBJECT_RESOURCE'}
-            <div class="switch">
-              <span class="text">
-                <span class="m3-body-large">Премодерация ссылок</span>
-                <span class="m3-body-small m3-muted">Новые ссылки видны всем после проверки</span>
-              </span>
-              <Switch
-                label="Премодерация ссылок"
-                bind:checked={premoderation}
-                disabled={switching}
-                onchange={toggle}
-              />
-            </div>
+  <Loadable resource={settings} loadingLabel="Загружаем правила">
+    {#snippet children(data)}
+      {#each POLICIES as option (option.value)}
+        {@const saved = data.policies[option.value]}
+        <div class="policy" hidden={policy !== option.value}>
+          {#if !saved}
+            <p class="m3-muted">Сервер не прислал эти правила</p>
           {:else}
-            <p class="m3-body-small m3-muted always">
-              Отзывы всегда проходят проверку перед публикацией
-            </p>
+            {#if option.value === 'SUBJECT_RESOURCE'}
+              <div class="switch">
+                <span class="text">
+                  <span class="m3-body-large">Премодерация ссылок</span>
+                  <span class="m3-body-small m3-muted">Новые ссылки видны всем после проверки</span>
+                </span>
+                <Switch
+                  label="Премодерация ссылок"
+                  bind:checked={premoderation}
+                  disabled={switching}
+                  onchange={toggle}
+                />
+              </div>
+            {:else}
+              <p class="m3-body-small m3-muted always">
+                Отзывы всегда проходят проверку перед публикацией
+              </p>
+            {/if}
+            {#key limitsKey(saved)}
+              <PolicyLimits
+                {saved}
+                submissionLabel={SUBMISSION_LABELS[option.value]}
+                onsave={(next) => save(option.value, next)}
+              />
+            {/key}
           {/if}
-          {#key limitsKey(saved)}
-            <PolicyLimits
-              {saved}
-              submissionLabel={SUBMISSION_LABELS[option.value]}
-              onsave={(next) => save(option.value, next)}
-            />
-          {/key}
-        {/if}
-      </div>
-    {/each}
-  {:else if settings.error}
-    <LoadError
-      error={settings.error}
-      title="Не удалось загрузить правила"
-      onretry={() => settings.load()}
-    />
-  {:else}
-    <LoadingIndicator label="Загружаем правила" />
-  {/if}
+        </div>
+      {/each}
+    {/snippet}
+    {#snippet failed(error)}
+      <LoadError {error} title="Не удалось загрузить правила" onretry={() => settings.load()} />
+    {/snippet}
+  </Loadable>
 </section>
 
 {#if confirming}

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import ResourceProbe from '../test/ResourceProbe.svelte';
 import { fail, ok, server } from '../test/server';
 
-describe('Resource with LoadError', () => {
+describe('LoadError under Loadable', () => {
   it('shows the cached copy at once on a repeated visit and then the fresh one', async () => {
     server.use(http.get('*/api/test/items', () => ok(['Первый'])));
     const first = render(ResourceProbe);

@@ -35,16 +35,6 @@ export function nameOf(user: { isu: number; name: string }): string {
   return user.name.trim() || `ИСУ ${user.isu}`;
 }
 
-export function initialsOf(name: string): string {
-  const letters = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word.slice(0, 1).toUpperCase());
-  return letters.join('') || '?';
-}
-
 export const AUDIENCE: Record<PrivacySettings['scheduleVisibility'], string> = {
   ALL: 'Все',
   FRIENDS: 'Друзья',

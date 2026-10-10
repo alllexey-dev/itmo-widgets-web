@@ -1,7 +1,14 @@
 <script lang="ts">
-  import { EmptyState, Icon, LoadingIndicator, LoadingOverlay, Shape } from '@alllexey/ui';
+  import {
+    EmptyState,
+    Icon,
+    LoadingIndicator,
+    LoadingOverlay,
+    Resource,
+    Shape,
+    statusRole,
+  } from '@alllexey/ui';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href } from '../../lib/router.svelte';
   import { hasAccess, session } from '../../lib/session.svelte';
   import { aiSummaries, credentials, openCases, reviewsSync, sport, type Source } from './api';
@@ -68,7 +75,7 @@
 <section class="m3-card attention" aria-labelledby="attention-title">
   <h2 id="attention-title" class="m3-section-title">Требует внимания</h2>
   {#if !ready}
-    <div class="waiting"><LoadingIndicator label="Проверяем, что требует внимания" /></div>
+    <LoadingIndicator block label="Проверяем, что требует внимания" />
   {:else if failed.length === checks.length}
     <LoadError error={failed[0]?.resource.error} title="Не удалось проверить" onretry={retry} />
   {:else}
@@ -82,12 +89,7 @@
                   <Shape
                     shape={row.tone === 'bad' ? 'softBurst' : 'cookie9'}
                     size={40}
-                    color={row.tone === 'bad'
-                      ? 'var(--md-error-container)'
-                      : 'var(--md-warning-container)'}
-                    fg={row.tone === 'bad'
-                      ? 'var(--md-on-error-container)'
-                      : 'var(--md-on-warning-container)'}
+                    tone={statusRole[row.tone]}
                   >
                     <Icon name={row.icon} size={20} />
                   </Shape>
@@ -125,19 +127,9 @@
   .attention {
     grid-column: 1 / -1;
   }
-  .rows {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
   .rows .headline,
   .rows .support {
     white-space: normal;
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 120px;
   }
   .failed {
     display: flex;

@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { ButtonGroup, LoadingIndicator, LoadingOverlay } from '@alllexey/ui';
+  import { ButtonGroup, Loadable, Resource } from '@alllexey/ui';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { fetchVersion, supportsIos, versionKey } from './api';
   import { PLATFORMS } from './labels';
   import type { AppVersion, Platform } from './types';
@@ -37,25 +36,20 @@
   <p class="m3-body-medium m3-muted lead">
     Приложение предлагает обновиться до последней версии и требует минимальную
   </p>
-  {#if version.data}
-    <LoadingOverlay loading={version.loading}>
-      {#key `${platform}:${version.data.updatedAt ?? 'env'}`}
+  <Loadable resource={version} loadingLabel="Загружаем версию">
+    {#snippet children(data)}
+      {#key `${platform}:${data.updatedAt ?? 'env'}`}
         <VersionForm
           {platform}
-          saved={version.data}
+          saved={data}
           onsaved={(saved) => (versions[platform].data = saved)}
         />
       {/key}
-    </LoadingOverlay>
-  {:else if version.error}
-    <LoadError
-      error={version.error}
-      title="Не удалось загрузить версию"
-      onretry={() => version.load()}
-    />
-  {:else}
-    <LoadingIndicator label="Загружаем версию" />
-  {/if}
+    {/snippet}
+    {#snippet failed(error)}
+      <LoadError {error} title="Не удалось загрузить версию" onretry={() => version.load()} />
+    {/snippet}
+  </Loadable>
 </section>
 
 <style>

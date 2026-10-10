@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { Icon } from '@alllexey/ui';
+  import { Avatar, Icon } from '@alllexey/ui';
   import { href } from '../../lib/router.svelte';
-  import Avatar from './Avatar.svelte';
   import { formatDate } from './format';
   import { CAPABILITIES } from './labels';
   import type { AdminUserSummary, SubmitterHistory } from './types';
@@ -25,7 +24,7 @@
 <section class="mod-section" aria-labelledby="case-author">
   <h3 id="case-author">Автор</h3>
   <div class="who">
-    <Avatar name={author.name} src={author.pictureUrl} size={48} />
+    <Avatar name={author.name} src={author.pictureUrl ?? ''} size={48} decorative />
     <div class="text">
       <span class="name">{author.name}</span>
       <span class="m3-muted">ИСУ {author.isu}{group ? ` · ${group}` : ''}</span>

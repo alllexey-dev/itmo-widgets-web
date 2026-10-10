@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- WV-10: Move the web app to @alllexey/ui 0.4.0: the package's Resource, Loadable, Tabs, Chips, Avatar, TextField, Search, TopBar and StatusShape text replace the app's own copies, the shell applies the theme, and the overrides for the old dark tertiary container, segmented tiles in cards and disabled danger buttons are gone (the app card on Главная is tertiary again); photos load with a same-origin referrer policy.
 - WV-09: Show the app versions in use on Система (7 or 30 days, devices per version and build with platform and channel, the beta share and devices of unknown version) and each device's reported build, channel and last report on the admin user page; sync the Backend 1.8.0 OpenAPI snapshot.
 - WV-08: Describe web sessions of 14 days idle and 60 days at most with 90-day retention, and answer a 401 reauth_required on staff actions with a re-login dialog that returns to the page and keeps the session.
 - WV-06-FIX2: Put the app card on Главная on the secondary container, as the package's tertiary container stays light in a dark scheme and the card showed as a light lavender block with a light blue button.

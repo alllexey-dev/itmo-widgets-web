@@ -1,17 +1,19 @@
 <script lang="ts">
   import {
+    Avatar,
+    type ChipOption,
+    Chips,
     ConfirmDialog,
     EmptyState,
     Icon,
-    LoadingIndicator,
-    LoadingOverlay,
+    Loadable,
+    Resource,
+    Search,
     snackbars,
   } from '@alllexey/ui';
   import { errorText } from '../../api/errors';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href, router } from '../../lib/router.svelte';
-  import Avatar from './Avatar.svelte';
   import {
     fetchRestrictions,
     restrictionsKey,
@@ -36,6 +38,10 @@
     const timer = setTimeout(() => (debounced = value), 300);
     return () => clearTimeout(timer);
   });
+  const STATES: ChipOption<'active' | 'all'>[] = [
+    { value: 'active', label: 'Действующие' },
+    { value: 'all', label: 'Все' },
+  ];
   const valid = $derived(debounced === '' || ISU_PATTERN.test(debounced));
   const active = $derived(router.query.get('all') !== '1');
   const page = $derived(Math.max(0, Number(router.query.get('page')) || 0));
@@ -91,46 +97,34 @@
 
 <div class="toolbar">
   <div class="search-field">
-    <label class="m3-search">
-      <Icon name="search" />
-      <input
-        type="search"
-        aria-label="ИСУ"
-        placeholder="Поиск по ИСУ"
-        inputmode="numeric"
-        autocomplete="off"
-        aria-invalid={!valid}
-        aria-describedby={valid ? undefined : 'isu-error'}
-        value={isuText}
-        oninput={(event) => changeIsu(event.currentTarget.value)}
-      />
-    </label>
+    <Search
+      value={isuText}
+      label="ИСУ"
+      placeholder="Поиск по ИСУ"
+      inputmode="numeric"
+      autocomplete="off"
+      aria-invalid={!valid}
+      aria-describedby={valid ? undefined : 'isu-error'}
+      oninput={changeIsu}
+    />
     {#if !valid}<small id="isu-error" class="error">Только цифры</small>{/if}
   </div>
-  <div class="chips" role="group" aria-label="Состояние">
-    <button
-      class="m3-chip"
-      class:selected={active}
-      aria-pressed={active}
-      onclick={() => router.setQuery({ all: null, page: null })}
-    >
-      {#if active}<Icon name="check" size={18} />{/if}Действующие
-    </button>
-    <button
-      class="m3-chip"
-      class:selected={!active}
-      aria-pressed={!active}
-      onclick={() => router.setQuery({ all: '1', page: null })}
-    >
-      {#if !active}<Icon name="check" size={18} />{/if}Все
-    </button>
+  <div class="chips">
+    <Chips
+      label="Состояние"
+      options={STATES}
+      bind:value={
+        () => (active ? 'active' : 'all'),
+        (next) => next && router.setQuery({ all: next === 'all' ? '1' : null, page: null })
+      }
+    />
   </div>
 </div>
 
-{#if restrictions.data}
-  <LoadingOverlay loading={restrictions.loading}>
+<Loadable resource={restrictions} loadingLabel="Загружаем ограничения">
+  {#snippet children(data)}
     <section class="m3-card flush">
-      {#if restrictions.data.items.length === 0}
+      {#if data.items.length === 0}
         {#if debounced}
           <EmptyState icon="search_off" title="Ничего не нашли" text="Проверьте номер ИСУ." />
         {:else}
@@ -154,13 +148,18 @@
               </tr>
             </thead>
             <tbody>
-              {#each restrictions.data.items as row (row.id)}
+              {#each data.items as row (row.id)}
                 {@const rowState = stateOf(row)}
                 {@const capability = CAPABILITIES[row.capability]}
                 <tr>
                   <td>
                     <span class="user">
-                      <Avatar name={row.user.name} src={row.user.pictureUrl} size={32} />
+                      <Avatar
+                        name={row.user.name}
+                        src={row.user.pictureUrl ?? ''}
+                        size={32}
+                        decorative
+                      />
                       <span class="user-text">
                         <span class="name">{row.user.name}</span>
                         <span class="m3-muted">ИСУ {row.user.isu}</span>
@@ -201,22 +200,19 @@
       <Pagination
         {page}
         size={RESTRICTIONS_PAGE_SIZE}
-        total={restrictions.data.total}
+        total={data.total}
         onchange={(next) => router.setQuery({ page: next > 0 ? next : null })}
       />
     </section>
-  </LoadingOverlay>
-{:else if restrictions.error}
-  <section class="m3-card">
+  {/snippet}
+  {#snippet failed(error)}
     <LoadError
-      error={restrictions.error}
+      {error}
       title="Не удалось загрузить ограничения"
       onretry={() => restrictions.load()}
     />
-  </section>
-{:else}
-  <div class="waiting"><LoadingIndicator label="Загружаем ограничения" /></div>
-{/if}
+  {/snippet}
+</Loadable>
 
 {#if confirming}
   <ConfirmDialog
@@ -242,21 +238,12 @@
     flex: 0 1 320px;
     min-width: 0;
   }
-  .search-field .m3-search {
-    height: 48px;
-  }
-  .search-field input::-webkit-search-cancel-button {
-    display: none;
-  }
   .error {
     padding: 0 16px;
     font: var(--md-body-small);
     color: var(--md-error);
   }
   .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
     padding-top: 8px;
   }
   /* Also the containing block of the hidden caption, which would otherwise widen the page. */

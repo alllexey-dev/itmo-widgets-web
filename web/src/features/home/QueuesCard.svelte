@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { Icon, LoadingIndicator, LoadingOverlay } from '@alllexey/ui';
+  import { Icon, Loadable, Resource } from '@alllexey/ui';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href } from '../../lib/router.svelte';
   import { queueRows, sportEntries } from './student';
 
@@ -17,42 +16,35 @@
     <h2 id="home-queues" class="m3-section-title">Очереди на спорт</h2>
     <a class="m3-btn text small" href={href('/sport')} aria-label="Все очереди">Все</a>
   </div>
-  {#if entries.data}
-    <LoadingOverlay loading={entries.loading}>
-      {#if rows.length > 0}
-        <ul class="m3-segmented tiles" aria-label="Очереди на спорт">
-          {#each rows.slice(0, SHOWN) as row (row.id)}
-            <li class="m3-list-item queue">
-              <span class="lead icon" aria-hidden="true"><Icon name={row.icon} /></span>
-              <span class="main">
-                <span class="headline">{row.section}</span>
-                <span class="support">{row.when} · {row.kind}</span>
-              </span>
-              <span class="trail"><span class="m3-pill {row.tone}">{row.status}</span></span>
-            </li>
-          {/each}
-        </ul>
-        {#if rows.length > SHOWN}
-          <p class="m3-body-small m3-muted note">
-            И ещё {rows.length - SHOWN} на странице «Спорт».
-          </p>
-        {/if}
-      {:else}
-        <p class="m3-muted">Вы не стоите в очередях.</p>
+  <Loadable resource={entries} loadingLabel="Загружаем очереди">
+    {#if rows.length > 0}
+      <ul class="m3-segmented" aria-label="Очереди на спорт">
+        {#each rows.slice(0, SHOWN) as row (row.id)}
+          <li class="m3-list-item queue">
+            <span class="lead icon" aria-hidden="true"><Icon name={row.icon} /></span>
+            <span class="main">
+              <span class="headline">{row.section}</span>
+              <span class="support">{row.when} · {row.kind}</span>
+            </span>
+            <span class="trail"><span class="m3-pill {row.tone}">{row.status}</span></span>
+          </li>
+        {/each}
+      </ul>
+      {#if rows.length > SHOWN}
+        <p class="m3-body-small m3-muted note">
+          И ещё {rows.length - SHOWN} на странице «Спорт».
+        </p>
       {/if}
-      <p class="m3-body-small m3-muted note">
-        Встать в очередь можно в приложении: расписание секций приходит из My ITMO.
-      </p>
-    </LoadingOverlay>
-  {:else if entries.error}
-    <LoadError
-      error={entries.error}
-      title="Не удалось загрузить очереди"
-      onretry={() => entries.load()}
-    />
-  {:else}
-    <div class="waiting"><LoadingIndicator label="Загружаем очереди" /></div>
-  {/if}
+    {:else}
+      <p class="m3-muted">Вы не стоите в очередях.</p>
+    {/if}
+    <p class="m3-body-small m3-muted note">
+      Встать в очередь можно в приложении: расписание секций приходит из My ITMO.
+    </p>
+    {#snippet failed(error)}
+      <LoadError {error} title="Не удалось загрузить очереди" onretry={() => entries.load()} />
+    {/snippet}
+  </Loadable>
 </section>
 
 <style>
@@ -68,17 +60,6 @@
   }
   p {
     margin: 0;
-  }
-  .tiles {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .tiles > :global(*) {
-    background: var(--md-surface-container-lowest);
-  }
-  :global([data-theme='dark']) .tiles > :global(*) {
-    background: var(--md-surface-container-high);
   }
   .icon {
     display: grid;

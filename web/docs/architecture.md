@@ -22,8 +22,7 @@ In development Vite serves `http://localhost:5173/app/` and proxies `/api` to
 ## Routing
 
 `src/main.ts` imports `@alllexey/ui/css` and `@alllexey/ui/elements`, registers
-the icons (`src/lib/icons.ts`) and the theme (`src/lib/theme.svelte.ts`), then
-mounts `src/App.svelte`. `App` renders `LoginPage` for `/login` and
+the icons (`src/lib/icons.ts`), then mounts `src/App.svelte`. `App` renders `LoginPage` for `/login` and
 `src/lib/Shell.svelte` for everything else, plus the package's `Snackbars`.
 
 `src/lib/router.svelte.ts` is a small history router under `BASE` (`/app`, from
@@ -85,20 +84,22 @@ history entry and drops empty values. Section documents list their parameters.
 
 ## Data loading
 
-Pages read Backend through `Resource<T>` (`src/lib/resource.svelte.ts`) on top
-of the package's `revalidate`: the cached answer for the key shows at once, the
-fresh one replaces it, and `loading` stays true until it arrives. A page
-renders `LoadingIndicator` while nothing is cached, the data under
-`LoadingOverlay` while it is replaced, and `LoadError` with `Повторить` on a
-failure. `load(key, fetch)` switches to another request (a filter or a page);
-answers of an older request are dropped.
+Pages read Backend through the package's `Resource<T>` on top of its
+`revalidate`: the cached answer for the key shows at once, the fresh one
+replaces it, and `loading` stays true until it arrives. A card renders it with
+the package's `Loadable`: `LoadingIndicator block` while nothing is cached, the
+data under `LoadingOverlay` while it is replaced, and the app's `LoadError`
+(the `failed` snippet) with `Повторить` on a failure. `load(key, fetch)`
+switches to another request (a filter or a page); answers of an older request
+are dropped.
 
 Cache keys are request paths with their query, so `forget(prefix)` drops a
 whole area: a mutation forgets what it changed (for example
 `/api/admin/moderation` after a decision, `/api/admin/audit` after any admin
 change, `/api/friends` and `/api/users/<isu>` after a friendship change) and the
-page loads again. Polling (credentials, reviews sync, AI summaries) re-reads
-the key quietly with `revalidate` every 3 s while the state asks for it.
+page loads again. Polling (credentials, reviews sync, AI summaries) is
+`Resource.poll(3000)` while the state asks for it: quiet, without the loading
+state.
 Feature-specific cache updates are documented with each section.
 
 ## API client
@@ -170,9 +171,9 @@ fields (Backend 1.8.0) and `capabilities` on a person's profile.
 ```text
 src/
   main.ts, App.svelte, pages.ts   entry, login or shell, route -> page
-  lib/        router, session, Resource, Shell, navigation (rail), icons,
-              theme, format, appBuild (build and channel names), Pagination,
-              LoadError, Forbidden, NotFound
+  lib/        router, session, Shell, navigation (rail), icons, format,
+              appBuild (build and channel names), Pagination, LoadError,
+              Forbidden, NotFound
   api/        client.ts, errors.ts, openapi.json, openapi.source, schema.ts
   features/
     auth/        login page, challenge, QR

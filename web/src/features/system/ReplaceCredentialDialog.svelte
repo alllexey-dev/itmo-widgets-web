@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { Dialog, snackbars } from '@alllexey/ui';
+  import { Dialog, snackbars, TextField } from '@alllexey/ui';
   import { ApiError } from '../../api/client';
   import { errorText } from '../../api/errors';
   import { replaceCredential } from './api';
   import { CREDENTIAL_HINTS, CREDENTIALS } from './labels';
-  import TextField from './TextField.svelte';
   import type { ServiceCredential, ServiceCredentialKey } from './types';
 
   // The value lives only in this password field and the request body; it is never shown back.
@@ -63,6 +62,8 @@
     <TextField
       label="Новое значение"
       type="password"
+      autocomplete="off"
+      spellcheck="false"
       bind:value
       hint={CREDENTIAL_HINTS[credential] ?? ''}
       error={invalid ? 'Проверьте значение' : ''}

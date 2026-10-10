@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { Icon, LoadingIndicator, revalidate, snackbars, StatusShape } from '@alllexey/ui';
+  import { Icon, Loadable, Resource, snackbars, StatusShape } from '@alllexey/ui';
   import { errorText } from '../../api/errors';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { fetchSync, POLL_MILLIS, startSync, SYNC_PATH } from './api';
   import { formatDateTime, formatNumber } from './format';
   import { SYNC_OUTCOMES } from './labels';
@@ -13,17 +12,10 @@
   void sync.load();
 
   let starting = $state(false);
-  let failedPolls = $state(0);
-
+  // Quietly re-read the status while a run goes.
+  const polling = $derived(sync.data?.running ?? false);
   $effect(() => {
-    void failedPolls;
-    if (!sync.data?.running) return;
-    const timer = setTimeout(() => {
-      revalidate(SYNC_PATH, fetchSync, (data) => (sync.data = data)).catch(
-        () => (failedPolls += 1),
-      );
-    }, POLL_MILLIS);
-    return () => clearTimeout(timer);
+    if (polling) return sync.poll(POLL_MILLIS);
   });
 
   async function start() {
@@ -45,9 +37,9 @@
   const health = $derived.by(() => {
     const status = sync.data;
     if (!status) return null;
-    if (!status.enabled) return { tone: 'off' as const, label: 'Выключена на сервере' };
+    if (!status.enabled) return { tone: 'neutral' as const, label: 'Выключена на сервере' };
     if (status.running) return { tone: 'warn' as const, label: 'Идёт синхронизация' };
-    if (!status.lastOutcome) return { tone: 'off' as const, label: 'Ещё не запускалась' };
+    if (!status.lastOutcome) return { tone: 'neutral' as const, label: 'Ещё не запускалась' };
     return SYNC_OUTCOMES[status.lastOutcome];
   });
 </script>
@@ -65,51 +57,51 @@
       </button>
     {/if}
   </header>
-  {#if sync.data}
-    {@const status = sync.data}
-    <p class="state">
-      {#if health}<span class="m3-label-large status"
-          ><StatusShape tone={health.tone} />{health.label}</span
-        >{/if}
-      {#if status.lastCheckedAt}
-        <span class="m3-body-small m3-muted">Проверено {formatDateTime(status.lastCheckedAt)}</span>
-      {/if}
-      {#if status.lastChangedAt}
-        <span class="m3-body-small m3-muted">Изменения {formatDateTime(status.lastChangedAt)}</span>
-      {/if}
-    </p>
-    {#if status.lastOutcome === 'FAILED' && status.lastError}
-      <code class="m3-mono m3-body-small error">{status.lastError}</code>
-    {/if}
-    <dl class="stats">
-      <div>
-        <dt>отзывов</dt>
-        <dd class="m3-num">{formatNumber(status.reviewsActive)}</dd>
-      </div>
-      <div>
-        <dt>удалено</dt>
-        <dd class="m3-num">{formatNumber(status.reviewsRemoved)}</dd>
-      </div>
-      <div>
-        <dt>преподавателей</dt>
-        <dd class="m3-num">{formatNumber(status.teachersActive)}</dd>
-      </div>
-    </dl>
-    {#if status.lastChangedAt}
-      <p class="m3-body-small m3-muted last">
-        Последний запуск с изменениями: добавлено {formatNumber(status.lastAdded)}, изменено
-        {formatNumber(status.lastUpdated)}, удалено {formatNumber(status.lastRemoved)}
+  <Loadable resource={sync} loadingLabel="Загружаем синхронизацию">
+    {#snippet children(status)}
+      <p class="state">
+        {#if health}<span class="m3-label-large"
+            ><StatusShape tone={health.tone}>{health.label}</StatusShape></span
+          >{/if}
+        {#if status.lastCheckedAt}
+          <span class="m3-body-small m3-muted"
+            >Проверено {formatDateTime(status.lastCheckedAt)}</span
+          >
+        {/if}
+        {#if status.lastChangedAt}
+          <span class="m3-body-small m3-muted"
+            >Изменения {formatDateTime(status.lastChangedAt)}</span
+          >
+        {/if}
       </p>
-    {/if}
-  {:else if sync.error}
-    <LoadError
-      error={sync.error}
-      title="Не удалось загрузить синхронизацию"
-      onretry={() => sync.load()}
-    />
-  {:else}
-    <LoadingIndicator label="Загружаем синхронизацию" />
-  {/if}
+      {#if status.lastOutcome === 'FAILED' && status.lastError}
+        <code class="m3-mono m3-body-small error">{status.lastError}</code>
+      {/if}
+      <dl class="stats">
+        <div>
+          <dt>отзывов</dt>
+          <dd class="m3-num">{formatNumber(status.reviewsActive)}</dd>
+        </div>
+        <div>
+          <dt>удалено</dt>
+          <dd class="m3-num">{formatNumber(status.reviewsRemoved)}</dd>
+        </div>
+        <div>
+          <dt>преподавателей</dt>
+          <dd class="m3-num">{formatNumber(status.teachersActive)}</dd>
+        </div>
+      </dl>
+      {#if status.lastChangedAt}
+        <p class="m3-body-small m3-muted last">
+          Последний запуск с изменениями: добавлено {formatNumber(status.lastAdded)}, изменено
+          {formatNumber(status.lastUpdated)}, удалено {formatNumber(status.lastRemoved)}
+        </p>
+      {/if}
+    {/snippet}
+    {#snippet failed(error)}
+      <LoadError {error} title="Не удалось загрузить синхронизацию" onretry={() => sync.load()} />
+    {/snippet}
+  </Loadable>
 </section>
 
 <style>
@@ -130,11 +122,6 @@
     align-items: center;
     gap: 4px 16px;
     margin: 0 0 12px;
-  }
-  .status {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
   }
   .error {
     display: block;

@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { LoadingIndicator, revalidate, StatusShape } from '@alllexey/ui';
+  import { Loadable, Resource, StatusShape } from '@alllexey/ui';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href } from '../../lib/router.svelte';
   import { awaitsCheck, CREDENTIALS_PATH, fetchCredentials, POLL_MILLIS } from './api';
   import { formatDate, formatDateTime, formatRelative } from './format';
@@ -14,99 +13,86 @@
   void credentials.load();
 
   let replacing = $state<ServiceCredentialKey | null>(null);
-  let failedPolls = $state(0);
 
   // Quietly re-read the list while a fresh value waits for its first use.
+  const polling = $derived(credentials.data ? awaitsCheck(credentials.data) : false);
   $effect(() => {
-    const list = credentials.data;
-    void failedPolls;
-    if (!list || !awaitsCheck(list)) return;
-    const timer = setTimeout(() => {
-      revalidate(CREDENTIALS_PATH, fetchCredentials, (data) => (credentials.data = data)).catch(
-        () => (failedPolls += 1),
-      );
-    }, POLL_MILLIS);
-    return () => clearTimeout(timer);
+    if (polling) return credentials.poll(POLL_MILLIS);
   });
 
-  const failed = (credential: ServiceCredential) =>
+  const broken = (credential: ServiceCredential) =>
     credential.status === 'FAILED' || credential.status === 'EXPIRED';
 </script>
 
 <section class="m3-card flush" aria-labelledby="system-credentials">
   <h2 class="m3-section-title title" id="system-credentials">Ключи и доступы</h2>
-  {#if credentials.data}
-    <div class="m3-table" role="table" aria-label="Ключи и доступы">
-      <div class="tr th" role="row">
-        <span role="columnheader">Ключ</span>
-        <span role="columnheader">Состояние</span>
-        <span role="columnheader">Истекает</span>
-        <span role="columnheader">Изменено</span>
-        <span role="columnheader" aria-label="Действия"></span>
-      </div>
-      {#each credentials.data as credential (credential.key)}
-        {@const status = CREDENTIAL_STATUSES[credential.status]}
-        <div class="tr" role="row">
-          <span role="cell" class="stack">
-            <span>{CREDENTIALS[credential.key]}</span>
-            <span class="m3-body-small m3-muted">
-              {credential.lastUsedAt
-                ? `использован ${formatRelative(credential.lastUsedAt)}`
-                : 'не использовался'}
-            </span>
-          </span>
-          <span role="cell" class="stack">
-            <span class="state"><StatusShape tone={status.tone} />{status.label}</span>
-            {#if failed(credential) && credential.lastError}
-              <code class="m3-mono m3-body-small error">{credential.lastError}</code>
-            {/if}
-            {#if failed(credential) && credential.lastErrorAt}
-              <span class="m3-body-small m3-muted">{formatDateTime(credential.lastErrorAt)}</span>
-            {/if}
-          </span>
-          <span role="cell" class="stack">
-            {#if credential.expiresAt}
-              <span class="m3-num">{formatDate(credential.expiresAt)}</span>
-            {:else}
-              <span class="m3-muted">—</span>
-            {/if}
-            {#if credential.expiresSoon}<span class="m3-pill warn">Скоро</span>{/if}
-          </span>
-          <span role="cell" class="stack">
-            <span class="m3-num">{formatDateTime(credential.updatedAt)}</span>
-            {#if credential.updatedSource === 'ADMIN' && credential.updatedByIsu !== null}
-              <a class="m3-body-small" href={href(`/admin/users/${credential.updatedByIsu}`)}>
-                {credential.updatedByName ?? `ИСУ ${credential.updatedByIsu}`}
-              </a>
-            {:else if credential.updatedSource && credential.updatedSource !== 'ADMIN'}
-              <span class="m3-body-small m3-muted">
-                {CREDENTIAL_SOURCES[credential.updatedSource]}
-              </span>
-            {/if}
-          </span>
-          <span role="cell" class="end">
-            {#if credential.replaceable}
-              <button
-                class="m3-btn text small"
-                aria-label="Заменить: {CREDENTIALS[credential.key]}"
-                onclick={() => (replacing = credential.key)}>Заменить</button
-              >
-            {/if}
-          </span>
+  <Loadable resource={credentials} loadingLabel="Загружаем ключи">
+    {#snippet children(data)}
+      <div class="m3-table" role="table" aria-label="Ключи и доступы">
+        <div class="tr th" role="row">
+          <span role="columnheader">Ключ</span>
+          <span role="columnheader">Состояние</span>
+          <span role="columnheader">Истекает</span>
+          <span role="columnheader">Изменено</span>
+          <span role="columnheader" aria-label="Действия"></span>
         </div>
-      {/each}
-    </div>
-  {:else if credentials.error}
-    <div class="pad">
-      <LoadError
-        error={credentials.error}
-        title="Не удалось загрузить ключи"
-        onretry={() => credentials.load()}
-      />
-    </div>
-  {:else}
-    <div class="pad"><LoadingIndicator label="Загружаем ключи" /></div>
-  {/if}
+        {#each data as credential (credential.key)}
+          {@const status = CREDENTIAL_STATUSES[credential.status]}
+          <div class="tr" role="row">
+            <span role="cell" class="stack">
+              <span>{CREDENTIALS[credential.key]}</span>
+              <span class="m3-body-small m3-muted">
+                {credential.lastUsedAt
+                  ? `использован ${formatRelative(credential.lastUsedAt)}`
+                  : 'не использовался'}
+              </span>
+            </span>
+            <span role="cell" class="stack">
+              <StatusShape tone={status.tone}>{status.label}</StatusShape>
+              {#if broken(credential) && credential.lastError}
+                <code class="m3-mono m3-body-small error">{credential.lastError}</code>
+              {/if}
+              {#if broken(credential) && credential.lastErrorAt}
+                <span class="m3-body-small m3-muted">{formatDateTime(credential.lastErrorAt)}</span>
+              {/if}
+            </span>
+            <span role="cell" class="stack">
+              {#if credential.expiresAt}
+                <span class="m3-num">{formatDate(credential.expiresAt)}</span>
+              {:else}
+                <span class="m3-muted">—</span>
+              {/if}
+              {#if credential.expiresSoon}<span class="m3-pill warn">Скоро</span>{/if}
+            </span>
+            <span role="cell" class="stack">
+              <span class="m3-num">{formatDateTime(credential.updatedAt)}</span>
+              {#if credential.updatedSource === 'ADMIN' && credential.updatedByIsu !== null}
+                <a class="m3-body-small" href={href(`/admin/users/${credential.updatedByIsu}`)}>
+                  {credential.updatedByName ?? `ИСУ ${credential.updatedByIsu}`}
+                </a>
+              {:else if credential.updatedSource && credential.updatedSource !== 'ADMIN'}
+                <span class="m3-body-small m3-muted">
+                  {CREDENTIAL_SOURCES[credential.updatedSource]}
+                </span>
+              {/if}
+            </span>
+            <span role="cell" class="end">
+              {#if credential.replaceable}
+                <button
+                  class="m3-btn text small"
+                  aria-label="Заменить: {CREDENTIALS[credential.key]}"
+                  onclick={() => (replacing = credential.key)}>Заменить</button
+                >
+              {/if}
+            </span>
+          </div>
+        {/each}
+      </div>
+    {/snippet}
+    {#snippet failed(error)}
+      <LoadError {error} title="Не удалось загрузить ключи" onretry={() => credentials.load()} />
+    {/snippet}
+  </Loadable>
 </section>
 
 {#if replacing}
@@ -124,9 +110,6 @@
   .title {
     padding: 20px 24px 0;
   }
-  .pad {
-    padding: 0 24px 24px;
-  }
   .tr {
     grid-template-columns: minmax(180px, 1.6fr) minmax(150px, 1.2fr) 110px minmax(130px, 1fr) 112px;
     min-width: 760px;
@@ -136,11 +119,6 @@
     gap: 2px;
     justify-items: start;
     min-width: 0;
-  }
-  .state {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
   }
   .error {
     overflow-wrap: anywhere;

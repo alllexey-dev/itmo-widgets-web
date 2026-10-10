@@ -178,14 +178,3 @@ export function hostOf(url: string): string | null {
 export function scoreText(score: number): string {
   return score > 0 ? `+${score}` : String(score);
 }
-
-/** Up to two initials for an avatar without a photo. */
-export function initialsOf(name: string): string {
-  const letters = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word.slice(0, 1).toUpperCase());
-  return letters.join('') || '?';
-}

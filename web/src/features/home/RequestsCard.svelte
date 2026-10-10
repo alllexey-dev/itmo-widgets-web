@@ -1,10 +1,8 @@
 <script lang="ts">
-  import { forget, Icon, LoadingIndicator, LoadingOverlay, snackbars } from '@alllexey/ui';
+  import { Avatar, forget, Icon, Loadable, Resource, snackbars } from '@alllexey/ui';
   import { errorText } from '../../api/errors';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { href } from '../../lib/router.svelte';
-  import Avatar from './Avatar.svelte';
   import { answerRequest, incomingRequests, nameOf } from './student';
   import type { UserProfile } from './types';
 
@@ -45,52 +43,47 @@
     <a class="m3-btn text small" href={href('/friends?tab=incoming')} aria-label="Все заявки">Все</a
     >
   </div>
-  {#if requests.data}
-    <LoadingOverlay loading={requests.loading}>
-      {#if shown.length > 0}
-        <ul class="m3-segmented tiles" aria-label="Заявки в друзья">
-          {#each shown as profile (profile.user.isu)}
-            {@const name = nameOf(profile.user)}
-            {@const group = profile.user.groups[0]}
-            <li class="m3-list-item request">
-              <span class="lead"><Avatar {name} src={profile.user.pictureUrl} /></span>
-              <span class="main">
-                <a class="headline person" href={href(`/u/${profile.user.isu}`)}>{name}</a>
-                {#if group}<span class="support">{group.name} · {group.facultyShortName}</span>{/if}
-              </span>
-              <span class="trail actions">
-                <button
-                  class="m3-btn tonal small"
-                  disabled={pending === profile.user.isu}
-                  aria-label="Принять заявку: {name}"
-                  onclick={() => answer(profile, true)}>Принять</button
-                >
-                <button
-                  class="m3-icon-btn"
-                  disabled={pending === profile.user.isu}
-                  aria-label="Отклонить заявку: {name}"
-                  title="Отклонить"
-                  onclick={() => answer(profile, false)}
-                >
-                  <Icon name="close" />
-                </button>
-              </span>
-            </li>
-          {/each}
-        </ul>
-      {:else}
-        <p class="m3-muted">Новых заявок нет.</p>
-      {/if}
-    </LoadingOverlay>
-  {:else if requests.error}
-    <LoadError
-      error={requests.error}
-      title="Не удалось загрузить заявки"
-      onretry={() => requests.load()}
-    />
-  {:else}
-    <div class="waiting"><LoadingIndicator label="Загружаем заявки" /></div>
-  {/if}
+  <Loadable resource={requests} loadingLabel="Загружаем заявки">
+    {#if shown.length > 0}
+      <ul class="m3-segmented" aria-label="Заявки в друзья">
+        {#each shown as profile (profile.user.isu)}
+          {@const name = nameOf(profile.user)}
+          {@const group = profile.user.groups[0]}
+          <li class="m3-list-item request">
+            <span class="lead"
+              ><Avatar {name} src={profile.user.pictureUrl ?? ''} decorative /></span
+            >
+            <span class="main">
+              <a class="headline person" href={href(`/u/${profile.user.isu}`)}>{name}</a>
+              {#if group}<span class="support">{group.name} · {group.facultyShortName}</span>{/if}
+            </span>
+            <span class="trail actions">
+              <button
+                class="m3-btn tonal small"
+                disabled={pending === profile.user.isu}
+                aria-label="Принять заявку: {name}"
+                onclick={() => answer(profile, true)}>Принять</button
+              >
+              <button
+                class="m3-icon-btn"
+                disabled={pending === profile.user.isu}
+                aria-label="Отклонить заявку: {name}"
+                title="Отклонить"
+                onclick={() => answer(profile, false)}
+              >
+                <Icon name="close" />
+              </button>
+            </span>
+          </li>
+        {/each}
+      </ul>
+    {:else}
+      <p class="m3-muted">Новых заявок нет.</p>
+    {/if}
+    {#snippet failed(error)}
+      <LoadError {error} title="Не удалось загрузить заявки" onretry={() => requests.load()} />
+    {/snippet}
+  </Loadable>
 </section>
 
 <style>
@@ -114,17 +107,6 @@
   p {
     margin: 0;
   }
-  .tiles {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .tiles > :global(*) {
-    background: var(--md-surface-container-lowest);
-  }
-  :global([data-theme='dark']) .tiles > :global(*) {
-    background: var(--md-surface-container-high);
-  }
   .person {
     color: inherit;
     text-decoration: none;
@@ -141,11 +123,6 @@
     display: flex;
     align-items: center;
     gap: 4px;
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 96px;
   }
   @media (max-width: 520px) {
     .request {

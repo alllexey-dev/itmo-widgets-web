@@ -20,7 +20,6 @@
   import PlannedSection from './PlannedSection.svelte';
   import { href, router, type RouteName } from './router.svelte';
   import { displayName, hasAccess, roleLabel, session } from './session.svelte';
-  import { theme } from './theme.svelte';
 
   let { pages }: { pages: PageTable } = $props();
 
@@ -79,12 +78,16 @@
   });
 </script>
 
-<AppShell brand="ITMO.Widgets" brandHref={href('/')} {items} {theme}>
-  {#snippet account()}
+<AppShell brand="ITMO.Widgets" brandHref={href('/')} {items}>
+  {#snippet account({ expanded })}
     {#if user}
-      <div class="account">
+      <div class="account" class:collapsed={!expanded}>
         <a class="who" href={href('/me')} aria-label="Профиль: {displayName(user)}">
-          <Account name={displayName(user)} status={roleLabel(user) ?? `ИСУ ${user.isu}`} />
+          <Account
+            name={displayName(user)}
+            src={user.pictureUrl ?? ''}
+            status={roleLabel(user) ?? `ИСУ ${user.isu}`}
+          />
         </a>
         <button
           class="m3-icon-btn out"
@@ -174,7 +177,7 @@
     flex: none;
   }
   /* The collapsed rail is 96 px wide: "Выйти" goes under the avatar instead of next to the name. */
-  :global(.shell:not(.expanded)) .account {
+  .account.collapsed {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -186,7 +189,7 @@
   }
   @media (max-width: 760px) {
     .account,
-    :global(.shell:not(.expanded)) .account {
+    .account.collapsed {
       flex-direction: row;
       align-items: center;
     }

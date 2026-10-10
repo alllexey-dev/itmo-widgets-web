@@ -1,8 +1,14 @@
 <script lang="ts">
-  import { ButtonGroup, forget, LoadingIndicator, snackbars, type GroupOption } from '@alllexey/ui';
+  import {
+    ButtonGroup,
+    forget,
+    Loadable,
+    Resource,
+    snackbars,
+    type GroupOption,
+  } from '@alllexey/ui';
   import { errorText } from '../../api/errors';
   import LoadError from '../../lib/LoadError.svelte';
-  import { Resource } from '../../lib/resource.svelte';
   import { privacy, PRIVACY_PATH, savePrivacy } from './api';
   import { AUDIENCE_ROWS, AUDIENCES } from './labels';
   import type { Audience, PrivacySettings } from './types';
@@ -37,29 +43,25 @@
   <p class="m3-body-medium m3-muted intro">
     Применяется сразу — на сайте и в приложении. «Друзья» — только принятые друзья.
   </p>
-  {#if settings.data}
-    {@const data = settings.data}
-    {#each AUDIENCE_ROWS as row (row.key)}
-      <div class="audience">
-        <span class="m3-body-large">{row.title}</span>
-        <ButtonGroup
-          small
-          label={row.label}
-          {options}
-          value={data[row.key]}
-          onchange={(value) => choose(row.key, value)}
-        />
-      </div>
-    {/each}
-  {:else if settings.error}
-    <LoadError
-      error={settings.error}
-      title="Не удалось загрузить настройки"
-      onretry={() => settings.load()}
-    />
-  {:else}
-    <div class="waiting"><LoadingIndicator label="Загружаем настройки" /></div>
-  {/if}
+  <Loadable resource={settings} loadingLabel="Загружаем настройки">
+    {#snippet children(data)}
+      {#each AUDIENCE_ROWS as row (row.key)}
+        <div class="audience">
+          <span class="m3-body-large">{row.title}</span>
+          <ButtonGroup
+            small
+            label={row.label}
+            {options}
+            value={data[row.key]}
+            onchange={(value) => choose(row.key, value)}
+          />
+        </div>
+      {/each}
+    {/snippet}
+    {#snippet failed(error)}
+      <LoadError {error} title="Не удалось загрузить настройки" onretry={() => settings.load()} />
+    {/snippet}
+  </Loadable>
 </section>
 
 <style>
@@ -76,11 +78,6 @@
   }
   .audience + .audience {
     border-top: 1px solid var(--md-outline-variant);
-  }
-  .waiting {
-    display: grid;
-    place-items: center;
-    min-height: 160px;
   }
   /* On a phone every choice sits under its title, so the three rows look alike. */
   @media (max-width: 520px) {
