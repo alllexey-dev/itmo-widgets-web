@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- WV-09: Show the app versions in use on Система (7 or 30 days, devices per version and build with platform and channel, the beta share and devices of unknown version) and each device's reported build, channel and last report on the admin user page; sync the Backend 1.8.0 OpenAPI snapshot.
 - WV-08: Describe web sessions of 14 days idle and 60 days at most with 90-day retention, and answer a 401 reauth_required on staff actions with a re-login dialog that returns to the page and keeps the session.
 - WV-06-FIX2: Put the app card on Главная on the secondary container, as the package's tertiary container stays light in a dark scheme and the card showed as a light lavender block with a light blue button.
 - WV-06-FIX: Treat a 403 without an ApiResponse envelope as a lost session, as Backend 1.7.0 answers an expired web session on every route, so the web shows "Сессия истекла" instead of access errors or hidden person cards.

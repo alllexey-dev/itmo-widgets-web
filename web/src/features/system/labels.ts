@@ -8,9 +8,11 @@ import type {
   SportOutcome,
 } from './types';
 
+export const PLATFORM_NAMES: Record<Platform, string> = { ANDROID: 'Android', IOS: 'iOS' };
+
 export const PLATFORMS: GroupOption<Platform>[] = [
-  { value: 'ANDROID', label: 'Android', icon: 'android' },
-  { value: 'IOS', label: 'iOS', icon: 'smartphone' },
+  { value: 'ANDROID', label: PLATFORM_NAMES.ANDROID, icon: 'android' },
+  { value: 'IOS', label: PLATFORM_NAMES.IOS, icon: 'smartphone' },
 ];
 
 export const SPORT_OUTCOMES: Record<SportOutcome, { label: string; tone: Tone }> = {

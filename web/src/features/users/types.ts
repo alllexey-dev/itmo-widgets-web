@@ -13,14 +13,14 @@ export interface UserPage {
   total: number;
 }
 
+type AppField = 'appVersion' | 'appBuild' | 'appPlatform' | 'appDistribution' | 'appVersionSeenAt';
+
 /**
- * BK-16b adds `platform` and `appVersion` to a device. A Backend before it sends neither, and every such
- * device registered from the Android app, so a missing platform means Android.
+ * The `app*` fields (Backend 1.8.0) are the build the device last reported and when; all null for a device
+ * that never reported one (Android 2.2 and older). A Backend before 1.8.0 sends none of them.
  */
-export type AdminDevice = Schemas['AdminDevice'] & {
-  platform?: string | null;
-  appVersion?: string | null;
-};
+export type AdminDevice = Omit<Schemas['AdminDevice'], AppField> &
+  Partial<Pick<Schemas['AdminDevice'], AppField>>;
 
 export type AdminUserDetail = Omit<Schemas['AdminUserDetail'], 'roles' | 'devices'> & {
   roles: Role[];

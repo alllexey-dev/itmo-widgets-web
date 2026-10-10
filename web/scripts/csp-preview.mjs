@@ -104,6 +104,39 @@ const ADMIN = {
     }),
     credential('GEMINI_API_KEY', 'API_KEY'),
   ],
+  '/api/admin/system/client-versions': () => {
+    const build = (platform, distribution, version, code, devices) => ({
+      platform,
+      distribution,
+      version,
+      build: code,
+      devices,
+    });
+    return {
+      last7d: {
+        activeDevices: 1284,
+        unknownDevices: 731,
+        builds: [
+          build('ANDROID', 'play', '2.2.1', 20210, 312),
+          build('ANDROID', 'github', '2.3.0-beta.1', 20291, 164),
+          build('ANDROID', 'play', '2.3.0-beta.1', 20291, 41),
+          build('IOS', 'appstore', '2.3.0-beta.1', 7, 27),
+          build('ANDROID', 'github', '2.2.1', 20210, 6),
+          build('ANDROID', 'dev', '2.3.0-beta.2', 20302, 3),
+        ],
+      },
+      last30d: {
+        activeDevices: 2410,
+        unknownDevices: 1702,
+        builds: [
+          build('ANDROID', 'play', '2.2.1', 20210, 480),
+          build('ANDROID', 'github', '2.3.0-beta.1', 20291, 170),
+          build('ANDROID', 'play', '2.3.0-beta.1', 20291, 30),
+          build('IOS', 'appstore', '2.3.0-beta.1', 7, 28),
+        ],
+      },
+    };
+  },
   '/api/admin/system/sport': () => ({
     runs: [],
     outcomes7d: { SUCCESS: 980, PARTIAL: 4, FAILED: 3 },
@@ -205,8 +238,33 @@ function userDetail(isu) {
     groups: [...user.groups, { name: 'P3112', course: 1, facultyShortName: 'ФПИиКТ' }],
     createdAt: user.createdAt,
     devices: [
-      { name: 'Pixel 8', lastLogin: iso(-90) },
-      { name: 'iPhone 15', lastLogin: iso(-30), platform: 'IOS', appVersion: '1.0.0' },
+      {
+        name: 'Pixel 8',
+        lastLogin: iso(-3 * DAY),
+        appVersion: '2.3.0-beta.1',
+        appBuild: 20291,
+        appPlatform: 'ANDROID',
+        appDistribution: 'github',
+        appVersionSeenAt: iso(-5),
+      },
+      {
+        name: 'iPhone 15',
+        lastLogin: iso(-30),
+        appVersion: '2.3.0',
+        appBuild: 7,
+        appPlatform: 'IOS',
+        appDistribution: 'appstore',
+        appVersionSeenAt: iso(-180),
+      },
+      {
+        name: 'Redmi Note 9',
+        lastLogin: iso(-20 * DAY),
+        appVersion: null,
+        appBuild: null,
+        appPlatform: null,
+        appDistribution: null,
+        appVersionSeenAt: null,
+      },
     ],
     friendsCount: 12,
     linksCount: 5,

@@ -8,6 +8,7 @@ import { forgetIosSupport } from './api';
 import type {
   AppVersion,
   AppVersionRequest,
+  ClientVersions,
   ModerationSettings,
   Platform,
   ServiceCredential,
@@ -144,6 +145,46 @@ const sport: SportStatus = {
   ],
 };
 
+/** Backend sorts builds by devices, then by build; `activeDevices` is `unknownDevices` plus the builds. */
+const clientVersions: ClientVersions = {
+  last7d: {
+    activeDevices: 200,
+    unknownDevices: 50,
+    builds: [
+      {
+        platform: 'ANDROID',
+        distribution: 'github',
+        version: '2.3.0-beta.1',
+        build: 20291,
+        devices: 60,
+      },
+      { platform: 'ANDROID', distribution: 'play', version: '2.2.1', build: 20210, devices: 55 },
+      {
+        platform: 'ANDROID',
+        distribution: 'play',
+        version: '2.3.0-beta.1',
+        build: 20291,
+        devices: 25,
+      },
+      { platform: 'IOS', distribution: 'appstore', version: '2.3.0-beta.1', build: 5, devices: 10 },
+    ],
+  },
+  last30d: {
+    activeDevices: 500,
+    unknownDevices: 300,
+    builds: [
+      { platform: 'ANDROID', distribution: 'play', version: '2.2.1', build: 20210, devices: 120 },
+      {
+        platform: 'ANDROID',
+        distribution: 'github',
+        version: '2.3.0-beta.1',
+        build: 20291,
+        devices: 80,
+      },
+    ],
+  },
+};
+
 /** Synthetic; it must never show up on the page. */
 const COOKIE_VALUE = 'synthetic-keycloak-identity-0123456789';
 /** Assembled from parts, so a search for leaked keys finds nothing. */
@@ -153,7 +194,11 @@ const GEMINI_KEY = 'AIza' + '0'.repeat(35);
  * A Backend with BK-17 answers the platform probe with 400 `invalid_request`; an older one with 200
  * and Android's values, and it ignores `?platform=` on the admin endpoints.
  */
-function mockSystem({ perPlatform = true } = {}) {
+function mockSystem({
+  perPlatform = true,
+  clients = (): Response => ok(clientVersions),
+}: { perPlatform?: boolean; clients?: (load: number) => Response } = {}) {
+  let clientLoads = 0;
   const requests: string[] = [];
   const versionSaves: { platform: string | null; body: AppVersionRequest; csrf: string | null }[] =
     [];
@@ -196,8 +241,15 @@ function mockSystem({ perPlatform = true } = {}) {
       return ok(currentSettings);
     }),
     http.get('*/api/admin/system/sport', () => ok(sport)),
+    http.get('*/api/admin/system/client-versions', () => clients(++clientLoads)),
   );
-  return { requests, versionSaves, settingsSaves, ...mockCredentials(() => credentials) };
+  return {
+    requests,
+    clientLoads: () => clientLoads,
+    versionSaves,
+    settingsSaves,
+    ...mockCredentials(() => credentials),
+  };
 }
 
 /** [list] answers each GET, so a test can change the state between polls. */
@@ -229,6 +281,7 @@ function mockCredentials(list: (request: number) => ServiceCredential[]) {
   return { replacements, loads: () => loads };
 }
 
+const clientsCard = () => screen.findByRole('region', { name: 'Версии приложения' });
 const versionCard = () => screen.findByRole('region', { name: 'Версия приложения' });
 const rulesCard = () => screen.findByRole('region', { name: 'Правила модерации' });
 const credentialsTable = () => screen.findByRole('table', { name: 'Ключи и доступы' });
@@ -247,6 +300,77 @@ afterEach(() => {
 });
 
 describe('SystemPage', () => {
+  describe('client versions', () => {
+    const rowsOf = async (card: HTMLElement) =>
+      within(await within(card).findByRole('list', { name: 'Устройства по версиям' }))
+        .getAllByRole('listitem')
+        .map((row) => row.textContent?.replace(/\s+/g, ' ').trim());
+
+    it('groups the week by version, most devices first, with channels and shares', async () => {
+      mockSystem();
+      renderApp('/admin/system');
+
+      expect(await rowsOf(await clientsCard())).toEqual([
+        '2.3.0-beta.1 (20291) бета 85 42,5 % Android, GitHub: 60 · Android, Google Play: 25',
+        '2.2.1 (20210) 55 27,5 % Android, Google Play: 55',
+        '2.3.0-beta.1 (5) бета 10 5 % iOS, App Store: 10',
+        'Версия неизвестна 50 25 % ≤ 2.2 или не обновлялись',
+      ]);
+    });
+
+    it('answers how many devices run a beta', async () => {
+      mockSystem();
+      renderApp('/admin/system');
+      const card = await clientsCard();
+
+      const beta = (await within(card).findByText('на бета-версиях')).parentElement;
+      expect(beta).toHaveTextContent('95 47,5 %');
+      expect(within(card).getByText('активных устройств').parentElement).toHaveTextContent('200');
+      expect(within(card).getByText('версия неизвестна').parentElement).toHaveTextContent(
+        '50 ≤ 2.2 или не обновлялись',
+      );
+    });
+
+    it('switches to 30 days from the same answer', async () => {
+      const { clientLoads } = mockSystem();
+      renderApp('/admin/system');
+      const card = await clientsCard();
+      await rowsOf(card);
+
+      await userEvent.click(within(card).getByRole('radio', { name: '30 дней' }));
+
+      expect(await rowsOf(card)).toEqual([
+        '2.2.1 (20210) 120 24 % Android, Google Play: 120',
+        '2.3.0-beta.1 (20291) бета 80 16 % Android, GitHub: 80',
+        'Версия неизвестна 300 60 % ≤ 2.2 или не обновлялись',
+      ]);
+      expect(clientLoads()).toBe(1);
+    });
+
+    it('says when no device was active', async () => {
+      const empty = { activeDevices: 0, unknownDevices: 0, builds: [] };
+      mockSystem({ clients: () => ok({ last7d: empty, last30d: empty }) });
+      renderApp('/admin/system');
+      const card = await clientsCard();
+
+      expect(await within(card).findByText('Активных устройств нет')).toBeInTheDocument();
+      expect(within(card).queryByRole('list')).not.toBeInTheDocument();
+    });
+
+    it('retries after a failed load', async () => {
+      mockSystem({
+        clients: (load) => (load === 1 ? fail(503, 'internal_server_error') : ok(clientVersions)),
+      });
+      renderApp('/admin/system');
+      const card = await clientsCard();
+
+      expect(await within(card).findByText('Не удалось загрузить версии')).toBeInTheDocument();
+      await userEvent.click(within(card).getByRole('button', { name: 'Повторить' }));
+
+      expect(await rowsOf(card)).toHaveLength(4);
+    });
+  });
+
   describe('app version', () => {
     it('saves the Android version', async () => {
       const { versionSaves } = mockSystem();

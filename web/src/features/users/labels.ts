@@ -6,9 +6,9 @@ export function groupLine({ name, course, facultyShortName }: GroupData): string
 
 const PLATFORMS: Record<string, string> = { ANDROID: 'Android', IOS: 'iOS' };
 
-/** A device without `platform` (Backend before BK-16b) is an Android one. */
+/** A device that never reported a build is an Android one: only Android clients predate the report. */
 export function platformLabel(device: AdminDevice): string {
-  const platform = device.platform ?? 'ANDROID';
+  const platform = device.appPlatform ?? 'ANDROID';
   return PLATFORMS[platform] ?? platform;
 }
 

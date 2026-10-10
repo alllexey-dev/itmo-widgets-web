@@ -229,24 +229,53 @@ describe('UserPage', () => {
 
   it.each<[string, AdminDevice[], string, string[]]>([
     [
-      'without platform from a Backend before BK-16b as Android',
+      'from a Backend before 1.8.0 as Android without data',
       [
         { name: 'Pixel 8', lastLogin: minutesAgo(90) },
         { name: 'Galaxy A54', lastLogin: minutesAgo(600) },
       ],
       'Android 2',
-      ['Android', 'Android'],
+      ['Android · версия: нет данных', 'Android · версия: нет данных'],
     ],
     [
-      'with platform and app version',
+      'with the reported build, channel and activity',
       [
-        { name: 'Pixel 8', lastLogin: minutesAgo(90), platform: 'ANDROID', appVersion: '2.3.0' },
-        { name: 'iPhone 15', lastLogin: minutesAgo(30), platform: 'IOS', appVersion: '1.0.0' },
+        {
+          name: 'Pixel 8',
+          lastLogin: minutesAgo(600),
+          appVersion: '2.3.0-beta.1',
+          appBuild: 20291,
+          appPlatform: 'ANDROID',
+          appDistribution: 'github',
+          appVersionSeenAt: minutesAgo(5),
+        },
+        {
+          name: 'iPhone 15',
+          lastLogin: minutesAgo(30),
+          appVersion: '2.3.0',
+          appBuild: 7,
+          appPlatform: 'IOS',
+          appDistribution: 'appstore',
+          appVersionSeenAt: minutesAgo(60 * 3),
+        },
+        {
+          name: 'Redmi Note 9',
+          lastLogin: minutesAgo(60 * 24 * 20),
+          appVersion: null,
+          appBuild: null,
+          appPlatform: null,
+          appDistribution: null,
+          appVersionSeenAt: null,
+        },
       ],
-      'Android 1 · iOS 1',
-      ['Android · версия 2.3.0', 'iOS · версия 1.0.0'],
+      'Android 2 · iOS 1',
+      [
+        'Android · 2.3.0-beta.1 (20291) · GitHub Активно 5 мин. назад',
+        'iOS · 2.3.0 (7) · App Store Активно 3 ч назад',
+        'Android · версия: нет данных',
+      ],
     ],
-  ])('lists devices %s', async (_, devices, counts, platforms) => {
+  ])('lists devices %s', async (_, devices, counts, lines) => {
     mockSession(userOf(['ADMIN']));
     mockUsers([ivan], [detailOf(ivan, { devices })]);
 
@@ -257,9 +286,13 @@ describe('UserPage', () => {
     const rows = within(within(card).getByRole('list', { name: 'Устройства' })).getAllByRole(
       'listitem',
     );
-    expect(rows.map((row) => row.querySelector('.support')?.textContent?.trim())).toEqual(
-      platforms,
-    );
+    expect(
+      rows.map((row) =>
+        [...row.querySelectorAll('.support')]
+          .map((line) => line.textContent?.replace(/\s+/g, ' ').trim())
+          .join(' '),
+      ),
+    ).toEqual(lines);
   });
 
   it('says when the user has no devices', async () => {

@@ -7,6 +7,9 @@ export type Platform = NonNullable<
 >;
 export type AppVersion = Schemas['AdminAppVersion'];
 export type AppVersionRequest = Schemas['AdminAppVersionRequest'];
+export type ClientVersions = Schemas['AdminClientVersions'];
+export type ClientVersionWindow = Schemas['AdminClientVersionWindow'];
+export type ClientBuild = Schemas['AdminClientBuild'];
 export type ModerationPolicy = Schemas['ModerationPolicy'];
 export type ModerationSettings = Schemas['ModerationSettings'];
 export type ServiceCredential = Schemas['AdminServiceCredential'];
