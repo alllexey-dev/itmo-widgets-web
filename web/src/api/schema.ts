@@ -260,6 +260,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/system/client-versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["adminSystem_clientVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/system/credentials": {
         parameters: {
             query?: never;
@@ -1435,6 +1451,27 @@ export interface components {
             /** @enum {string} */
             targetType: "SUBJECT_RESOURCE" | "TEACHER_REVIEW";
         };
+        AdminClientBuild: {
+            /** Format: int32 */
+            build: number;
+            /** Format: int64 */
+            devices: number;
+            distribution: string;
+            /** @enum {string} */
+            platform: "ANDROID" | "IOS";
+            version: string;
+        };
+        AdminClientVersionWindow: {
+            /** Format: int64 */
+            activeDevices: number;
+            builds: components["schemas"]["AdminClientBuild"][];
+            /** Format: int64 */
+            unknownDevices: number;
+        };
+        AdminClientVersions: {
+            last30d: components["schemas"]["AdminClientVersionWindow"];
+            last7d: components["schemas"]["AdminClientVersionWindow"];
+        };
         AdminDashboard: {
             days: components["schemas"]["AdminDashboardDay"][];
             totals: components["schemas"]["AdminDashboardTotals"];
@@ -1473,6 +1510,14 @@ export interface components {
             webSessions7d: number;
         };
         AdminDevice: {
+            /** Format: int32 */
+            appBuild: number | null;
+            appDistribution: string | null;
+            /** @enum {string|null} */
+            appPlatform: "ANDROID" | "IOS" | null;
+            appVersion: string | null;
+            /** Format: date-time */
+            appVersionSeenAt: string | null;
             /** Format: date-time */
             lastLogin: string;
             name: string;
@@ -1735,6 +1780,11 @@ export interface components {
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
+        ApiResponseAdminClientVersions: {
+            data: components["schemas"]["AdminClientVersions"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
         ApiResponseAdminDashboard: {
             data: components["schemas"]["AdminDashboard"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
@@ -1970,7 +2020,7 @@ export interface components {
         };
         ErrorDetails: {
             /** @enum {string} */
-            code: "invalid_request" | "invalid_request_data" | "validation_error" | "unauthorized" | "permission_denied" | "access_denied" | "restricted" | "csrf" | "not_found" | "business_rule_violation" | "conflict" | "rate_limited" | "internal_server_error";
+            code: "invalid_request" | "invalid_request_data" | "validation_error" | "unauthorized" | "reauth_required" | "permission_denied" | "access_denied" | "restricted" | "csrf" | "not_found" | "business_rule_violation" | "conflict" | "rate_limited" | "internal_server_error";
             message: string;
         };
         FriendSportBooking: {
@@ -1998,6 +2048,7 @@ export interface components {
             buildingId: number | null;
             /** Format: date */
             date: string;
+            /** Format: time-local */
             end: string;
             /** Format: int64 */
             flowId: number;
@@ -2013,6 +2064,7 @@ export interface components {
             /** Format: int64 */
             pairId: number;
             room: string | null;
+            /** Format: time-local */
             start: string;
             /** Format: int64 */
             subjectId: number;
@@ -2996,6 +3048,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseAdminAppVersion"];
+                };
+            };
+        };
+    };
+    adminSystem_clientVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminClientVersions"];
                 };
             };
         };

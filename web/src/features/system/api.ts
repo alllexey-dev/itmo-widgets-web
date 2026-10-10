@@ -3,6 +3,7 @@ import { api, ApiError } from '../../api/client';
 import type {
   AppVersion,
   AppVersionRequest,
+  ClientVersions,
   ModerationSettings,
   Platform,
   ServiceCredential,
@@ -14,6 +15,9 @@ const AUDIT_PREFIX = '/api/admin/audit';
 
 export const SPORT_PATH = '/api/admin/system/sport';
 export const fetchSport = () => api.get<SportStatus>(SPORT_PATH);
+
+export const CLIENT_VERSIONS_PATH = '/api/admin/system/client-versions';
+export const fetchClientVersions = () => api.get<ClientVersions>(CLIENT_VERSIONS_PATH);
 
 const VERSION_PATH = '/api/admin/system/app-version';
 

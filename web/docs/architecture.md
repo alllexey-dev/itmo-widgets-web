@@ -162,8 +162,8 @@ where the UI needs it: closed label unions where the snapshot says `string`
 fields of newer Backend releases. Envelope error codes and AI summary tags stay
 open strings, so unknown values from another release keep a fallback text.
 Web deploys apart from Backend, so a field a newer Backend adds is optional
-until that release is on both hosts: for example a device's `platform`
-(BK-16b) and `capabilities` on a person's profile.
+until that release is on both hosts: for example a device's `app*` build
+fields (Backend 1.8.0) and `capabilities` on a person's profile.
 
 ## Features layout
 
@@ -171,7 +171,8 @@ until that release is on both hosts: for example a device's `platform`
 src/
   main.ts, App.svelte, pages.ts   entry, login or shell, route -> page
   lib/        router, session, Resource, Shell, navigation (rail), icons,
-              theme, format, Pagination, LoadError, Forbidden, NotFound
+              theme, format, appBuild (build and channel names), Pagination,
+              LoadError, Forbidden, NotFound
   api/        client.ts, errors.ts, openapi.json, openapi.source, schema.ts
   features/
     auth/        login page, challenge, QR

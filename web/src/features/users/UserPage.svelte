@@ -10,6 +10,7 @@
   } from '@alllexey/ui';
   import { api, ApiError } from '../../api/client';
   import { errorText } from '../../api/errors';
+  import { buildLabel, channelLabel } from '../../lib/appBuild';
   import { formatDate, formatDateTime, formatNumber, formatRelative } from '../../lib/format';
   import LoadError from '../../lib/LoadError.svelte';
   import { Resource } from '../../lib/resource.svelte';
@@ -117,15 +118,22 @@
           <p class="m3-muted counts">{platformCounts(detail.devices)}</p>
           <ul class="m3-list divided plain" aria-label="Устройства">
             {#each detail.devices as device, index (`${device.name}-${device.lastLogin}-${index}`)}
-              <li class="m3-list-item">
+              <li class="m3-list-item device">
                 <span class="lead"><Icon name="smartphone" /></span>
                 <span class="main">
                   <span class="headline">{device.name}</span>
                   <span class="support">
-                    {platformLabel(device)}{device.appVersion
-                      ? ` · версия ${device.appVersion}`
+                    {platformLabel(device)} · {device.appVersion
+                      ? buildLabel(device.appVersion, device.appBuild)
+                      : 'версия: нет данных'}{device.appDistribution
+                      ? ` · ${channelLabel(device.appDistribution)}`
                       : ''}
                   </span>
+                  {#if device.appVersionSeenAt}
+                    <span class="support" title={formatDateTime(device.appVersionSeenAt)}>
+                      Активно {formatRelative(device.appVersionSeenAt)}
+                    </span>
+                  {/if}
                 </span>
                 <span class="trail">{formatDateTime(device.lastLogin)}</span>
               </li>
@@ -255,7 +263,8 @@
   p {
     margin: 0;
   }
-  .restriction .support {
+  .restriction .support,
+  .device .support {
     white-space: normal;
   }
   .actions {

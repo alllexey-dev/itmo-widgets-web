@@ -1,8 +1,25 @@
 # System - `/admin/system`, administrator
 
-Система holds four cards: app version, keys and access, sport automation and
-moderation rules. `/admin/sport`, the former sport page, opens the same page
-with focus on the sport card.
+Система holds five cards: app versions in use, app version, keys and access,
+sport automation and moderation rules. `/admin/sport`, the former sport page,
+opens the same page with focus on the sport card.
+
+## App versions in use
+
+The first card, full width, reads `GET /api/admin/system/client-versions`
+once; the "7 дней" / "30 дней" switch picks `last7d` or `last30d` of the same
+answer. Backend counts a device as active when it registered or reported a
+build in the window, under the last build it reported.
+
+- Totals: active devices, devices on a pre-release (a version with a
+  `-suffix`, such as `2.3.0-beta.1`) with their share, and devices of unknown
+  version (`unknownDevices`: Android 2.2 and older, or not updated).
+- One row per version and build, `2.3.0-beta.1 (20291)`, most devices first,
+  with a "бета" pill for pre-releases, the count, the share of active devices,
+  a share bar and the counts per platform and channel, such as
+  `Android, GitHub: 60`. The unknown devices come last as "Версия неизвестна".
+- No active device shows "Активных устройств нет"; a failed load shows the
+  error with "Повторить". An unknown channel name is shown as sent.
 
 ## Sport automation
 
