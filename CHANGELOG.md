@@ -1,70 +1,51 @@
 # Changelog
 
+Dates are production deploys; before 2026-10-02 they are commit dates.
+
 ## Unreleased
 
-- WV-11: Date the privacy policy 10 October 2026 and describe the app version each request reports since Backend 1.8.0: version, build, platform and channel, the last report kept per device, visible to administrators only, deleted with the device or account.
-- WV-10: Move the web app to @alllexey/ui 0.4.0: the package's Resource, Loadable, Tabs, Chips, Avatar, TextField, Search, TopBar and StatusShape text replace the app's own copies, the shell applies the theme, and the overrides for the old dark tertiary container, segmented tiles in cards and disabled danger buttons are gone (the app card on Главная is tertiary again); photos load with a same-origin referrer policy.
-- WV-09: Show the app versions in use on Система (7 or 30 days, devices per version and build with platform and channel, the beta share and devices of unknown version) and each device's reported build, channel and last report on the admin user page; sync the Backend 1.8.0 OpenAPI snapshot.
-- WV-08: Describe web sessions of 14 days idle and 60 days at most with 90-day retention, and answer a 401 reauth_required on staff actions with a re-login dialog that returns to the page and keeps the session.
-- WV-06-FIX2: Put the app card on Главная on the secondary container, as the package's tertiary container stays light in a dark scheme and the card showed as a light lavender block with a light blue button.
-- WV-06-FIX: Treat a 403 without an ApiResponse envelope as a lost session, as Backend 1.7.0 answers an expired web session on every route, so the web shows "Сессия истекла" instead of access errors or hidden person cards.
-- WV-06: Switch /app/ to the Svelte web v3: the React app is removed, web-next/ becomes web/ in the same image, nginx and CSP unchanged; the web docs describe the new router, session, data loading, design rules and every section.
-- WV-05: Build the student sections of the web v3: friend requests, sport queues, audiences and the app on Главная; Друзья with tabs, local search and adding by ISU; a person's page with schedule, sport and friends by capability; own sport queues with leaving and the auto-sign limit; Профиль with privacy, an active restriction and sign-out.
-- WV-03: Build the web v3 home with the staff attention card and the admin 7-day card, statistics on the shared uPlot chart, users with search, devices per platform and the moderator switch, and the audit log.
-- WV-02: Port moderation to the Svelte web v3: one queue for links and reviews with a split view on wide screens, case details with diffs, decisions with required reasons and typed confirmation, J/K/A/R shortcuts, shareable URL state, and the restrictions tab at the old address.
-- WV-04: Build Система and Отзывы in the web v3: per-platform app versions with the iOS editor only on a Backend that keeps platforms apart, credentials with replacement and polling, sport automation (also at /app/admin/sport), moderation rules, reviews sync, ISU check, AI summaries, the teachers table and the summary dialog.
-- WV-01: Start the Svelte web v3 in web-next/ with the role-based cabinet shell, history router keeping every /app/ URL, session and lost-session dialog, phone sign-in, CSP preview, and run both apps in scripts/verify.sh.
-- WB-16a: Rebuild the web app on the shared @alllexey/ui design system and its UX rules: navigation rail, shared alllexey.dev theme, package fonts and icons, four states per screen and typed confirmation for destructive actions.
-- BK-15w: Match the signed-out fixture to Backend 401 responses and verify legacy session compatibility and access-error routing.
-- WB-11a: Generate landing and app tokens from one recorded web token source.
+- Signing out with an expired session signs out instead of showing "Сессия истекла" and "Не удалось выйти".
+- A section whose code is gone after a deploy reloads the page once; if it still does not load, it shows an error with "Повторить" instead of spinning forever.
+- The app version editor on Система always offers Android and iOS.
+- Dates on Система, Отзывы and Модерация use the shared format: a date in another year shows the year, and "использован ... назад" on keys covers the last week, older uses show the date.
+- Removed support for Backend releases before 1.8.0 (the bare 403 lost session and the iOS version probe).
+- `npm run dev` proxies `/api` to `API_TARGET` when it is set.
+- Removed the unused GHCR delivery workflows; the README describes the real deploy, check and rollback.
 
-- WB-02: Drop the untracked design drafts by owner decision, exclude design/ from the image context, and fail verification on unreferenced landing images.
-- WB-15: Guard moderation labels and icons against the recorded app catalog with explicit moderator wording exceptions.
+## 2026-10-10
 
-- WB-06: Prepare verified immutable GHCR delivery to dev and approved production delivery; keep server onboarding owner-only and compose local.
-- WB-04: Self-host typed Material Symbols with a verified subset, add CSP and Permissions-Policy, and update the approved privacy wording and date.
+- Web sessions last 14 days idle and 60 days at most; staff actions with an old sign-in ask to sign in again and return to the page.
+- Система shows the app versions in use over 7 or 30 days: devices per version and build with platform and channel, the beta share and devices of unknown version. The admin user page shows each device's build, channel and last report.
+- Moved the web app to `@alllexey/ui` 0.4.0 and its shared components.
+- The privacy policy is dated 10 October 2026 and describes the app version each request reports.
 
-- WB-01: Correct Caddy routing and the temporary production /app/ procedure; remove the obsolete edge snippet and document all shared UI components.
-- CI-04: Add locked-dependency verification, local image smoke checks and pull request CI.
-- WB-03: Refresh React and pin container images and QR dependencies.
-- WB-05: Enforce feature boundaries and centralize shared types.
-- WB-13: Load feature routes lazily through a data router.
-- WB-07: Generate API type aliases from the recorded Backend OpenAPI snapshot and verify drift.
+## 2026-10-07
 
-## Pre-v2.3 history
+- The web app at `/app/` is rebuilt in Svelte 5 on the shared `@alllexey/ui` design system: one cabinet with sections by role, the shared alllexey.dev theme, typed confirmation for destructive actions.
+- Students get Главная, Друзья (requests, search, adding by ISU), a person's page with schedule, sport and friends, own sport queues and Профиль with privacy settings and sign-out.
+- Staff get Модерация (one queue for links and reviews, diffs, decisions with reasons, keyboard shortcuts, restrictions), Пользователи, Статистика, Система (app versions per platform, keys, sport automation, moderation rules), Отзывы (sync, ISU check, AI summaries) and Журнал.
+- Self-hosted Material Symbols, a strict CSP and Permissions-Policy.
+- Landing and web design tokens come from one source; CI checks the web app and the site image on every PR.
 
-### 2026-10-03
+## 2026-10-03
 
-- `e8c6f36`: Move the landing to the day-in-the-life layout and share its style across pages.
-- `9f4f2e4`: Rewrite the privacy policy and add the account deletion page.
+- The landing moved to the day-in-the-life layout and shares its style with every page.
+- Rewrote the privacy policy and added the account deletion page.
+- The web app is served at `/app/` on production.
 
-### 2026-10-02
+## 2026-10-02
 
-- `0e4cd2c`: Document assetlinks.json and the app link pages.
-- `f4ade46`: Serve assetlinks.json and app-free pages for shared profile and sport links.
+- Serve `assetlinks.json` and app-free pages for shared profile and sport links.
 
-### 2026-09-29
+## 2026-09-29
 
-- `678e22a`: Document AI summaries, the Gemini key and their audit entries in the admin.
-- `be1ba54`: Add AI summaries, the Gemini key and their audit entries to the admin.
-- `53a7e99`: Document review cases, service credentials and ISU check counters in the admin.
-- `5824537`: Add teacher reviews, service credentials and ISU check counters to the admin.
+- Admin: teacher reviews, service credentials, ISU check counters, AI summaries and the Gemini key, with audit entries.
 
-### 2026-09-24
+## 2026-09-24
 
-- `6834fd7`: Document the reviews sync.
-- `ba3fdd7`: Add reviews sync to the admin.
-- `00a390a`: Document the web app sections, architecture and design.
-- `519ebb9`: Add moderation, users, dashboard, sport, system and audit to the admin.
-- `ae99c8e`: Sign in to the web app with a QR code approved in the app.
-- `73c3495`: Add the web app shell under /app with the landing in one image.
-- `1d7cc58`: Rename the site container and server directory to itmowidgets-web.
+- The web app under `/app/`: sign-in with a QR code approved in the app, moderation, users, dashboard, sport, system, reviews sync and audit.
+- The site container and server directory are named `itmowidgets-web`.
 
-### 2026-09-20
+## 2026-09-20
 
-- `923ac6c`: Keep compose at the repository root so the site path resolves.
-- `451f789`: Drop the FAQ section.
-- `94d134d`: Four features, one sentence each, unstretched screenshots.
-- `5b43660`: Add the container and nginx-hub snippet for deployment.
-- `46db836`: Show more of each screen in the feature cards.
-- `50ffeb2`: Landing page, privacy policy and FAQ with fixture screenshots.
+- Landing page and privacy policy with demo screenshots.

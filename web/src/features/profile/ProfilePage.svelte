@@ -9,7 +9,6 @@
   import PrivacyCard from './PrivacyCard.svelte';
 
   // The signed-in user: who they are, who sees their data, a restriction in force and this sign-in.
-  // Account deletion joins here with WV-07.
   const active = new Resource(RESTRICTIONS_PATH, restrictions);
   void active.load();
 

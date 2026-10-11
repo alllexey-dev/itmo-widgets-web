@@ -2,7 +2,7 @@
   import { Loadable, Resource, StatusShape } from '@alllexey/ui';
   import LoadError from '../../lib/LoadError.svelte';
   import { fetchSport, SPORT_PATH } from './api';
-  import { formatDateTime, formatDuration, formatNumber, formatRelative } from './format';
+  import { formatDateTime, formatDuration, formatNumber, formatRelative } from '../../lib/format';
   import { SPORT_ERRORS, SPORT_HEALTH, SPORT_OUTCOMES } from './labels';
   import type { SportErrorCategory, SportRun, SportStatus } from './types';
 

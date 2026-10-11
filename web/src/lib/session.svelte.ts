@@ -35,10 +35,9 @@ export function roleLabel(user: User): string | null {
 type Status = 'idle' | 'loading' | 'ready' | 'signedOut' | 'failed';
 
 /**
- * The signed-in user of this browser. A 401 anywhere, a 403 on `/me` or a 403 without an envelope
- * (Backend 1.7.0) means the cookie session is gone: a visitor who never got in goes straight to the
- * login page, a user who was signed in sees "Сессия истекла" first. An enveloped 403 elsewhere is a
- * page's access error and keeps the session.
+ * The signed-in user of this browser. A 401 other than `reauth_required` means the cookie session is
+ * gone: a visitor who never got in goes straight to the login page, a user who was signed in sees
+ * "Сессия истекла" first. A 403 is a page's access error and keeps the session.
  */
 class Session {
   user = $state<User | null>(null);
@@ -67,7 +66,12 @@ class Session {
   }
 
   async logout(): Promise<void> {
-    await api.post<unknown>('/api/web/auth/logout');
+    try {
+      await api.post<unknown>('/api/web/auth/logout');
+    } catch (error) {
+      // An expired session is already signed out.
+      if (!(error instanceof ApiError && error.sessionLost)) throw error;
+    }
     this.#signOut();
     router.go('/login', { replace: true });
   }
@@ -101,7 +105,7 @@ class Session {
       this.user = await api.get<User>(SESSION_PATH);
       this.status = 'ready';
     } catch (error) {
-      if (error instanceof ApiError && (error.isUnauthorized || error.isForbidden)) {
+      if (error instanceof ApiError && error.sessionLost) {
         this.status = 'signedOut';
         return;
       }

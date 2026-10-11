@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@alllexey/ui';
-  import { formatDateTime, formatRelative } from './format';
+  import { formatDateTime, formatRelative } from '../../lib/format';
   import { ACTIONS, CAPABILITIES, REPORT_REASONS } from './labels';
   import type { ModerationDecision, ModerationReport } from './types';
 

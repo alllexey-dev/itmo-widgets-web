@@ -3,7 +3,7 @@
   import { untrack } from 'svelte';
   import { errorText } from '../../api/errors';
   import { saveVersion } from './api';
-  import { formatDateTime } from './format';
+  import { formatDateTime } from '../../lib/format';
   import type { AppVersion, Platform } from './types';
   import { compareVersions, NOTE_LIMIT, versionError } from './version';
 

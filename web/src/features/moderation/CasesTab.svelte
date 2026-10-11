@@ -13,7 +13,7 @@
   import CaseDetail from './CaseDetail.svelte';
   import CaseList from './CaseList.svelte';
   import { REASONS } from './labels';
-  import Pagination from './Pagination.svelte';
+  import Pagination from '../../lib/Pagination.svelte';
   import { shortcuts } from './shortcuts.svelte';
   import type { AdminCaseItem, AdminPage, CaseReason, CaseStatus, ModerationCase } from './types';
 

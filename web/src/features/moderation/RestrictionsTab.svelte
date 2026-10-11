@@ -21,9 +21,9 @@
     RESTRICTIONS_PAGE_SIZE,
     type RestrictionFilter,
   } from './api';
-  import { formatDate } from './format';
+  import { formatDate } from '../../lib/format';
   import { CAPABILITIES, type PillTone } from './labels';
-  import Pagination from './Pagination.svelte';
+  import Pagination from '../../lib/Pagination.svelte';
   import type { AdminPage, AdminRestriction } from './types';
 
   // Who may not do what after moderation decisions. `isu`, `all` and `page` live in the query string;

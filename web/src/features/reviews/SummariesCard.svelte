@@ -11,7 +11,7 @@
   import LoadError from '../../lib/LoadError.svelte';
   import { href } from '../../lib/router.svelte';
   import { startSummaries } from './api';
-  import { formatDateTime, formatDay, formatNumber } from './format';
+  import { formatDate, formatDateTime, formatNumber } from '../../lib/format';
   import { RUN_OUTCOMES, RUN_TRIGGERS } from './labels';
   import type { AiSummariesState } from './types';
 
@@ -116,7 +116,7 @@
           <dd class="m3-num">{formatNumber(state.hidden)}</dd>
         </div>
         <div>
-          <dt>запросов за {formatDay(state.budgetDay)}</dt>
+          <dt>запросов за {formatDate(state.budgetDay)}</dt>
           <dd class="m3-num">
             {formatNumber(state.budgetUsed)} из {formatNumber(state.dailyBudget)}
           </dd>

@@ -1,21 +1,20 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const args = process.argv.slice(2);
-if (args.length !== 0 && (args.length !== 2 || args[0] !== "--app")) {
-  throw new Error("Usage: scripts/sync-app-labels.mjs [--app <dir>]");
+if (args.length !== 2 || args[0] !== "--app") {
+  throw new Error("Usage: scripts/sync-app-labels.mjs --app <dir>");
 }
-const app = resolve(args[1] ?? `${homedir()}/proj/.wt/android/next`);
+const app = resolve(args[1]);
 const git = (...args) =>
   execFileSync("git", ["-C", app, ...args], { encoding: "utf8" });
 const sha = git("rev-parse", "HEAD").trim();
 if (git("status", "--porcelain").trim())
   throw new Error("App source must be clean");
-git("merge-base", "--is-ancestor", sha, "origin/v2.3/next");
+git("merge-base", "--is-ancestor", sha, "origin/master");
 const strings = {};
 const paths = git("ls-tree", "-r", "--name-only", sha)
   .trim()

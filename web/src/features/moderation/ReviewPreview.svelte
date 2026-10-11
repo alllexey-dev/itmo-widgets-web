@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@alllexey/ui';
-  import { formatDateTime, formatRelative } from './format';
+  import { formatDateTime, formatRelative } from '../../lib/format';
   import { scoreText, VERIFICATION } from './labels';
   import type { TeacherReviewTarget } from './types';
 

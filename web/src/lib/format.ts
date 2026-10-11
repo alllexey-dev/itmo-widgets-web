@@ -5,6 +5,7 @@
 export const TIME_ZONE = 'Europe/Moscow';
 
 const numberFormat = new Intl.NumberFormat('ru-RU');
+const secondsFormat = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
 const dateFormat = new Intl.DateTimeFormat('ru-RU', {
   day: 'numeric',
   month: 'short',
@@ -30,6 +31,14 @@ const DAY = 24 * HOUR;
 
 export function formatNumber(value: number): string {
   return numberFormat.format(value);
+}
+
+/** "2,1 с", "1 мин 5 с". */
+export function formatDuration(millis: number): string {
+  if (millis < MINUTE) return `${secondsFormat.format(millis / 1000)} с`;
+  const minutes = Math.floor(millis / MINUTE);
+  const seconds = Math.round((millis % MINUTE) / 1000);
+  return seconds > 0 ? `${minutes} мин ${seconds} с` : `${minutes} мин`;
 }
 
 /** A `YYYY-MM-DD` date is that calendar day in Moscow; anything else is an instant. */

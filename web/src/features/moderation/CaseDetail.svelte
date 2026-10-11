@@ -8,7 +8,7 @@
   import AuthorSection from './AuthorSection.svelte';
   import CaseChanges from './CaseChanges.svelte';
   import CaseHistory from './CaseHistory.svelte';
-  import { formatDateTime, formatRelative } from './format';
+  import { formatDateTime, formatRelative } from '../../lib/format';
   import { CASE_STATUSES, doneText, periodLabel, REASONS, TARGET_TEXTS } from './labels';
   import LinkPreview from './LinkPreview.svelte';
   import RejectDialog from './RejectDialog.svelte';

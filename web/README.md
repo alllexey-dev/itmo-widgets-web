@@ -40,7 +40,8 @@ npm run dev
 ```
 
 Приложение открывается на `http://localhost:5173/app/`. Запросы `/api` уходят
-на `https://dev.widgets.alllexey.dev` через прокси Vite.
+через прокси Vite на `https://dev.widgets.alllexey.dev`; другой бэкенд задаётся
+переменной `API_TARGET`, например `API_TARGET=http://localhost:8080 npm run dev`.
 
 Ограничения локального запуска:
 
@@ -72,10 +73,10 @@ npm run dev
 | `npm run format` | Prettier |
 
 Перед коммитом - `scripts/verify.sh` из корня репозитория: генерация с
-`--check`, lint, typecheck, тесты и сборка.
+`--check`, lint, typecheck, тесты и сборка. `scripts/verify.sh site` собирает
+образ и проверяет сайт в контейнере (нужен Docker), `full` - оба режима.
 
 ## Развёртывание
 
-Текущий порядок для dev и prod описан в разделе
+Порядок для dev и prod, проверка и откат описаны в разделе
 ["Развёртывание" корневого README](../README.md#развёртывание).
-Выкладка выполняется только с согласия владельца.

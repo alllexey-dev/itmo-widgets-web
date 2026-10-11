@@ -3,7 +3,7 @@
   import { untrack } from 'svelte';
   import { errorText } from '../../api/errors';
   import { regenerateSummary, setSummaryHidden } from './api';
-  import { formatDateTime, formatNumber, plural } from './format';
+  import { formatDateTime, formatNumber, plural } from '../../lib/format';
   import {
     SUMMARY_CONFIDENCES,
     SUMMARY_LEVELS,

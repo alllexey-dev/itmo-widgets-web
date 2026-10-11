@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fail, legacySessionLost, mockSignedOut, ok, server } from '../test/server';
+import { fail, mockSignedOut, ok, server } from '../test/server';
 import { api, ApiError, onReauthRequired, onSessionLost } from './client';
 
 describe('api client', () => {
@@ -69,16 +69,6 @@ describe('api client', () => {
     expect(error).toMatchObject({ status: 429, code: 'rate_limited', message: 'Слишком часто' });
   });
 
-  it('reports a lost session on 403 from /me', async () => {
-    const listener = vi.fn();
-    unsubscribe = onSessionLost(listener);
-    server.use(http.get('*/api/web/auth/me', () => fail(403, 'access_denied')));
-
-    await expect(api.get('/api/web/auth/me')).rejects.toBeInstanceOf(ApiError);
-
-    expect(listener).toHaveBeenCalledOnce();
-  });
-
   it('uses the Backend 401 unauthorized response for the signed-out fixture', async () => {
     const listener = vi.fn();
     unsubscribe = onSessionLost(listener);
@@ -119,22 +109,6 @@ describe('api client', () => {
     },
   );
 
-  it.each([
-    ['GET', () => api.get('/api/friends')],
-    ['POST', () => api.post('/api/friends/311111/request')],
-  ])('reports a lost session on a bare 403 of a Backend before BK-15 (%s)', async (_, call) => {
-    const listener = vi.fn();
-    unsubscribe = onSessionLost(listener);
-    server.use(http.all('*/api/friends*', legacySessionLost));
-
-    const error = await call().catch((caught: unknown) => caught);
-
-    expect(error).toBeInstanceOf(ApiError);
-    expect(error).toMatchObject({ status: 403, sessionLost: true, isForbidden: false });
-    expect((error as ApiError).isUnauthorized).toBe(true);
-    expect(listener).toHaveBeenCalledOnce();
-  });
-
   it('asks for a fresh sign-in on 401 reauth_required and keeps the session', async () => {
     const lost = vi.fn();
     const reauth = vi.fn();
@@ -150,7 +124,6 @@ describe('api client', () => {
     unsubscribeLost();
 
     expect(error).toMatchObject({ status: 401, code: 'reauth_required', sessionLost: false });
-    expect((error as ApiError).isUnauthorized).toBe(false);
     expect(reauth).toHaveBeenCalledOnce();
     expect(lost).not.toHaveBeenCalled();
   });

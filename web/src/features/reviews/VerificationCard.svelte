@@ -2,7 +2,7 @@
   import { Loadable, Resource } from '@alllexey/ui';
   import LoadError from '../../lib/LoadError.svelte';
   import { fetchVerification, VERIFICATION_PATH } from './api';
-  import { formatNumber } from './format';
+  import { formatNumber } from '../../lib/format';
   import type { ReviewVerificationCounts } from './types';
 
   // Whether the teacher taught the author of the review, checked against ISU.

@@ -9,7 +9,7 @@ export interface RailItem {
   access: Exclude<Access, 'anonymous'>;
 }
 
-/** Student sections first, then staff sections by role (concept section 3 A). */
+/** Student sections first, then staff sections by role. */
 export const RAIL: readonly RailItem[] = [
   { section: 'home', path: '/', label: 'Главная', icon: 'home', access: 'user' },
   { section: 'friends', path: '/friends', label: 'Друзья', icon: 'group', access: 'user' },
@@ -34,15 +34,9 @@ export const RAIL: readonly RailItem[] = [
   { section: 'audit', path: '/admin/audit', label: 'Журнал', icon: 'history', access: 'admin' },
 ];
 
-/** A built section, loaded on first visit and prefetched when the browser is idle; it reads `router`. */
+/** A section, loaded on first visit and prefetched when the browser is idle; it reads `router`. */
 export interface LazyPage {
   load: () => Promise<{ default: Component }>;
 }
 
-/** A section that is not built yet: the rail is complete from day one, the page says what will be there. */
-export interface PlannedPage {
-  title: string;
-  text: string;
-}
-
-export type PageTable = Record<Exclude<RouteName, 'login' | 'notFound'>, LazyPage | PlannedPage>;
+export type PageTable = Record<Exclude<RouteName, 'login' | 'notFound'>, LazyPage>;

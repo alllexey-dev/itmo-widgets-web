@@ -4,7 +4,7 @@
   import LoadError from '../../lib/LoadError.svelte';
   import { router } from '../../lib/router.svelte';
   import { PAGE_SIZE, teachersRequest } from './api';
-  import { formatDateTime, formatNumber } from './format';
+  import { formatDateTime, formatNumber } from '../../lib/format';
   import { SUMMARY_LEVELS, SUMMARY_STATUSES, teacherLabel } from './labels';
   import SummaryDialog from './SummaryDialog.svelte';
   import type { SummaryStatus, TeacherPage, TeacherSummaryRow } from './types';

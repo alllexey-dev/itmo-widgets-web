@@ -22,7 +22,6 @@
   `prefers-color-scheme`. Кнопка Google Play на лендинге и страницах ссылок
   стоит с атрибутом `hidden` до публикации в Play.
 - `design/` не хранится в репозитории и исключен из Docker-контекста.
-  Черновики лендинга и графики Play не сохраняются по решению владельца.
 - `web/` — веб-версия (Svelte, Vite, TypeScript, `@alllexey/ui`): запуск и команды
   описаны в [`web/README.md`](web/README.md), разделы и роли - в
   [документации разделов](web/README.md#документация), устройство - в
@@ -67,7 +66,7 @@
 Telegram или на почту, подтверждение входом в веб-версию через «Профиль → Вход
 на сайт», выключение «Подключения к ITMO.Widgets», срок 30 дней и что остаётся
 после удаления. Отдельной формы и запросов к API у страницы нет; удаление
-выполняет владелец по регламенту бэкенда `docs/ops/account-deletion.md`.
+выполняется вручную по регламенту бэкенда `docs/ops/account-deletion.md`.
 Приложение открывает страницу из «Настройки → Подключение к ITMO.Widgets →
 Удалить аккаунт ITMO.Widgets», карточка Google Play ссылается на неё в разделе
 удаления данных. Подтверждение входом работает на хосте, где отдаётся `/app/`.
@@ -116,36 +115,79 @@ cd web && npm install && npm run dev
 Домены обслуживает общий Caddy (`stacks/edge/Caddyfile` в `srvscripts`):
 `/api/*` уходит в бэкенд (`itmowidgets:8080` и `itmowidgets-dev:8080`), всё
 остальное - в контейнер сайта (`itmowidgets-web:80` и `itmowidgets-web-dev:80`)
-в сети `web`. После подключения доставки серверные compose-файлы и
-`deploy.conf` будут в `srvscripts/stacks/itmowidgets-web{,-dev}/`,
-а не в этом репозитории.
+в сети `web`. Серверные compose-файлы лежат в
+`srvscripts/stacks/itmowidgets-web{,-dev}/`; там же в `docs/architecture.md`
+записывается каждая выкладка. CI (`ci.yml`) только проверяет PR и `main`,
+автоматической выкладки нет. Сначала dev, потом prod той же сборкой.
 
-Подготовлены workflows по образцу Backend:
+### Dev - `dev.widgets.alllexey.dev`
 
-- `deliver.yml`: push в `dev` запускает `ci.yml` через `workflow_call`
-  (`scripts/verify.sh full`), затем публикует
-  `ghcr.io/alllexey-dev/itmo-widgets-web:sha-<12 символов коммита>`.
-  Существующий тег не пересобирается: проверяются OCI source и полный revision.
-  После выкладки в `itmowidgets-web-dev` через `platform ssh-gate` (окружение
-  `development`) workflow fast-forward-ит `main`. Неуспешная проверка, сборка
-  или выкладка не двигает `main`; разошедшаяся история отклоняется.
-- `release.yml`: ручной `workflow_dispatch` только с `main`, для коммита с
-  успешным `deliver` и историей в `main` и `dev`. Использует тот же `sha-` образ
-  с проверкой OCI source/revision, без новой сборки, git-тега и GitHub release.
-  Выкладка в `itmowidgets-web` требует одобрения окружения `production`.
-- `ci.yml` сам запускается для PR и push в `v2.3/next`/`main`, но не для `dev`.
-  Push от `GITHUB_TOKEN` после dev-выкладки не запускает новый CI; ruleset `main`
-  должен требовать успешный `deploy-dev`, а не `verify`.
+Каталог `/mnt/raid/srv/web/itmowidgets-web-dev`: распакованный `git archive`
+этого репозитория и серверный `compose.dev.yml`, который собирает образ
+`itmowidgets-web:dev` из корневого `Dockerfile`.
 
-Эта подготовка не меняет живой сервер и не включает доставку. На 2026-10-03
-(srvscripts `794f073`, web `e8c6f36`) prod использует `nginx:alpine` с
-смонтированным `site/` и вручную скопированным `web/dist` в `site/app`, dev -
-сборку из `git archive`. До отдельного согласования владельцем подключения
-обоих стеков этот порядок остаётся текущим. Переход на GHCR, первая выкладка
-на dev и каждая выкладка на prod - только с отдельного согласия владельца.
-Процедура подключения находится в `srvscripts/docs/architecture.md`
-(`platform deploy`, `ssh-gate`, `link-repo`); необходимые шаги владельца
-зафиксированы в PR WB-06. Ветка `dev` и окружения не создаются этим PR.
+```bash
+SHA=$(git rev-parse --short=7 origin/main)
+DIR=/mnt/raid/srv/web/itmowidgets-web-dev
+ssh alllexey.dev "tar -czf /mnt/raid/backups/archive/itmowidgets-web-dev-$(date +%Y%m%d).tar.gz -C /mnt/raid/srv/web itmowidgets-web-dev"
+git archive "$SHA" | ssh alllexey.dev "tar -x -C $DIR"
+ssh alllexey.dev "echo '$(date -u +%FT%TZ) git archive of $SHA' > $DIR/DEPLOYED_FROM"
+ssh alllexey.dev "cd $DIR && docker compose -f compose.dev.yml build --build-arg REVISION=$SHA && docker compose -f compose.dev.yml up -d"
+```
+
+`tar -x` не удаляет файлы, которых больше нет в репозитории: удалённые из
+`site/` или `web/` файлы нужно убрать из каталога руками.
+
+### Prod - `widgets.alllexey.dev`
+
+Каталог `/mnt/raid/srv/web/itmowidgets-web`: контейнер `nginx:alpine` с
+`./site` и `./deploy/site.nginx.conf`, смонтированными с диска. Prod получает
+ровно то, что уже проверено на dev: `site/` вместе с `site/app/` и конфиг
+nginx копируются из образа `itmowidgets-web:dev`. На сервере:
+
+```bash
+cd /mnt/raid/srv/web
+tar -czf /mnt/raid/backups/archive/itmowidgets-web-$(date +%Y%m%d).tar.gz itmowidgets-web
+stage=$(mktemp -d)
+id=$(docker create itmowidgets-web:dev)
+docker cp "$id:/usr/share/nginx/html" "$stage/site"
+docker cp "$id:/etc/nginx/conf.d/default.conf" "$stage/site.nginx.conf"
+docker rm "$id"
+docker run --rm -v "$stage/site:/usr/share/nginx/html:ro" \
+  -v "$stage/site.nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:alpine nginx -t
+cd itmowidgets-web
+rsync -a --delete "$stage/site/" site/
+cp "$stage/site.nginx.conf" deploy/site.nginx.conf
+docker compose up -d --force-recreate
+```
+
+`--force-recreate` обязателен: при простом reload nginx остаётся старый
+смонтированный файл конфига. Ревизию запишите в `DEPLOYED_FROM`.
+
+### Проверка после выкладки
+
+На обоих хостах: `/`, `/privacy.html`, `/delete-account`,
+`/.well-known/assetlinks.json` (`application/json`), `/u/<isu>`, `/sport/<id>`,
+`/app` (301 на `/app/`), `/app/`, `/app/login` (код создаётся),
+`/api/app/version-info`; в консоли браузера нет ошибок CSP; `platform doctor`
+без изменений.
+
+### Откат
+
+Каталог восстанавливается из архива, сделанного перед выкладкой:
+
+```bash
+cd /mnt/raid/srv/web
+mv itmowidgets-web itmowidgets-web.bad
+tar -xzf /mnt/raid/backups/archive/itmowidgets-web-<дата>.tar.gz
+cd itmowidgets-web && docker compose up -d --force-recreate
+```
+
+Для dev то же с `itmowidgets-web-dev` и
+`docker compose -f compose.dev.yml up -d --build`. После проверки
+`*.bad` удаляется.
+
+### Локальный образ
 
 Для локального образа без API и серверной сети:
 
@@ -154,4 +196,3 @@ docker compose up --build
 ```
 
 Лендинг доступен на `http://127.0.0.1:8080/`, веб-версия - на `/app/`.
-`compose.dev.yml` удалён: этот репозиторий больше не описывает серверные стеки.

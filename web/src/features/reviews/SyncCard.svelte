@@ -3,7 +3,7 @@
   import { errorText } from '../../api/errors';
   import LoadError from '../../lib/LoadError.svelte';
   import { fetchSync, POLL_MILLIS, startSync, SYNC_PATH } from './api';
-  import { formatDateTime, formatNumber } from './format';
+  import { formatDateTime, formatNumber } from '../../lib/format';
   import { SYNC_OUTCOMES } from './labels';
   import type { ReviewsSyncStatus } from './types';
 

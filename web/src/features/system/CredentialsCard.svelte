@@ -3,7 +3,7 @@
   import LoadError from '../../lib/LoadError.svelte';
   import { href } from '../../lib/router.svelte';
   import { awaitsCheck, CREDENTIALS_PATH, fetchCredentials, POLL_MILLIS } from './api';
-  import { formatDate, formatDateTime, formatRelative } from './format';
+  import { formatDate, formatDateTime, formatRelative } from '../../lib/format';
   import { CREDENTIAL_SOURCES, CREDENTIAL_STATUSES, CREDENTIALS } from './labels';
   import ReplaceCredentialDialog from './ReplaceCredentialDialog.svelte';
   import type { ServiceCredential, ServiceCredentialKey } from './types';

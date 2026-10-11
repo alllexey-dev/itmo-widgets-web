@@ -28,7 +28,7 @@ export interface RequestOptions {
 
 export const SESSION_PATH = '/api/web/auth/me';
 
-/** 401 on an admin or moderator route whose session is older than Backend allows there (BK-WS2). */
+/** 401 on an admin or moderator route whose session is older than Backend allows there. */
 export const REAUTH_REQUIRED = 'reauth_required';
 
 /** Error codes produced by the client itself rather than by the backend. */
@@ -41,24 +41,20 @@ export class ApiError extends Error {
   readonly status: number;
   /** Backend `ApiResponse.error.code`, e.g. `not_found`, `rate_limited`, `csrf`. */
   readonly code: string;
-  /** The cookie session is gone, whatever the status says (see `isSessionLost`). */
+  /** The cookie session is gone: a 401 other than `reauth_required`. */
   readonly sessionLost: boolean;
 
-  constructor(message: string, status: number, code: string, sessionLost = status === 401) {
+  constructor(message: string, status: number, code: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
-    this.sessionLost = sessionLost;
+    this.sessionLost = status === 401 && code !== REAUTH_REQUIRED;
   }
 
-  get isUnauthorized(): boolean {
-    return this.sessionLost;
-  }
-
-  /** An access error of the request itself; a lost session is not one. */
+  /** An access error of the request itself; the session stays. */
   get isForbidden(): boolean {
-    return this.status === 403 && !this.sessionLost;
+    return this.status === 403;
   }
 
   get isNetwork(): boolean {
@@ -94,20 +90,6 @@ function notifySessionLost(): void {
   }
   const loginPath = `${import.meta.env.BASE_URL}login`;
   if (!window.location.pathname.startsWith(loginPath)) window.location.assign(loginPath);
-}
-
-/**
- * Backend 1.7.0 answers a missing or expired cookie session with a bare 403 on every route, Backend
- * BK-15 with 401. Every real authorization denial (`permission_denied`, `access_denied`,
- * `restricted`, `csrf`) carries an `ApiResponse` envelope, so a 403 without one is a lost session.
- */
-function isSessionLost(path: string, status: number, payload: unknown): boolean {
-  if (status === 401) return errorCode(payload) !== REAUTH_REQUIRED;
-  return status === 403 && (path === SESSION_PATH || !isEnvelope(payload));
-}
-
-function errorCode(payload: unknown): string | null | undefined {
-  return isEnvelope(payload) ? payload.error?.code : undefined;
 }
 
 function buildUrl(path: string, query?: Record<string, QueryValue>): URL {
@@ -161,16 +143,15 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const payload = await readJson(response);
 
   if (!response.ok || (isEnvelope(payload) && !payload.success)) {
-    const lost = isSessionLost(path, response.status, payload);
-    if (lost) notifySessionLost();
-    else if (response.status === 401) reauthListeners.forEach((listener) => listener());
     const error = isEnvelope(payload) ? payload.error : null;
-    throw new ApiError(
+    const failure = new ApiError(
       error?.message ?? `HTTP ${response.status}`,
       response.status,
       error?.code ?? CLIENT_ERROR_CODES.http,
-      lost,
     );
+    if (failure.sessionLost) notifySessionLost();
+    else if (response.status === 401) reauthListeners.forEach((listener) => listener());
+    throw failure;
   }
 
   return (isEnvelope(payload) ? payload.data : payload) as T;

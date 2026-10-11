@@ -4,7 +4,7 @@
 /** Who may open a route; the backend enforces access, the UI only hides. */
 export type Access = 'anonymous' | 'user' | 'moderator' | 'admin';
 
-/** Rail sections of the cabinet (concept section 3 A); folded pages belong to the section that hosts them. */
+/** Rail sections of the cabinet; folded pages belong to the section that hosts them. */
 export type Section =
   'home' | 'friends' | 'sport' | 'me' | 'moderation' | 'users' | 'reviews' | 'system' | 'audit';
 
