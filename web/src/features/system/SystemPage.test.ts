@@ -4,7 +4,6 @@ import { http } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../../test/render';
 import { fail, mockSession, ok, server, userOf } from '../../test/server';
-import { forgetIosSupport } from './api';
 import type {
   AppVersion,
   AppVersionRequest,
@@ -190,16 +189,10 @@ const COOKIE_VALUE = 'synthetic-keycloak-identity-0123456789';
 /** Assembled from parts, so a search for leaked keys finds nothing. */
 const GEMINI_KEY = 'AIza' + '0'.repeat(35);
 
-/**
- * A Backend with BK-17 answers the platform probe with 400 `invalid_request`; an older one with 200
- * and Android's values, and it ignores `?platform=` on the admin endpoints.
- */
 function mockSystem({
-  perPlatform = true,
   clients = (): Response => ok(clientVersions),
-}: { perPlatform?: boolean; clients?: (load: number) => Response } = {}) {
+}: { clients?: (load: number) => Response } = {}) {
   let clientLoads = 0;
-  const requests: string[] = [];
   const versionSaves: { platform: string | null; body: AppVersionRequest; csrf: string | null }[] =
     [];
   const settingsSaves: ModerationSettings[] = [];
@@ -207,21 +200,9 @@ function mockSystem({
   let currentSettings = settings;
   const platformOf = (request: Request): Platform => {
     const platform = new URL(request.url).searchParams.get('platform');
-    return perPlatform && platform === 'IOS' ? 'IOS' : 'ANDROID';
+    return platform === 'IOS' ? 'IOS' : 'ANDROID';
   };
   server.use(
-    http.all('*/api/*', ({ request }) => {
-      requests.push(
-        `${request.method} ${new URL(request.url).pathname}${new URL(request.url).search}`,
-      );
-    }),
-    http.get('*/api/app/version-info', ({ request }) => {
-      const platform = new URL(request.url).searchParams.get('platform');
-      if (perPlatform && platform !== null && platform !== 'ANDROID' && platform !== 'IOS') {
-        return fail(400, 'invalid_request');
-      }
-      return ok({ latestVersion: '2.2', minVersion: '2.1', note: '' });
-    }),
     http.get('*/api/admin/system/app-version', ({ request }) => ok(current[platformOf(request)])),
     http.put('*/api/admin/system/app-version', async ({ request }) => {
       const body = (await request.json()) as AppVersionRequest;
@@ -244,7 +225,6 @@ function mockSystem({
     http.get('*/api/admin/system/client-versions', () => clients(++clientLoads)),
   );
   return {
-    requests,
     clientLoads: () => clientLoads,
     versionSaves,
     settingsSaves,
@@ -291,7 +271,6 @@ async function credentialRow(name: string) {
 }
 
 beforeEach(() => {
-  forgetIosSupport();
   mockSession(userOf(['ADMIN']));
 });
 
@@ -394,7 +373,7 @@ describe('SystemPage', () => {
       ]);
     });
 
-    it('edits iOS apart from Android on a Backend that keeps platforms apart', async () => {
+    it('edits iOS apart from Android', async () => {
       const { versionSaves } = mockSystem();
       renderApp('/admin/system');
       const card = await versionCard();
@@ -414,18 +393,6 @@ describe('SystemPage', () => {
       ]);
       await userEvent.click(within(card).getByRole('radio', { name: 'Android' }));
       expect(await within(card).findByRole('textbox', { name: 'Последняя' })).toHaveValue('2.2');
-    });
-
-    it('never asks for iOS on a Backend before per-platform versions', async () => {
-      const { requests } = mockSystem({ perPlatform: false });
-      renderApp('/admin/system');
-      const card = await versionCard();
-
-      expect(await within(card).findByRole('textbox', { name: 'Последняя' })).toHaveValue('2.2');
-      await waitFor(() => expect(requests).toContain('GET /api/app/version-info?platform=PROBE'));
-
-      expect(within(card).queryByRole('radiogroup', { name: 'Платформа' })).toBeNull();
-      expect(requests.filter((request) => request.includes('platform=IOS'))).toEqual([]);
     });
 
     it('does not let the minimum exceed the latest version', async () => {

@@ -3,13 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './api/client';
+import { pages } from './pages';
 import { mockStaffSources, pageOf } from './test/admin';
 import { renderApp } from './test/render';
 import {
   fail,
   mockChallenges,
-  legacySessionLost,
-  mockLegacySignedOut,
   mockPoll,
   mockSession,
   mockSignedOut,
@@ -137,14 +136,34 @@ describe('Shell', () => {
 
     expect(await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ')).toBeInTheDocument();
   });
+
+  it('reloads the page once when a section of an older build is gone', async () => {
+    mockSession(userOf([]));
+    vi.spyOn(pages.me, 'load').mockRejectedValue(new TypeError('Failed to fetch'));
+
+    renderApp('/me');
+
+    await waitFor(() => expect(sessionStorage.getItem('iw-section-reload')).toBe('1'));
+    expect(screen.queryByText('Не удалось открыть раздел')).not.toBeInTheDocument();
+  });
+
+  it('offers a retry when a section still does not load after the reload', async () => {
+    sessionStorage.setItem('iw-section-reload', '1');
+    mockSession(userOf([]));
+    vi.spyOn(pages.me, 'load').mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    renderApp('/me');
+
+    expect(await screen.findByText('Не удалось открыть раздел')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Повторить' }));
+
+    expect(await screen.findByRole('heading', { name: 'Профиль' })).toBeInTheDocument();
+    expect(sessionStorage.getItem('iw-section-reload')).toBeNull();
+  });
 });
 
 describe('Session', () => {
-  it.each([
-    ['401 unauthorized', mockSignedOut],
-    ['403 forbidden of a Backend before BK-15', mockLegacySignedOut],
-  ])('sends a visitor to the login page after %s on /me', async (_, signedOut) => {
-    signedOut();
+  it('sends a visitor to the login page after 401 unauthorized on /me', async () => {
+    mockSignedOut();
     mockChallenges('ABCDEFGH');
     mockPoll();
 
@@ -178,17 +197,6 @@ describe('Session', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Войти' }));
     expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
     expect(location.pathname).toBe('/app/login');
-  });
-
-  it('asks a signed-in user to sign in again after a bare 403 of a Backend before BK-15', async () => {
-    mockSession(userOf(['ADMIN']));
-    server.use(http.get('*/api/admin/users', legacySessionLost));
-    renderApp('/admin/users');
-
-    expect(await screen.findByRole('alertdialog', { name: 'Сессия истекла' })).toBeInTheDocument();
-    expect(
-      screen.queryByText('Недостаточно прав, чтобы открыть эти данные.'),
-    ).not.toBeInTheDocument();
   });
 
   it.each(['forbidden', 'restricted', 'permission_denied'])(
@@ -273,6 +281,22 @@ describe('Session', () => {
     expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
     await waitFor(() => expect(location.pathname).toBe('/app/login'));
     expect(signedIn).toBe(false);
+  });
+
+  it('signs out quietly when the session has already expired', async () => {
+    mockSession(userOf([]));
+    server.use(http.post('*/api/web/auth/logout', () => fail(401, 'unauthorized')));
+    mockChallenges('ABCDEFGH');
+    mockPoll();
+    renderApp('/');
+    await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ');
+
+    await userEvent.click(rail().getByRole('button', { name: 'Выйти' }));
+
+    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    expect(location.pathname).toBe('/app/login');
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Не удалось выйти')).not.toBeInTheDocument();
   });
 
   it('reports a failed sign-out and stays', async () => {

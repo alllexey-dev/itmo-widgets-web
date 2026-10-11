@@ -39,8 +39,8 @@ export function targetOf(target: string): Target {
 const IOS_PREFIX = 'IOS: ';
 
 /**
- * App version changes name their platform: Backend prefixes iOS details with `IOS: ` (BK-17); entries
- * without it, including every one written before BK-17, are Android. Other actions have no platform.
+ * App version changes name their platform: Backend prefixes iOS details with `IOS: `; entries without
+ * it, including every one written before per-platform versions, are Android. Other actions have none.
  */
 export function detailsOf(entry: AuditEntry): { platform: string | null; text: string | null } {
   if (entry.action !== 'APP_VERSION_CHANGED') return { platform: null, text: entry.details };

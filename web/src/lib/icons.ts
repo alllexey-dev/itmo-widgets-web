@@ -19,7 +19,6 @@ import i_timer_off from '@material-symbols/svg-400/rounded/timer_off.svg?raw';
 import i_hourglass_top from '@material-symbols/svg-400/rounded/hourglass_top.svg?raw';
 import i_cloud_off from '@material-symbols/svg-400/rounded/cloud_off.svg?raw';
 import i_search_off from '@material-symbols/svg-400/rounded/search_off.svg?raw';
-import i_construction from '@material-symbols/svg-400/rounded/construction.svg?raw';
 import i_download from '@material-symbols/svg-400/rounded/download.svg?raw';
 import i_qr_code_2 from '@material-symbols/svg-400/rounded/qr_code_2.svg?raw';
 import i_arrow_forward from '@material-symbols/svg-400/rounded/arrow_forward.svg?raw';
@@ -73,7 +72,6 @@ defineIcons({
   hourglass_top: i_hourglass_top,
   cloud_off: i_cloud_off,
   search_off: i_search_off,
-  construction: i_construction,
   download: i_download,
   qr_code_2: i_qr_code_2,
   arrow_forward: i_arrow_forward,

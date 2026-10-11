@@ -65,8 +65,7 @@ default is the package's: the calm (`tonal`) palette from `#0061a4`, following
 the system. `public/theme-init.js` sets `data-theme` from the cookie before the
 first paint, so a manual dark choice does not flash (the package does not ship
 such a script yet). `Оформление` changes mode, seed and palette; it is in the
-rail, the phone top bar and on the login page's top bar. The landing still uses its own `iw-theme`
-until WB-16b moves it to the package.
+rail, the phone top bar and on the login page's top bar. The landing still uses its own `iw-theme`.
 
 ## Fonts and icons
 

@@ -29,12 +29,9 @@ errors over 7 days and the run list.
 
 ## App version
 
-App-version fields are latest, minimum and update note, per platform. The iOS
-editor appears only on a Backend that keeps platforms apart (BK-17): one probe
-per page load asks `/api/app/version-info?platform=PROBE`, and only a 400
-`invalid_request` proves it. An older Backend ignores `platform` and answers
-Android's values, so saving iOS there would overwrite Android. A save forgets
-the platform's version and the audit log.
+App-version fields are latest, minimum and update note, per platform; a
+"Платформа" switch picks Android or iOS. A save forgets the platform's version
+and the audit log.
 
 ## Moderation rules
 

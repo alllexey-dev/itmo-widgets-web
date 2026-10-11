@@ -1,5 +1,5 @@
 import { forget } from '@alllexey/ui';
-import { api, ApiError } from '../../api/client';
+import { api } from '../../api/client';
 import type {
   AppVersion,
   AppVersionRequest,
@@ -36,34 +36,6 @@ export async function saveVersion(
   forget(versionKey(platform));
   forget(AUDIT_PREFIX);
   return saved;
-}
-
-// A Backend before BK-17 ignores `?platform=` and answers Android's values for iOS, so a save there
-// would overwrite Android. BK-17 answers an unknown platform with 400 `invalid_request`, older ones
-// with 200: one probe per page load decides whether the iOS editor exists.
-const PROBE_PLATFORM = 'PROBE';
-let iosProbe: Promise<boolean> | null = null;
-
-export function supportsIos(): Promise<boolean> {
-  iosProbe ??= api
-    .get<unknown>('/api/app/version-info', { query: { platform: PROBE_PLATFORM } })
-    .then(
-      () => false,
-      (error: unknown) => {
-        if (error instanceof ApiError && error.status === 400 && error.code === 'invalid_request') {
-          return true;
-        }
-        // Unknown (network, 5xx): Android only for now, ask again next time.
-        iosProbe = null;
-        return false;
-      },
-    );
-  return iosProbe;
-}
-
-/** Tests start every page load from scratch. */
-export function forgetIosSupport(): void {
-  iosProbe = null;
 }
 
 export const SETTINGS_PATH = '/api/admin/moderation/settings';

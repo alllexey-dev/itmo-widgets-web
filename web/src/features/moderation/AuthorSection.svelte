@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Avatar, Icon } from '@alllexey/ui';
   import { href } from '../../lib/router.svelte';
-  import { formatDate } from './format';
+  import { formatDate } from '../../lib/format';
   import { CAPABILITIES } from './labels';
   import type { AdminUserSummary, SubmitterHistory } from './types';
 

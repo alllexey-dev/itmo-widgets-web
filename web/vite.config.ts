@@ -8,7 +8,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://dev.widgets.alllexey.dev',
+        target: process.env.API_TARGET ?? 'https://dev.widgets.alllexey.dev',
         changeOrigin: true,
         secure: true,
       },

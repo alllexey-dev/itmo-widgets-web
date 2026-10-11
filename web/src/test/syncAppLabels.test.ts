@@ -23,7 +23,7 @@ const commit = () => {
     '-qm',
     'Fixture',
   );
-  git('update-ref', 'refs/remotes/origin/v2.3/next', 'HEAD');
+  git('update-ref', 'refs/remotes/origin/master', 'HEAD');
 };
 const run = () =>
   spawnSync(process.execPath, [join(root, 'scripts/sync-app-labels.mjs'), '--app', app], {

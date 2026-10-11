@@ -13,12 +13,12 @@ BACKEND=${BACKEND_REPO:-$HOME/proj/itmo-widgets-backend}
 SNAPSHOT=$(mktemp)
 trap 'rm -f "$SNAPSHOT"' EXIT
 if [ -d "$BACKEND" ] && git -C "$BACKEND" cat-file -e "$SHA^{commit}" 2>/dev/null; then
-    git -C "$BACKEND" merge-base --is-ancestor "$SHA" origin/v2.3/next
+    git -C "$BACKEND" merge-base --is-ancestor "$SHA" origin/master
     git -C "$BACKEND" show "$SHA:docs/openapi.json" > "$SNAPSHOT"
 else
-    status=$(gh api --method GET "repos/$REPO/compare/$SHA...v2.3/next" --jq '.status')
+    status=$(gh api --method GET "repos/$REPO/compare/$SHA...master" --jq '.status')
     if [ "$status" != ahead ] && [ "$status" != identical ]; then
-        echo 'The source commit is not on Backend v2.3/next.' >&2
+        echo 'The source commit is not on Backend master.' >&2
         exit 1
     fi
     gh api --method GET -H 'Accept: application/vnd.github.raw' \

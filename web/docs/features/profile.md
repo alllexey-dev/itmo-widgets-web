@@ -8,5 +8,5 @@
   (`/api/users/me/restrictions`).
 - "Этот вход" with "Выйти".
 
-Account deletion arrives with WV-07; until then the landing's
-`/delete-account` page describes it.
+Account deletion is not in the web app; the landing's `/delete-account` page
+describes it.

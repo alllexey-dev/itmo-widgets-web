@@ -15,11 +15,13 @@
   import { errorText } from '../api/errors';
   import Forbidden from './Forbidden.svelte';
   import { track } from './lazy';
-  import { RAIL, type LazyPage, type PageTable } from './navigation';
+  import LoadError from './LoadError.svelte';
+  import { RAIL, type PageTable } from './navigation';
   import NotFound from './NotFound.svelte';
-  import PlannedSection from './PlannedSection.svelte';
   import { href, router, type RouteName } from './router.svelte';
   import { displayName, hasAccess, roleLabel, session } from './session.svelte';
+
+  const RELOADED = 'iw-section-reload';
 
   let { pages }: { pages: PageTable } = $props();
 
@@ -39,14 +41,30 @@
   );
   const allowed = $derived(hasAccess(user, router.current.access));
 
-  // Built sections load on first visit; the loaded component is kept per route name.
+  // Sections load on first visit; the loaded component is kept per route name.
   let loaded = $state<Partial<Record<RouteName, Component>>>({});
+  let failed = $state<Partial<Record<RouteName, unknown>>>({});
   $effect(() => {
     const name = router.route.name;
-    if (!entry || !('load' in entry) || !allowed || loaded[name]) return;
-    void track(entry.load()).then((module) => (loaded[name] = module.default));
+    if (!entry || !allowed || loaded[name] || failed[name]) return;
+    void track(entry.load()).then(
+      (module) => {
+        sessionStorage.removeItem(RELOADED);
+        loaded[name] = module.default;
+      },
+      (error: unknown) => {
+        // After a deploy the old hashed chunks are gone: one reload picks up the new build.
+        if (sessionStorage.getItem(RELOADED)) {
+          failed[name] = error;
+          return;
+        }
+        sessionStorage.setItem(RELOADED, '1');
+        location.reload();
+      },
+    );
   });
   const PageComponent = $derived(loaded[router.route.name]);
+  const loadError = $derived(failed[router.route.name]);
 
   let leaving = $state(false);
   async function logout() {
@@ -65,9 +83,7 @@
     // Prefetch the sections this user can open once the browser is idle.
     const prefetch = () => {
       if (!session.user) return;
-      Object.values(pages)
-        .filter((page): page is LazyPage => 'load' in page)
-        .forEach((page) => void track(page.load()));
+      Object.values(pages).forEach((page) => void track(page.load()).catch(() => undefined));
     };
     if ('requestIdleCallback' in window) {
       const id = requestIdleCallback(prefetch, { timeout: 3000 });
@@ -116,12 +132,16 @@
       <NotFound />
     {:else if !allowed}
       <Forbidden access={router.current.access} />
-    {:else if 'title' in entry}
-      <PlannedSection title={entry.title} text={entry.text} />
     {:else if PageComponent}
       {#key router.route}
         <PageComponent />
       {/key}
+    {:else if loadError}
+      <LoadError
+        error={loadError}
+        title="Не удалось открыть раздел"
+        onretry={() => (failed[router.route.name] = undefined)}
+      />
     {:else}
       <div class="waiting"><LoadingIndicator size={56} /></div>
     {/if}

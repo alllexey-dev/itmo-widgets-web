@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@alllexey/ui';
-  import { formatDateTime, formatRelative } from './format';
+  import { formatDateTime, formatRelative } from '../../lib/format';
   import { CATEGORIES, hostOf, scoreText, visibilityLabel } from './labels';
   import type { SubjectLinkTarget } from './types';
 

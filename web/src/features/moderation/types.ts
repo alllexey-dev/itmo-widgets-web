@@ -2,9 +2,7 @@ import type { components } from '../../api/schema';
 
 type Schemas = components['schemas'];
 
-// BK-08 capabilities are not required at runtime until both hosts run that release.
-type ModerationAuthor = Omit<Schemas['UserData'], 'capabilities'> &
-  Partial<Pick<Schemas['UserData'], 'capabilities'>>;
+type ModerationAuthor = Schemas['UserData'];
 
 export type AdminPage<T> = Omit<Schemas['AdminPageAdminCaseItem'], 'items'> & { items: T[] };
 export type AdminUserSummary = Schemas['AdminUserSummary'];

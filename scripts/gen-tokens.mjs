@@ -30,7 +30,7 @@ const value = (path, unit = "") => {
 };
 const kebab = (role) =>
   role.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-// The web app takes its theme from @alllexey/ui (WB-16a); only the landing block is generated here.
+// The web app takes its theme from @alllexey/ui; only the landing block is generated here.
 const roles = [
   "surface",
   "surfaceContainerLow",

@@ -44,7 +44,10 @@ the signed-in `Account` linking to `/me`, `Выйти` and `Оформление
 the session, then renders `NotFound`, `Forbidden` (`Нет доступа`, without a
 request to Backend) or the page. A page component is keyed by the route, so
 moving between two users' pages starts fresh. Once the browser is idle, the
-shell prefetches every section's chunk. The rail is filtered by the same
+shell prefetches every section's chunk. If a section's chunk fails to load
+(after a deploy the old hashed chunks are gone), the shell reloads the page
+once; a `sessionStorage` flag stops a loop, and a second failure shows
+`LoadError` with `Повторить`. The rail is filtered by the same
 `hasAccess` rule as the routes.
 
 Page state that should survive a reload or a shared link lives in the query
@@ -58,21 +61,13 @@ history entry and drops empty values. Section documents list their parameters.
   concurrent callers share the request; roles the web does not know are ignored.
 - `hasAccess(user, access)` is the only role rule: `ADMIN` implies moderator
   rights. The backend enforces access; the UI only hides.
-- The API client reports a lost session (`onSessionLost`) on 401 from any
-  request, 403 from `/api/web/auth/me` and a 403 without an `ApiResponse`
-  envelope from any request. A visitor who never got in goes
+- The API client reports a lost session (`onSessionLost`) on a 401 from any
+  request, except `401 reauth_required`. A visitor who never got in goes
   straight to `/login`; a signed-in user sees the modal `Сессия истекла` with
   `Войти` first, so the page under it does not vanish. On `/login` the signal is
   ignored: the login page checks the session itself.
-- Backend BK-15 uses `401 unauthorized` for a missing or expired cookie session.
-  Backend 1.7.0 answers it with a bare 403 (empty body) on every route, while
-  every real denial (`permission_denied`, `access_denied`, `restricted`,
-  `csrf`) carries an envelope. Keep both `403` compatibility branches while
-  production may still run the older Backend. They may be removed only after
-  Backend 1.8.0 reaches production (gate R), in a later 2.3.x change.
-  An enveloped 403 from another endpoint keeps the session and shows the page's
-  access error (`src/lib/LoadError.svelte`).
-- `401 reauth_required` (Backend BK-WS2: a moderator or admin route with a
+- A 403 keeps the session and shows the page's access error (`src/lib/LoadError.svelte`).
+- `401 reauth_required` (a moderator or admin route with a
   session older than 12 hours) is not a lost session: the client calls
   `onReauthRequired` instead, the shell shows the dismissible dialog
   `Для действий администратора войдите заново`, and the student sections keep
@@ -80,7 +75,8 @@ history entry and drops empty values. Section documents list their parameters.
   lost-session `Войти` also passes `next`. After approval the login page forgets
   cached responses and returns to `next` (an app path, never `/login`).
 - `session.logout()` posts `/api/web/auth/logout`, forgets the user and every
-  cached response and goes to `/login`.
+  cached response and goes to `/login`. A lost session on that request (an
+  expired cookie) counts as signed out, not as a failed sign-out.
 
 ## Data loading
 
@@ -113,9 +109,9 @@ All HTTP goes through `src/api/client.ts`:
   cookie sessions (CSRF, answer `403 csrf` otherwise).
 - The `ApiResponse` envelope `{success, data, error: {message, code}}` is
   unwrapped; the promise resolves with `data`.
-- Failures throw `ApiError(message, status, code)` with `sessionLost` and
-  helpers `isUnauthorized` (401 or a lost session), `isForbidden` (403 that is
-  not a lost session) and `isNetwork` (status 0). Aborts rethrow the
+- Failures throw `ApiError(message, status, code)` with `sessionLost` (a 401
+  other than `reauth_required`) and helpers `isForbidden` (403) and
+  `isNetwork` (status 0). Aborts rethrow the
   `AbortError` untouched.
 
 Error codes:
@@ -138,14 +134,14 @@ technical and are never shown.
 
 `src/api/openapi.json` is the byte-identical Backend `docs/openapi.json` snapshot
 at the full commit recorded in `src/api/openapi.source` (including its SHA-256).
-Refresh only from a commit on Backend `v2.3/next` with
+Refresh only from a commit on Backend `master` with
 `scripts/sync-openapi.sh <full-sha>` at the repository root, then run
 `cd web && npm run gen:api`. The script reads a local Backend checkout when
 available (`BACKEND_REPO` overrides its path), otherwise GitHub's commit-pinned
 contents API; it never calls a running Backend. Never hand-edit the snapshot or
 `schema.ts`, including during a rebase: refresh and regenerate them instead.
 
-`openapi-typescript` is pinned to **7.13.0**, as validated by SP-18, with
+`openapi-typescript` is pinned to **7.13.0** with
 TypeScript **6.0.3**. Its published TypeScript peer range still says `^5.x`;
 `package.json` overrides that peer only for this generator to the application's
 exact TypeScript pin. Normal `npm ci` works without global peer flags. The
@@ -199,9 +195,9 @@ the code) together. ESLint `no-restricted-imports` (`eslint.config.js`) lets a
 feature import only itself, `src/lib` and `src/api`, with canonical relative
 paths; `src/lib` and `src/api` never import a feature. Features meet only in
 `App.svelte` and `pages.ts`. Tests are exempt;
-`src/test/featureBoundaries.test.ts` checks the rule itself. Small pieces two
-features both need (an avatar, a date format) are duplicated per feature
-rather than shared through a feature.
+`src/test/featureBoundaries.test.ts` checks the rule itself. Pieces several
+features need (number and date formats, pagination, `LoadError`) live in
+`src/lib`; nothing is shared through a feature.
 
 ## Testing
 
@@ -211,15 +207,14 @@ Vitest runs in jsdom with `src/test/setup.ts`:
   `onUnhandledRequest: 'error'`, so every request a test makes must be mocked.
   After each test handlers are reset, the session, the response cache and the
   snackbars are cleared, the URL returns to `/app/`, and `localStorage`, the
-  theme attribute and cookie are removed. `fetch` is never stubbed.
+  theme attribute and cookie are removed, and `sessionStorage` is cleared.
+  `fetch` is never stubbed.
 - `src/test/browser-shims.ts` adds to jsdom only `matchMedia`, `animate`,
   `ResizeObserver`, `scrollTo` and an empty 2D canvas with `Path2D` for uPlot.
   Tests do not register the package's custom elements (jsdom has no
   constructable stylesheets), so they render as plain elements.
 - Helpers in `server.ts`: `ok(data)` and `fail(status, code)` build backend
-  envelopes; `userOf(roles)`, `mockSession`, `mockSignedOut` (401 on `/me`,
-  matching Backend BK-15), `mockLegacySignedOut` (bare 403 on `/me` before BK-15), `legacySessionLost`
-  (that bare 403 for any handler),
+  envelopes; `userOf(roles)`, `mockSession`, `mockSignedOut` (401 on `/me`),
   `mockChallenges` and `mockPoll` for sign-in.
 - `src/test/admin.ts` holds synthetic admin answers (`pageOf`,
   `credentialsOf`, `sportStatusOf`, `aiSummariesOf`, `reviewsSyncOf`,
@@ -302,11 +297,11 @@ visibility labels with the recorded app catalog and icon registry. Its
 from the repository root with Node 22 and Python 3:
 
 ```bash
-node scripts/sync-app-labels.mjs --app ~/proj/.wt/android/next
+node scripts/sync-app-labels.mjs --app <path to the ITMO.Widgets checkout>
 ```
 
-`--app` defaults to that path. The app checkout must be clean, with its HEAD on
-the locally recorded `origin/v2.3/next` history. The script reads committed files
+The app checkout must be clean, with its HEAD on the locally recorded
+`origin/master` history. The script reads committed files
 at that immutable SHA, discovers `values/strings*.xml` across source layouts,
 excludes `build/`, and records the SHA alongside strings and icon symbols in
 `src/test/fixtures/app-labels.json`. Conflicting resource keys are refused.

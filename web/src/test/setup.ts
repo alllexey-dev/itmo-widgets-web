@@ -25,6 +25,7 @@ afterEach(() => {
   history.replaceState(null, '', '/app/');
   router.refresh();
   localStorage.clear();
+  sessionStorage.clear();
   delete document.documentElement.dataset.theme;
   document.cookie = 'alllexey-theme=; Max-Age=0; Path=/';
 });

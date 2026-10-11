@@ -48,6 +48,14 @@ export function userSummary(overrides: Partial<AdminUserSummary> = {}): AdminUse
   } satisfies AdminUserSummary;
 }
 
+/** A case author as Backend sends it, with the viewer's capabilities. */
+function authorOf(name: string) {
+  return {
+    ...userSummary({ name }),
+    capabilities: { canViewSchedule: true, canViewSport: true, canViewFriends: true },
+  };
+}
+
 export function pageOf<T>(all: readonly T[], request: Request, defaultSize = 20): AdminPage<T> {
   const url = new URL(request.url);
   const page = Number(url.searchParams.get('page') ?? 0);
@@ -106,7 +114,7 @@ export function linkTarget(
       score: 0,
       updatedAt: minutesAgo(30),
     },
-    author: userSummary({ name: seed.authorName ?? 'Иван Петров' }),
+    author: authorOf(seed.authorName ?? 'Иван Петров'),
     reports: [],
     submitterHistory: { approved: 4, rejected: 1, dismissedReports: 0, activeRestrictions: [] },
     ...overrides,
@@ -175,7 +183,7 @@ export function reviewTarget(
       verification: 'PENDING',
       verifiedFlowId: null,
     },
-    author: userSummary({ name: seed.authorName ?? 'Иван Петров' }),
+    author: authorOf(seed.authorName ?? 'Иван Петров'),
     reports: [],
     submitterHistory: { approved: 2, rejected: 0, dismissedReports: 0, activeRestrictions: [] },
     ...overrides,

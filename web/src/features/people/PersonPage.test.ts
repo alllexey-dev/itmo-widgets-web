@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import type { components } from '../../api/schema';
 import { renderApp } from '../../test/render';
-import { fail, legacySessionLost, mockSession, ok, server, userOf } from '../../test/server';
+import { fail, mockSession, ok, server, userOf } from '../../test/server';
 import {
   autoEntryOf,
   freeEntryOf,
@@ -209,9 +209,9 @@ describe('PersonPage', () => {
     mockSession(userOf([]));
     mockPerson();
     server.use(
-      http.get(`*/api/schedule/lessons/user/${ISU}`, legacySessionLost),
-      http.get(`*/api/sport/users/${ISU}/bookings`, legacySessionLost),
-      http.get(`*/api/users/${ISU}/friends`, legacySessionLost),
+      http.get(`*/api/schedule/lessons/user/${ISU}`, () => fail(401, 'unauthorized')),
+      http.get(`*/api/sport/users/${ISU}/bookings`, () => fail(401, 'unauthorized')),
+      http.get(`*/api/users/${ISU}/friends`, () => fail(401, 'unauthorized')),
     );
 
     renderApp(`/u/${ISU}`);
