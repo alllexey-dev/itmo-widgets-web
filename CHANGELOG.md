@@ -4,6 +4,8 @@ Dates are production deploys; before 2026-10-02 they are commit dates.
 
 ## Unreleased
 
+- `/pair` shows a page for device pairing links: open the link on the phone with ITMO.Widgets, scan the QR or paste the link into "Подключить устройство". The page never reads the link's fragment.
+- "Открыть в приложении" on link pages keeps the link's query and fragment.
 - Signing out with an expired session signs out instead of showing "Сессия истекла" and "Не удалось выйти".
 - A section whose code is gone after a deploy reloads the page once; if it still does not load, it shows an error with "Повторить" instead of spinning forever.
 - The app version editor on Система always offers Android and iOS.

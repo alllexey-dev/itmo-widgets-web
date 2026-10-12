@@ -8,6 +8,7 @@
     return;
   }
   var fallback = encodeURIComponent('https://github.com/alllexey-dev/ITMO.Widgets/releases/latest');
-  button.href = 'intent://' + location.host + location.pathname +
+  // Android keeps a fragment placed before #Intent; in the intent's data URI.
+  button.href = 'intent://' + location.host + location.pathname + location.search + location.hash +
     '#Intent;scheme=https;package=dev.alllexey.itmowidgets;S.browser_fallback_url=' + fallback + ';end';
 })();

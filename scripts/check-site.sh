@@ -78,12 +78,12 @@ header() {
 APP_PATHS=(/app/ '/app/login?code=K7MW3QXP' /app/friends /app/u/1 /app/sport /app/me
     /app/admin/moderation /app/admin/restrictions /app/admin/dashboard /app/admin/users
     /app/admin/users/1 /app/admin/system /app/admin/sport /app/admin/reviews /app/admin/audit)
-for path in / /privacy.html /delete-account /u/1 /sport/1 /sport/p/1 "${APP_PATHS[@]}"; do
+for path in / /privacy.html /delete-account /u/1 /sport/1 /sport/p/1 /pair "${APP_PATHS[@]}"; do
     request "$path" 200
     [ "$(header Content-Security-Policy)" = "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" ] || fail "$path lacks the expected CSP"
     [ "$(header Permissions-Policy)" = 'camera=(), microphone=(), geolocation=()' ] || fail "$path lacks Permissions-Policy"
     case "$path" in
-        /u/*|/sport/*)
+        /u/*|/sport/*|/pair)
             [ "$(header X-Robots-Tag)" = noindex ] || fail "$path lacks X-Robots-Tag: noindex"
             ;;
         /app/*)
@@ -91,6 +91,12 @@ for path in / /privacy.html /delete-account /u/1 /sport/1 /sport/p/1 "${APP_PATH
             ;;
     esac
 done
+
+# The /pair fragment carries the device's key and secret: its only script is the theme switch,
+# which never reads the URL.
+request /pair 200
+[ "$(grep -o '<script[^>]*>' "$TMP/body")" = '<script src="/theme.js">' ] || fail '/pair must load no script but /theme.js'
+! grep -q location "$ROOT/site/theme.js" || fail 'theme.js must not read the location'
 
 request /app 301
 [ "$(header Location)" = /app/ ] || fail '/app must redirect to /app/'
