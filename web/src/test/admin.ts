@@ -162,6 +162,7 @@ export function dashboardOf(
       newUsers7d: 42,
       activeDevices7d: 610,
       activeDevices30d: 900,
+      devicesByPlatform: { ANDROID: 880, IOS: 20 },
       webSessions7d: 7,
       friendships: 380,
       links: { PRIVATE: 20, PENDING: 3, PUBLISHED: 150, REJECTED: 9, HIDDEN: 2 },

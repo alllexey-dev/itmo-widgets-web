@@ -4,6 +4,8 @@ const CHANNELS: Record<string, string> = {
   github: 'GitHub',
   play: 'Google Play',
   appstore: 'App Store',
+  testflight: 'TestFlight',
+  sideload: 'Установлено вручную',
   dev: 'Отладочная сборка',
 };
 
