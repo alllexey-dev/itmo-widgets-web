@@ -6,10 +6,12 @@ export function groupLine({ name, course, facultyShortName }: GroupData): string
 
 const PLATFORMS: Record<string, string> = { ANDROID: 'Android', IOS: 'iOS' };
 
-/** A device that never reported a build is an Android one: only Android clients predate the report. */
+/**
+ * The platform the device last reported, else the one it registered with; a value this web does not know is
+ * unknown, never Android.
+ */
 export function platformLabel(device: AdminDevice): string {
-  const platform = device.appPlatform ?? 'ANDROID';
-  return PLATFORMS[platform] ?? platform;
+  return PLATFORMS[device.appPlatform ?? device.platform] ?? 'Неизвестная платформа';
 }
 
 /** "Android 2 · iOS 1": platforms in a stable order, only those with devices. */

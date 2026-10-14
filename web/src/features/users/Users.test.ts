@@ -45,11 +45,12 @@ function detailOf(item: AdminUserItem, overrides: Partial<AdminUserDetail> = {})
     roles: item.roles,
     groups: [...item.groups, { name: 'M3105', course: 1, facultyShortName: 'ФИТиП' }],
     createdAt: item.createdAt,
-    devices: [{ name: 'Pixel 8', lastLogin: minutesAgo(90) }],
+    devices: [{ name: 'Pixel 8', lastLogin: minutesAgo(90), platform: 'ANDROID' }],
     friendsCount: 12,
     linksCount: 5,
     restrictions: [restrictionOf(item)],
     lastSeen: minutesAgo(15),
+    agentAccess: false,
     ...overrides,
   };
 }
@@ -229,10 +230,10 @@ describe('UserPage', () => {
 
   it.each<[string, AdminDevice[], string, string[]]>([
     [
-      'from a Backend before 1.8.0 as Android without data',
+      'registered on Android without a reported build',
       [
-        { name: 'Pixel 8', lastLogin: minutesAgo(90) },
-        { name: 'Galaxy A54', lastLogin: minutesAgo(600) },
+        { name: 'Pixel 8', lastLogin: minutesAgo(90), platform: 'ANDROID' },
+        { name: 'Galaxy A54', lastLogin: minutesAgo(600), platform: 'ANDROID' },
       ],
       'Android 2',
       ['Android · версия: нет данных', 'Android · версия: нет данных'],
@@ -248,6 +249,7 @@ describe('UserPage', () => {
           appPlatform: 'ANDROID',
           appDistribution: 'github',
           appVersionSeenAt: minutesAgo(5),
+          platform: 'ANDROID',
         },
         {
           name: 'iPhone 15',
@@ -257,6 +259,7 @@ describe('UserPage', () => {
           appPlatform: 'IOS',
           appDistribution: 'appstore',
           appVersionSeenAt: minutesAgo(60 * 3),
+          platform: 'IOS',
         },
         {
           name: 'Redmi Note 9',
@@ -266,6 +269,7 @@ describe('UserPage', () => {
           appPlatform: null,
           appDistribution: null,
           appVersionSeenAt: null,
+          platform: 'ANDROID',
         },
       ],
       'Android 2 · iOS 1',
@@ -273,6 +277,30 @@ describe('UserPage', () => {
         'Android · 2.3.0-beta.1 (20291) · GitHub Активно 5 мин. назад',
         'iOS · 2.3.0 (7) · App Store Активно 3 ч назад',
         'Android · версия: нет данных',
+      ],
+    ],
+    [
+      'by the registered platform until a build is reported, and an unknown one as unknown',
+      [
+        {
+          name: 'iOS, no push token',
+          lastLogin: minutesAgo(30),
+          appVersion: '2.3.0',
+          appBuild: 877,
+          appPlatform: 'IOS',
+          appDistribution: 'sideload',
+          appVersionSeenAt: minutesAgo(30),
+          platform: 'IOS',
+        },
+        { name: 'Apple iPhone', lastLogin: minutesAgo(60), platform: 'IOS' },
+        // A platform a later Backend may add.
+        { name: 'Web', lastLogin: minutesAgo(90), platform: 'WEB' as AdminDevice['platform'] },
+      ],
+      'iOS 2 · Неизвестная платформа 1',
+      [
+        'iOS · 2.3.0 (877) · Установлено вручную Активно 30 мин. назад',
+        'iOS · версия: нет данных',
+        'Неизвестная платформа · версия: нет данных',
       ],
     ],
   ])('lists devices %s', async (_, devices, counts, lines) => {
