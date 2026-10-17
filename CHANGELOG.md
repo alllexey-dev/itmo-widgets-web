@@ -4,6 +4,7 @@ Dates are production deploys; before 2026-10-02 they are commit dates.
 
 ## Unreleased
 
+- Friend tiles on a person's page show the given name from Backend's `givenName`: Backend now names users «Фамилия Имя», so the first word of the name is the surname. Avatar initials follow that order.
 - A user's devices show the platform the device registered with until it reports a build, so an iOS device is never labelled Android; a platform this web does not know shows as "Неизвестная платформа". The channels TestFlight and "Установлено вручную" (sideloaded iOS builds) have names. API types come from Backend 06bf4d1.
 - `/pair` shows a page for device pairing links: open the link on the phone with ITMO.Widgets, scan the QR or paste the link into "Подключить устройство". The page never reads the link's fragment.
 - "Открыть в приложении" on link pages keeps the link's query and fragment.

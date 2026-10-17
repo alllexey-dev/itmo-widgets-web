@@ -10,7 +10,8 @@ Cards, each requested only when the profile's `capabilities` open it:
   Moscow time.
 - Спорт: `/api/sport/users/<isu>/bookings`; queue entries with lesson names,
   confirmed bookings only as a number.
-- Друзья: the person's friends.
+- Друзья: the person's friends, each under their given name: `givenName` when Backend sends it, else the first
+  word of `name` (accounts that have not uploaded the name parts yet, whose `name` still starts with it).
 
 Missing `capabilities` (an older Backend) count as closed, and a 403 on a card
 shows it as "... скрыто" too, unless it is a lost session (a bare 403 of

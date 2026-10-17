@@ -6,8 +6,14 @@ export function nameOf(user: Pick<UserData, 'isu' | 'name'>): string {
   return user.name.trim() || `ИСУ ${user.isu}`;
 }
 
-export function firstNameOf(user: Pick<UserData, 'isu' | 'name'>): string {
-  return user.name.trim().split(/\s+/)[0] || `ИСУ ${user.isu}`;
+/**
+ * The given name from ITMO.ID's `given_name` (Backend's `name` is «Фамилия Имя» once it has it); the first word of
+ * `name` only for an account whose app has not uploaded its name parts yet, where `name` still starts with it.
+ */
+export function firstNameOf(
+  user: Pick<UserData, 'isu' | 'name'> & { givenName?: string | null },
+): string {
+  return user.givenName?.trim() || user.name.trim().split(/\s+/)[0] || `ИСУ ${user.isu}`;
 }
 
 export function groupLine({ name, course, facultyShortName }: GroupData): string {
