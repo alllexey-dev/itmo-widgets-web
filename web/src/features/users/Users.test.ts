@@ -323,6 +323,90 @@ describe('UserPage', () => {
     ).toEqual(lines);
   });
 
+  it("lists the user's apps, site sessions and agents with custom builds marked", async () => {
+    mockSession(userOf(['ADMIN']));
+    const seen = { firstSeenAt: minutesAgo(60 * 24 * 10), lastSeenAt: minutesAgo(30) };
+    mockUsers(
+      [ivan],
+      [
+        detailOf(ivan, {
+          clients: [
+            {
+              kind: 'ANDROID',
+              name: null,
+              version: '2.3.0',
+              build: '20300',
+              channel: 'play',
+              source: null,
+              commit: null,
+              base: null,
+              custom: false,
+              os: '36',
+              browser: null,
+              ...seen,
+            },
+            {
+              kind: 'AGENT',
+              name: 'Домашний сервер',
+              version: '1.4.0-mine',
+              build: null,
+              channel: 'custom',
+              source: 'local',
+              commit: null,
+              base: '1.4.0',
+              custom: true,
+              os: 'linux-arm64',
+              browser: null,
+              ...seen,
+            },
+            {
+              kind: 'WEB',
+              name: null,
+              version: '1a2b3c4',
+              build: null,
+              channel: 'web',
+              source: null,
+              commit: '1a2b3c4',
+              base: null,
+              custom: false,
+              os: null,
+              browser: 'safari/18',
+              ...seen,
+            },
+          ],
+        }),
+      ],
+    );
+
+    renderApp('/admin/users/311111');
+
+    const card = await screen.findByRole('region', { name: 'Клиенты' });
+    const rows = within(within(card).getByRole('list', { name: 'Клиенты' })).getAllByRole(
+      'listitem',
+    );
+    expect(rows.map((row) => row.querySelector('.headline')?.textContent?.trim())).toEqual([
+      'Android · 2.3.0 (20300)',
+      'Домашний сервер · 1.4.0-mine',
+      'Сайт · 1a2b3c4',
+    ]);
+    expect(rows[1]).toHaveTextContent('своя сборка');
+    expect(rows[1]).toHaveTextContent(
+      'Своя сборка · собрано локально · на основе 1.4.0 · linux-arm64',
+    );
+    expect(rows[2]).toHaveTextContent('Сайт · Safari 18');
+  });
+
+  it('says when Backend knows no clients of the user', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockUsers([ivan]);
+
+    renderApp('/admin/users/311111');
+
+    expect(await screen.findByRole('region', { name: 'Клиенты' })).toHaveTextContent(
+      'Нет данных о клиентах',
+    );
+  });
+
   it('says when the user has no devices', async () => {
     mockSession(userOf(['ADMIN']));
     mockUsers([ivan], [detailOf(ivan, { devices: [] })]);

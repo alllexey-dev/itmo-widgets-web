@@ -105,6 +105,10 @@ All HTTP goes through `src/api/client.ts`:
 - `api.get/post/put/patch/delete<T>(path, ...)` over `apiRequest`, with
   `credentials: 'same-origin'`, `Accept: application/json`, JSON bodies and a
   `query` object (empty values are dropped).
+- Every request carries `X-Client: kind=web; version=<commit or local>;
+  channel=web; commit=<sha>; browser=<family>/<major>` (`src/api/clientHeader.ts`;
+  Backend client statistics). The commit comes from the image's `REVISION`
+  build argument as `VITE_REVISION`; the raw user agent is never sent.
 - Every non-GET request carries `X-Web-Request: 1`, which Backend requires for
   cookie sessions (CSRF, answer `403 csrf` otherwise).
 - The `ApiResponse` envelope `{success, data, error: {message, code}}` is

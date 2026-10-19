@@ -276,6 +276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/system/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["adminSystem_clients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/system/credentials": {
         parameters: {
             query?: never;
@@ -447,6 +463,22 @@ export interface paths {
         put?: never;
         post: operations["agentPairing_createSessionPairing"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/self": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["agent_revokeSelf"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1156,6 +1188,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sport/sections/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["sportSection_createSportSection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sport/sections/my": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["sportSection_mySportSections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sport/sections/slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["sportSection_sportSectionSlots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sport/sections/{id}/occurrence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["sportSection_updateSportSectionOccurrence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sport/sections/{id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["sportSection_stopSportSection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sport/sign/sync": {
         parameters: {
             query?: never;
@@ -1678,6 +1790,24 @@ export interface components {
             /** @enum {string} */
             targetType: "SUBJECT_RESOURCE" | "TEACHER_REVIEW";
         };
+        AdminClient: {
+            base: string | null;
+            browser: string | null;
+            build: string | null;
+            channel: string | null;
+            commit: string | null;
+            custom: boolean;
+            /** Format: date-time */
+            firstSeenAt: string;
+            /** @enum {string} */
+            kind: "ANDROID" | "IOS" | "WEB" | "AGENT";
+            /** Format: date-time */
+            lastSeenAt: string;
+            name: string | null;
+            os: string | null;
+            source: string | null;
+            version: string;
+        };
         AdminClientBuild: {
             /** Format: int32 */
             build: number;
@@ -1687,6 +1817,47 @@ export interface components {
             /** @enum {string} */
             platform: "ANDROID" | "IOS";
             version: string;
+        };
+        AdminClientBuildGroup: {
+            /** Format: int64 */
+            active30d: number;
+            /** Format: int64 */
+            active7d: number;
+            channel: string | null;
+            custom: boolean;
+            source: string | null;
+            version: string;
+        };
+        AdminClientCount: {
+            /** Format: int64 */
+            active30d: number;
+            name: string | null;
+        };
+        AdminClientDay: {
+            /** Format: int64 */
+            active1d: number;
+            /** Format: int64 */
+            active30d: number;
+            /** Format: int64 */
+            active7d: number;
+            custom: boolean;
+            /** Format: date */
+            day: string;
+            /** @enum {string} */
+            kind: "ANDROID" | "IOS" | "WEB" | "AGENT";
+            version: string;
+        };
+        AdminClientKind: {
+            /** Format: int64 */
+            active1d: number;
+            /** Format: int64 */
+            active30d: number;
+            /** Format: int64 */
+            active7d: number;
+            builds: components["schemas"]["AdminClientBuildGroup"][];
+            /** @enum {string} */
+            kind: "ANDROID" | "IOS" | "WEB" | "AGENT";
+            platforms: components["schemas"]["AdminClientCount"][];
         };
         AdminClientVersionWindow: {
             /** Format: int64 */
@@ -1698,6 +1869,10 @@ export interface components {
         AdminClientVersions: {
             last30d: components["schemas"]["AdminClientVersionWindow"];
             last7d: components["schemas"]["AdminClientVersionWindow"];
+        };
+        AdminClients: {
+            history: components["schemas"]["AdminClientDay"][];
+            kinds: components["schemas"]["AdminClientKind"][];
         };
         AdminDashboard: {
             days: components["schemas"]["AdminDashboardDay"][];
@@ -1972,6 +2147,7 @@ export interface components {
         };
         AdminUserDetail: {
             agentAccess: boolean;
+            clients: components["schemas"]["AdminClient"][];
             /** Format: date-time */
             createdAt: string;
             devices: components["schemas"]["AdminDevice"][];
@@ -2063,6 +2239,11 @@ export interface components {
         };
         ApiResponseAdminClientVersions: {
             data: components["schemas"]["AdminClientVersions"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseAdminClients: {
+            data: components["schemas"]["AdminClients"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
@@ -2181,6 +2362,11 @@ export interface components {
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
+        ApiResponseListMySportSection: {
+            data: components["schemas"]["MySportSection"][] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
         ApiResponseListSportAutoSignEntry: {
             data: components["schemas"]["SportAutoSignEntry"][] | null;
             error: components["schemas"]["ErrorDetails"] | null;
@@ -2198,6 +2384,11 @@ export interface components {
         };
         ApiResponseListSportFreeSignQueue: {
             data: components["schemas"]["SportFreeSignQueue"][] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseListSportSectionSlot: {
+            data: components["schemas"]["SportSectionSlot"][] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
@@ -2228,6 +2419,11 @@ export interface components {
         };
         ApiResponseModerationSettings: {
             data: components["schemas"]["ModerationSettings"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseMySportSection: {
+            data: components["schemas"]["MySportSection"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
@@ -2541,6 +2737,18 @@ export interface components {
                 [key: string]: components["schemas"]["ModerationPolicy"];
             };
         };
+        MySportSection: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int64 */
+            id: number;
+            lesson: components["schemas"]["SportLessonDto"];
+            occurrences: components["schemas"]["SportSectionDate"][];
+            /** Format: int32 */
+            place: number;
+            /** Format: int32 */
+            subscribers: number;
+        };
         OwnTeacherReview: {
             anonymous: boolean;
             /** Format: uuid */
@@ -2765,6 +2973,42 @@ export interface components {
         };
         SportQueue: components["schemas"]["SportFreeSignQueue"] | components["schemas"]["SportAutoSignQueue"];
         SportQueueEntry: components["schemas"]["SportFreeSignEntry"] | components["schemas"]["SportAutoSignEntry"];
+        SportSectionDate: {
+            /** Format: date-time */
+            end: string;
+            /** Format: int64 */
+            entryId: number | null;
+            /** Format: int32 */
+            position: number | null;
+            /** Format: date-time */
+            start: string;
+            /** @enum {string|null} */
+            state: "QUEUED" | "LIMIT" | "SKIPPED" | null;
+            /** Format: int32 */
+            total: number | null;
+        };
+        SportSectionOccurrenceRequest: {
+            skipped: boolean;
+            /** Format: date-time */
+            start: string;
+        };
+        SportSectionRequest: {
+            /** Format: int64 */
+            lessonId: number;
+        };
+        SportSectionSlot: {
+            /** Format: int32 */
+            cap: number | null;
+            full: boolean;
+            /** Format: int64 */
+            lessonId: number;
+            /** Format: int32 */
+            place: number | null;
+            /** Format: int32 */
+            subscribers: number;
+            /** Format: int64 */
+            subscriptionId: number | null;
+        };
         SubjectLink: {
             audienceLabel: string | null;
             author: components["schemas"]["UserData"] | null;
@@ -2947,6 +3191,9 @@ export interface components {
         };
         UserData: {
             capabilities: components["schemas"]["UserCapabilities"];
+            familyName: string | null;
+            gender: string | null;
+            givenName: string | null;
             groups: components["schemas"]["GroupData"][];
             /** Format: int32 */
             isu: number;
@@ -2970,6 +3217,8 @@ export interface components {
         UserProfile: {
             /** @enum {string} */
             relationship: "NONE" | "OUTGOING" | "INCOMING" | "FRIENDS" | "BLOCKED";
+            /** Format: date-time */
+            requestedAt: string | null;
             user: components["schemas"]["UserData"];
         };
         UserRestriction: {
@@ -3464,6 +3713,26 @@ export interface operations {
             };
         };
     };
+    adminSystem_clients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminClients"];
+                };
+            };
+        };
+    };
     adminSystem_credentials: {
         parameters: {
             query?: never;
@@ -3732,6 +4001,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseCreatedPairing"];
+                };
+            };
+        };
+    };
+    agent_revokeSelf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseUnit"];
                 };
             };
         };
@@ -4769,6 +5058,120 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseFriendsSportBookingsResponse"];
+                };
+            };
+        };
+    };
+    sportSection_createSportSection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SportSectionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMySportSection"];
+                };
+            };
+        };
+    };
+    sportSection_mySportSections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListMySportSection"];
+                };
+            };
+        };
+    };
+    sportSection_sportSectionSlots: {
+        parameters: {
+            query: {
+                lessonIds: number[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListSportSectionSlot"];
+                };
+            };
+        };
+    };
+    sportSection_updateSportSectionOccurrence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SportSectionOccurrenceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMySportSection"];
+                };
+            };
+        };
+    };
+    sportSection_stopSportSection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseString"];
                 };
             };
         };

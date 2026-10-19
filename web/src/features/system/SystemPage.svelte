@@ -2,6 +2,7 @@
   import { PageHeader } from '@alllexey/ui';
   import { router } from '../../lib/router.svelte';
   import AppVersionCard from './AppVersionCard.svelte';
+  import ClientsCard from './ClientsCard.svelte';
   import ClientVersionsCard from './ClientVersionsCard.svelte';
   import CredentialsCard from './CredentialsCard.svelte';
   import './icons';
@@ -18,6 +19,7 @@
 />
 
 <div class="cards">
+  <div class="wide"><ClientsCard /></div>
   <div class="wide"><ClientVersionsCard /></div>
   <AppVersionCard />
   <CredentialsCard />

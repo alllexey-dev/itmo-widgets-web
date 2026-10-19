@@ -44,6 +44,20 @@ describe('api client', () => {
     expect(body).toEqual({ latest: '2.2' });
   });
 
+  it('names the web client in X-Client on every request', async () => {
+    let header: string | null | undefined;
+    server.use(
+      http.get('*/api/admin/audit', ({ request }) => {
+        header = request.headers.get('X-Client');
+        return ok([]);
+      }),
+    );
+
+    await api.get('/api/admin/audit');
+
+    expect(header).toMatch(/^kind=web; version=\S+; channel=web; .*browser=[a-z]+(\/\d+)?$/);
+  });
+
   it('does not mark GET requests', async () => {
     let headers: Headers | undefined;
     server.use(

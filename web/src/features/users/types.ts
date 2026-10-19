@@ -22,7 +22,11 @@ type AppField = 'appVersion' | 'appBuild' | 'appPlatform' | 'appDistribution' | 
 export type AdminDevice = Omit<Schemas['AdminDevice'], AppField> &
   Partial<Pick<Schemas['AdminDevice'], AppField>>;
 
-export type AdminUserDetail = Omit<Schemas['AdminUserDetail'], 'roles' | 'devices'> & {
+export type AdminClient = Schemas['AdminClient'];
+
+/** `clients` comes from Backend with client statistics (ADR 0034); an older Backend sends none. */
+export type AdminUserDetail = Omit<Schemas['AdminUserDetail'], 'roles' | 'devices' | 'clients'> & {
   roles: Role[];
   devices: AdminDevice[];
+  clients?: AdminClient[];
 };

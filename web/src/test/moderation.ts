@@ -53,6 +53,9 @@ function authorOf(name: string) {
   return {
     ...userSummary({ name }),
     capabilities: { canViewSchedule: true, canViewSport: true, canViewFriends: true },
+    familyName: null,
+    givenName: null,
+    gender: null,
   };
 }
 

@@ -1,12 +1,23 @@
 # System - `/admin/system`, administrator
 
-Система holds five cards: app versions in use, app version, keys and access,
-sport automation and moderation rules. `/admin/sport`, the former sport page,
+Система holds six cards: clients, app versions in use, app version, keys and
+access, sport automation and moderation rules. `/admin/sport`, the former sport page,
 opens the same page with focus on the sport card.
+
+## Clients
+
+The first card, full width, reads `GET /api/admin/system/clients` (Backend
+client statistics, ITMO.Widgets ADR 0034): clients of signed-in users that send
+`X-Client`. The top row counts each kind (Android, iOS, Сайт, Агент) over 30
+days with its 7-day and 1-day figures. A switch picks the kind; under it
+"Официальные сборки" and "Свои сборки" (forks and self-built clients, counted
+under their upstream version) list the 30-day counts with channel, source and
+the 7-day count, and "Системы" (OS versions) or "Браузеры" (for the site)
+count platforms. The history in the answer is not drawn yet.
 
 ## App versions in use
 
-The first card, full width, reads `GET /api/admin/system/client-versions`
+The second card, full width, reads `GET /api/admin/system/client-versions`
 once; the "7 дней" / "30 дней" switch picks `last7d` or `last30d` of the same
 answer. Backend counts a device as active when it registered or reported a
 build in the window, under the last build it reported.
