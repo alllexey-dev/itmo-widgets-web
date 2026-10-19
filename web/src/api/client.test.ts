@@ -165,7 +165,11 @@ describe('api client', () => {
     it('shares one refresh between concurrent requests', async () => {
       const calls = mockExpiredAccess();
 
-      await Promise.all([api.get('/api/friends'), api.get('/api/friends'), api.get('/api/friends')]);
+      await Promise.all([
+        api.get('/api/friends'),
+        api.get('/api/friends'),
+        api.get('/api/friends'),
+      ]);
 
       expect(calls.refresh).toBe(1);
     });
@@ -190,7 +194,10 @@ describe('api client', () => {
       unsubscribe = onSessionLost(lost);
       const calls = mockExpiredAccess(() => fail(401, 'unauthorized'));
 
-      await expect(api.get('/api/friends')).rejects.toMatchObject({ status: 401, sessionLost: true });
+      await expect(api.get('/api/friends')).rejects.toMatchObject({
+        status: 401,
+        sessionLost: true,
+      });
 
       expect(calls).toEqual({ friends: 1, refresh: 1 });
       expect(lost).toHaveBeenCalledOnce();
@@ -216,7 +223,9 @@ describe('api client', () => {
         }),
       );
 
-      await expect(api.get('/api/admin/dashboard')).rejects.toMatchObject({ code: 'reauth_required' });
+      await expect(api.get('/api/admin/dashboard')).rejects.toMatchObject({
+        code: 'reauth_required',
+      });
 
       expect(refresh).not.toHaveBeenCalled();
     });

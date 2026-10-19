@@ -143,7 +143,9 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
 }
 
 function isUnauthorized(response: Response, payload: unknown): boolean {
-  return response.status === 401 && !(isEnvelope(payload) && payload.error?.code === REAUTH_REQUIRED);
+  return (
+    response.status === 401 && !(isEnvelope(payload) && payload.error?.code === REAUTH_REQUIRED)
+  );
 }
 
 /** When this tab or another one last rotated the cookies, `Date.now()`. */
