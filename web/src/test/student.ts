@@ -24,12 +24,16 @@ export function profileOf(
 ): UserProfile {
   return {
     relationship: overrides.relationship ?? 'FRIENDS',
+    requestedAt: null,
     user: {
       isu,
       name,
       pictureUrl: null,
       groups: [{ name: overrides.group ?? 'P3212', course: 2, facultyShortName: 'ФПИиКТ' }],
       capabilities: { ...ALL_CAPABILITIES, ...overrides.capabilities },
+      familyName: null,
+      givenName: null,
+      gender: null,
     },
   };
 }
