@@ -128,6 +128,109 @@ describe('api client', () => {
     expect(lost).not.toHaveBeenCalled();
   });
 
+  describe('refresh', () => {
+    afterEach(() => localStorage.clear());
+
+    /** `/api/friends` answers 401 until the refresh rotated the cookies; counts both. */
+    function mockExpiredAccess(refresh: () => Response = () => ok({})) {
+      let rotated = false;
+      const calls = { friends: 0, refresh: 0 };
+      server.use(
+        http.get('*/api/friends', () => {
+          calls.friends += 1;
+          return rotated ? ok(['friend']) : fail(401, 'unauthorized');
+        }),
+        http.post('*/api/web/auth/refresh', ({ request }) => {
+          calls.refresh += 1;
+          expect(request.headers.get('X-Web-Request')).toBe('1');
+          const response = refresh();
+          rotated = response.ok;
+          return response;
+        }),
+      );
+      return calls;
+    }
+
+    it('rotates the cookies on 401 unauthorized and repeats the request once', async () => {
+      const lost = vi.fn();
+      unsubscribe = onSessionLost(lost);
+      const calls = mockExpiredAccess();
+
+      await expect(api.get('/api/friends')).resolves.toEqual(['friend']);
+
+      expect(calls).toEqual({ friends: 2, refresh: 1 });
+      expect(lost).not.toHaveBeenCalled();
+    });
+
+    it('shares one refresh between concurrent requests', async () => {
+      const calls = mockExpiredAccess();
+
+      await Promise.all([
+        api.get('/api/friends'),
+        api.get('/api/friends'),
+        api.get('/api/friends'),
+      ]);
+
+      expect(calls.refresh).toBe(1);
+    });
+
+    it('reuses a refresh another tab finished after the request was sent', async () => {
+      server.use(http.post('*/api/web/auth/refresh', () => fail(500, 'internal_error')));
+      let first = true;
+      server.use(
+        http.get('*/api/friends', () => {
+          if (!first) return ok(['friend']);
+          first = false;
+          localStorage.setItem('iw-session-refreshed-at', String(Date.now() + 1000));
+          return fail(401, 'unauthorized');
+        }),
+      );
+
+      await expect(api.get('/api/friends')).resolves.toEqual(['friend']);
+    });
+
+    it('reports a lost session when Backend rejects the refresh, without repeating the request', async () => {
+      const lost = vi.fn();
+      unsubscribe = onSessionLost(lost);
+      const calls = mockExpiredAccess(() => fail(401, 'unauthorized'));
+
+      await expect(api.get('/api/friends')).rejects.toMatchObject({
+        status: 401,
+        sessionLost: true,
+      });
+
+      expect(calls).toEqual({ friends: 1, refresh: 1 });
+      expect(lost).toHaveBeenCalledOnce();
+    });
+
+    it('keeps the session when the refresh itself fails', async () => {
+      const lost = vi.fn();
+      unsubscribe = onSessionLost(lost);
+      mockExpiredAccess(() => fail(502, 'http_error'));
+
+      await expect(api.get('/api/friends')).rejects.toMatchObject({ status: 502 });
+
+      expect(lost).not.toHaveBeenCalled();
+    });
+
+    it('does not refresh on 401 reauth_required', async () => {
+      const refresh = vi.fn();
+      server.use(
+        http.get('*/api/admin/dashboard', () => fail(401, 'reauth_required')),
+        http.post('*/api/web/auth/refresh', () => {
+          refresh();
+          return ok({});
+        }),
+      );
+
+      await expect(api.get('/api/admin/dashboard')).rejects.toMatchObject({
+        code: 'reauth_required',
+      });
+
+      expect(refresh).not.toHaveBeenCalled();
+    });
+  });
+
   it('turns a failed connection into a network ApiError', async () => {
     server.use(http.get('*/api/admin/audit', () => HttpResponse.error()));
 

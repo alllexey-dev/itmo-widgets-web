@@ -149,8 +149,8 @@ describe('ProfilePage', () => {
     renderApp('/me');
 
     const card = await screen.findByRole('region', { name: 'Этот вход' });
-    expect(within(card).getByText(/после 14 дней без действий/)).toBeInTheDocument();
-    expect(within(card).queryByText(/раз в 12 часов/) !== null).toBe(staff);
+    expect(within(card).getByText(/после 30 дней без действий/)).toBeInTheDocument();
+    expect(within(card).queryByText(/раз в 7 дней/) !== null).toBe(staff);
   });
 
   it('signs out from this sign-in card', async () => {
