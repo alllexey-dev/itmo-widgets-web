@@ -76,7 +76,7 @@ history entry and drops empty values. Section documents list their parameters.
   ignored: the login page checks the session itself.
 - A 403 keeps the session and shows the page's access error (`src/lib/LoadError.svelte`).
 - `401 reauth_required` (a moderator or admin route with a
-  session older than 12 hours) is not a lost session: the client calls
+  session older than 7 days) is not a lost session: the client calls
   `onReauthRequired` instead, the shell shows the dismissible dialog
   `Для действий администратора войдите заново`, and the student sections keep
   working. Its `Войти` opens `/login?next=<path>` without signing out; the

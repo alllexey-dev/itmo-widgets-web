@@ -12,7 +12,7 @@
 The rail shows the sections the role opens; the signed-in user at its bottom
 links to Профиль, next to `Выйти`. `Оформление` sets the shared alllexey.dev
 theme (see `../design.md`). A session refreshes itself while used and expires
-after 30 days without requests or 180 days after sign-in; moderator and admin actions need a sign-in at most 12 hours
+after 30 days without requests, with no absolute limit; moderator and admin actions need a sign-in at most 7 days
 old (see `../architecture.md`, Session). Only the phone app can approve sign-in; a web session
 cannot approve another browser. What happens when a session ends is described
 in `../architecture.md` (Session).
