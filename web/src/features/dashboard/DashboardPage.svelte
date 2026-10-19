@@ -201,7 +201,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 56px;
+    min-height: var(--md-row);
     padding: 0 24px;
     cursor: pointer;
   }

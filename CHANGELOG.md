@@ -4,6 +4,7 @@ Dates are production deploys; before 2026-10-02 they are commit dates.
 
 ## Unreleased
 
+- `@alllexey/ui` 0.5.0: density tokens and a rail whose menu button and items stay centred on short windows. The site keeps the default density; app sizes of controls, rows and cards follow the density tokens. On a user's page the "своя сборка" pill of a client keeps its own width.
 - Client statistics (ITMO.Widgets ADR 0034): every request names the web build and the browser family and major version in `X-Client`. Система gains the "Клиенты" card (apps, site and agents over 30 days, official and custom builds apart), and a user's page lists their clients. API types come from Backend a6360df.
 - The session renews itself: on a 401 the web rotates its cookies through `POST /api/web/auth/refresh` and repeats the request, one refresh at a time across tabs, so "Сессия истекла" shows only when Backend ended the session (30 days without use, sign-out or revocation; there is no absolute limit any more). Profile, "Этот вход" names the new limits: 30 idle days, and a staff sign-in confirmed once in 7 days instead of 12 hours. Needs Backend with the refresh route; with an older Backend the refresh fails and the session ends as before. API types come from Backend 9fbffd7.
 - Friend tiles on a person's page show the given name from Backend's `givenName`: Backend now names users «Фамилия Имя», so the first word of the name is the surname. Avatar initials follow that order.

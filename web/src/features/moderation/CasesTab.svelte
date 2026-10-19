@@ -179,7 +179,7 @@
     top: 16px;
     max-height: calc(100dvh - 32px);
     overflow-y: auto;
-    border-radius: var(--md-shape-xl);
+    border-radius: var(--md-card-shape);
   }
   .pane {
     min-width: 0;

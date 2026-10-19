@@ -160,7 +160,7 @@
                         client.build,
                       )}</span
                     >
-                    {#if client.custom}<span class="m3-pill tertiary">своя сборка</span>{/if}
+                    {#if client.custom}<span class="m3-pill tertiary own">своя сборка</span>{/if}
                     <span class="support">
                       {originLabel(client.channel, client.source)}{client.base
                         ? ` · на основе ${client.base}`
@@ -253,6 +253,10 @@
 </Loadable>
 
 <style>
+  /* The pill keeps its own width in the list item's column. */
+  .own {
+    align-self: flex-start;
+  }
   .back {
     margin: -8px 0 8px -12px;
   }
