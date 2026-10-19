@@ -137,6 +137,80 @@ const ADMIN = {
       },
     };
   },
+  '/api/admin/system/clients': () => {
+    const group = (custom, version, channel, source, active7d, active30d) => ({
+      custom,
+      version,
+      channel,
+      source,
+      active7d,
+      active30d,
+    });
+    return {
+      kinds: [
+        {
+          kind: 'ANDROID',
+          active1d: 640,
+          active7d: 980,
+          active30d: 1210,
+          builds: [
+            group(false, '2.3.0', 'play', 'alllexey-dev/ITMO.Widgets', 700, 860),
+            group(false, '2.3.0', 'github', 'alllexey-dev/ITMO.Widgets', 210, 260),
+            group(false, '2.2.1', 'play', null, 40, 70),
+            group(true, '2.3.0', 'custom', 'AlexPer777/ITMO.Widgets', 12, 14),
+            group(true, '2.3.0', 'custom', 'local', 3, 6),
+          ],
+          platforms: [
+            { name: '36', active30d: 610 },
+            { name: '35', active30d: 420 },
+            { name: '34', active30d: 170 },
+            { name: null, active30d: 10 },
+          ],
+        },
+        {
+          kind: 'IOS',
+          active1d: 90,
+          active7d: 150,
+          active30d: 190,
+          builds: [
+            group(false, '2.3.0', 'appstore', null, 120, 150),
+            group(true, '2.3.0', 'custom', 'AlexPer777/ITMO.Widgets', 25, 32),
+          ],
+          platforms: [
+            { name: '26', active30d: 160 },
+            { name: '18', active30d: 30 },
+          ],
+        },
+        {
+          kind: 'WEB',
+          active1d: 40,
+          active7d: 90,
+          active30d: 130,
+          builds: [group(false, 'a3bd4b5', 'web', null, 90, 130)],
+          platforms: [
+            { name: 'chrome/131', active30d: 70 },
+            { name: 'safari/18', active30d: 45 },
+            { name: 'yandex/24', active30d: 15 },
+          ],
+        },
+        {
+          kind: 'AGENT',
+          active1d: 6,
+          active7d: 8,
+          active30d: 9,
+          builds: [
+            group(false, '1.4.0', 'github', 'alllexey-dev/itmo-widgets-agent', 5, 6),
+            group(true, '1.4.0', 'custom', 'local', 3, 3),
+          ],
+          platforms: [
+            { name: 'linux-arm64', active30d: 5 },
+            { name: 'darwin-arm64', active30d: 4 },
+          ],
+        },
+      ],
+      history: [],
+    };
+  },
   '/api/admin/system/sport': () => ({
     runs: [],
     outcomes7d: { SUCCESS: 980, PARTIAL: 4, FAILED: 3 },
@@ -237,6 +311,53 @@ function userDetail(isu) {
     roles: user.roles,
     groups: [...user.groups, { name: 'P3112', course: 1, facultyShortName: 'ФПИиКТ' }],
     createdAt: user.createdAt,
+    clients: [
+      {
+        kind: 'ANDROID',
+        name: null,
+        version: '2.3.0',
+        build: '20300',
+        channel: 'play',
+        source: 'alllexey-dev/ITMO.Widgets',
+        commit: '0123456789ab',
+        base: null,
+        custom: false,
+        os: '36',
+        browser: null,
+        firstSeenAt: iso(-40 * DAY),
+        lastSeenAt: iso(-5),
+      },
+      {
+        kind: 'WEB',
+        name: null,
+        version: 'a3bd4b5',
+        build: null,
+        channel: 'web',
+        source: null,
+        commit: 'a3bd4b5',
+        base: null,
+        custom: false,
+        os: null,
+        browser: 'chrome/131',
+        firstSeenAt: iso(-3 * DAY),
+        lastSeenAt: iso(-60),
+      },
+      {
+        kind: 'AGENT',
+        name: 'Домашний сервер',
+        version: '1.4.0',
+        build: null,
+        channel: 'custom',
+        source: 'local',
+        commit: null,
+        base: null,
+        custom: true,
+        os: 'linux-arm64',
+        browser: null,
+        firstSeenAt: iso(-10 * DAY),
+        lastSeenAt: iso(-2),
+      },
+    ],
     devices: [
       {
         name: 'Pixel 8',

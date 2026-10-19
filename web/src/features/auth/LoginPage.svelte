@@ -310,7 +310,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-height: 40px;
+    min-height: var(--md-control);
     margin: 0;
     padding: 4px 16px;
     border-radius: var(--md-shape-full);

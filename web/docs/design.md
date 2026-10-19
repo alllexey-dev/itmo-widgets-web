@@ -97,6 +97,12 @@ per symbol.
   digits (`m3-num`), wide tables scroll sideways inside the card, never the
   page; on phones the users table becomes a two-line list. Statuses are
   `m3-pill` or `StatusShape` with text, never colour alone.
+- Density: the default one. The site is for students on phones and laptops
+  first; UX.md keeps `data-density="compact"` for data-work apps on desktop,
+  and switching density between the student and staff sections would resize
+  the rail and controls on navigation. App sizes that match a control, a field
+  row or a card use the density tokens (`--md-control`, `--md-row`,
+  `--md-card-shape`), not numbers, so a later switch follows them.
 - Layout: the rail is expanded with labels from 1100 px, collapsed down to
   760 px, then a top app bar with a drawer. Moderation shows the queue and the
   case side by side from 1100 px.
