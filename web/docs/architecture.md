@@ -61,8 +61,16 @@ history entry and drops empty values. Section documents list their parameters.
   concurrent callers share the request; roles the web does not know are ignored.
 - `hasAccess(user, access)` is the only role rule: `ADMIN` implies moderator
   rights. The backend enforces access; the UI only hides.
+- Backend keeps the session in two httpOnly cookies: `iw_session`, an access
+  token for one hour, and `iw_refresh`, which `POST /api/web/auth/refresh`
+  rotates together with it. On a 401 other than `reauth_required` the API client
+  refreshes once and repeats the request; concurrent requests share one refresh,
+  tabs take turns through the Web Lock `iw-session-refresh` and reuse a refresh
+  another tab finished after the request was sent (`localStorage`
+  `iw-session-refreshed-at`). A refresh that fails with another status fails the
+  request and keeps the session.
 - The API client reports a lost session (`onSessionLost`) on a 401 from any
-  request, except `401 reauth_required`. A visitor who never got in goes
+  request that the refresh did not save, except `401 reauth_required`. A visitor who never got in goes
   straight to `/login`; a signed-in user sees the modal `Сессия истекла` with
   `Войти` first, so the page under it does not vanish. On `/login` the signal is
   ignored: the login page checks the session itself.

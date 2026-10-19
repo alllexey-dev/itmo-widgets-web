@@ -5,7 +5,10 @@ import type { components } from '../api/schema';
 import type { LoginChallenge, LoginStatus } from '../features/auth/login';
 import type { Role, User } from '../lib/session.svelte';
 
-export const server = setupServer();
+/** Without a session the refresh is rejected, as Backend does without an `iw_refresh` cookie. */
+export const server = setupServer(
+  http.post('*/api/web/auth/refresh', () => fail(401, 'unauthorized')),
+);
 
 /** Wraps data the way the backend `ApiResponse` does. */
 export function ok<T>(data: T) {
