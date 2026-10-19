@@ -4,6 +4,8 @@ import type { components } from './schema';
  * Thin `fetch` wrapper for our `/api/**`. The browser is authenticated by the
  * httpOnly `iw_session` cookie on the same origin; changing requests carry
  * `X-Web-Request: 1`, which the backend requires for cookie sessions (CSRF).
+ * A 401 `unauthorized` first rotates the cookies through the httpOnly
+ * `iw_refresh` cookie and repeats the request once.
  * Every request names the web build and the browser in `X-Client` (client statistics).
  * Every backend response is an `ApiResponse` envelope that is unwrapped here.
  */
@@ -29,6 +31,7 @@ export interface RequestOptions {
 }
 
 export const SESSION_PATH = '/api/web/auth/me';
+export const REFRESH_PATH = '/api/web/auth/refresh';
 
 /** 401 on an admin or moderator route whose session is older than Backend allows there. */
 export const REAUTH_REQUIRED = 'reauth_required';
@@ -127,7 +130,7 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function send(path: string, options: RequestOptions): Promise<Response> {
   const method = options.method ?? 'GET';
   const headers: Record<string, string> = {
     Accept: 'application/json',
@@ -136,10 +139,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   };
   if (method !== 'GET') headers['X-Web-Request'] = '1';
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
-
-  let response: Response;
   try {
-    response = await fetch(buildUrl(path, options.query), {
+    return await fetch(buildUrl(path, options.query), {
       method,
       headers,
       credentials: 'same-origin',
@@ -150,8 +151,54 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     if (cause instanceof DOMException && cause.name === 'AbortError') throw cause;
     throw new ApiError('Нет соединения с сервером', 0, CLIENT_ERROR_CODES.network);
   }
+}
 
-  const payload = await readJson(response);
+function isUnauthorized(response: Response, payload: unknown): boolean {
+  return (
+    response.status === 401 && !(isEnvelope(payload) && payload.error?.code === REAUTH_REQUIRED)
+  );
+}
+
+/** When this tab or another one last rotated the cookies, `Date.now()`. */
+const REFRESHED_AT_KEY = 'iw-session-refreshed-at';
+let refreshing: Promise<boolean> | null = null;
+
+/**
+ * Rotates the session cookies; false when Backend ended the session. One refresh
+ * at a time in this tab and, through a Web Lock, across tabs; a refresh another
+ * tab finished after [sentAt] is reused, since the cookies are shared.
+ */
+function refreshSession(sentAt: number): Promise<boolean> {
+  refreshing ??= withRefreshLock(async () => {
+    if (Number(localStorage.getItem(REFRESHED_AT_KEY)) > sentAt) return true;
+    const rotated = await postRefresh();
+    if (rotated) localStorage.setItem(REFRESHED_AT_KEY, String(Date.now()));
+    return rotated;
+  }).finally(() => (refreshing = null));
+  return refreshing;
+}
+
+function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
+  // Browsers without Web Locks only lose cross-tab serialization; Backend tolerates a concurrent refresh.
+  return 'locks' in navigator ? navigator.locks.request('iw-session-refresh', task) : task();
+}
+
+async function postRefresh(): Promise<boolean> {
+  const response = await send(REFRESH_PATH, { method: 'POST' });
+  if (response.ok) return true;
+  if (response.status === 401) return false;
+  // A failing Backend is not a lost session: the request fails instead.
+  throw new ApiError(`HTTP ${response.status}`, response.status, CLIENT_ERROR_CODES.http);
+}
+
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const sentAt = Date.now();
+  let response = await send(path, options);
+  let payload = await readJson(response);
+  if (isUnauthorized(response, payload) && (await refreshSession(sentAt))) {
+    response = await send(path, options);
+    payload = await readJson(response);
+  }
 
   if (!response.ok || (isEnvelope(payload) && !payload.success)) {
     const error = isEnvelope(payload) ? payload.error : null;

@@ -11,8 +11,8 @@
 
 The rail shows the sections the role opens; the signed-in user at its bottom
 links to Профиль, next to `Выйти`. `Оформление` sets the shared alllexey.dev
-theme (see `../design.md`). A session expires after 14 days without requests or
-60 days after sign-in; moderator and admin actions need a sign-in at most 12 hours
+theme (see `../design.md`). A session refreshes itself while used and expires
+after 30 days without requests, with no absolute limit; moderator and admin actions need a sign-in at most 7 days
 old (see `../architecture.md`, Session). Only the phone app can approve sign-in; a web session
 cannot approve another browser. What happens when a session ends is described
 in `../architecture.md` (Session).
@@ -20,7 +20,7 @@ in `../architecture.md` (Session).
 ## Phone sign-in - `/login`
 
 The site displays a QR and a code; approval in the app lets Backend set the
-httpOnly `iw_session` cookie. The code has 8 characters excluding the similar
+httpOnly `iw_session` and `iw_refresh` cookies. The code has 8 characters excluding the similar
 `0 O 1 I L` and lasts 2 minutes. In the phone app, Профиль -> "Вход на сайт" ->
 QR or code -> "Войти" is available only with the ITMO.Widgets connection
 enabled. A 429 displays "Слишком много попыток, подождите пару минут". On a
