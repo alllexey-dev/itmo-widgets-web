@@ -44,6 +44,20 @@ describe('api client', () => {
     expect(body).toEqual({ latest: '2.2' });
   });
 
+  it('names the web client in X-Client on every request', async () => {
+    let header: string | null | undefined;
+    server.use(
+      http.get('*/api/admin/audit', ({ request }) => {
+        header = request.headers.get('X-Client');
+        return ok([]);
+      }),
+    );
+
+    await api.get('/api/admin/audit');
+
+    expect(header).toMatch(/^kind=web; version=\S+; channel=web; .*browser=[a-z]+(\/\d+)?$/);
+  });
+
   it('does not mark GET requests', async () => {
     let headers: Headers | undefined;
     server.use(
@@ -160,6 +174,27 @@ describe('api client', () => {
 
       expect(calls).toEqual({ friends: 2, refresh: 1 });
       expect(lost).not.toHaveBeenCalled();
+    });
+
+    it('names the client in X-Client on the request, the refresh and the retry', async () => {
+      const seen: string[] = [];
+      let rotated = false;
+      server.use(
+        http.get('*/api/friends', ({ request }) => {
+          seen.push(`friends ${request.headers.get('X-Client')}`);
+          return rotated ? ok([]) : fail(401, 'unauthorized');
+        }),
+        http.post('*/api/web/auth/refresh', ({ request }) => {
+          seen.push(`refresh ${request.headers.get('X-Client')}`);
+          rotated = true;
+          return ok({});
+        }),
+      );
+
+      await api.get('/api/friends');
+
+      expect(seen.map((line) => line.split(' ')[0])).toEqual(['friends', 'refresh', 'friends']);
+      for (const line of seen) expect(line).toMatch(/ kind=web; version=\S+; channel=web; /);
     });
 
     it('shares one refresh between concurrent requests', async () => {

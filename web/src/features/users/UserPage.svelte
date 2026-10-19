@@ -12,6 +12,7 @@
   import { api, ApiError } from '../../api/client';
   import { errorText } from '../../api/errors';
   import { buildLabel, channelLabel } from '../../lib/appBuild';
+  import { CLIENT_KINDS, originLabel, platformLabel as clientPlatform } from '../../lib/clients';
   import { formatDate, formatDateTime, formatNumber, formatRelative } from '../../lib/format';
   import LoadError from '../../lib/LoadError.svelte';
   import { href, router } from '../../lib/router.svelte';
@@ -137,6 +138,39 @@
                     {/if}
                   </span>
                   <span class="trail">{formatDateTime(device.lastLogin)}</span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </section>
+
+        <section class="m3-card" aria-labelledby="user-clients">
+          <h2 id="user-clients" class="m3-section-title">Клиенты</h2>
+          {#if (detail.clients ?? []).length === 0}
+            <p class="m3-muted">Нет данных о клиентах</p>
+          {:else}
+            <ul class="m3-list divided plain" aria-label="Клиенты">
+              {#each detail.clients ?? [] as client, index (`${client.kind}-${client.firstSeenAt}-${index}`)}
+                <li class="m3-list-item device">
+                  <span class="lead"><Icon name={CLIENT_KINDS[client.kind].icon} /></span>
+                  <span class="main">
+                    <span class="headline"
+                      >{client.name ?? CLIENT_KINDS[client.kind].label} · {buildLabel(
+                        client.version,
+                        client.build,
+                      )}</span
+                    >
+                    {#if client.custom}<span class="m3-pill tertiary">своя сборка</span>{/if}
+                    <span class="support">
+                      {originLabel(client.channel, client.source)}{client.base
+                        ? ` · на основе ${client.base}`
+                        : ''} · {clientPlatform(client.kind, client.browser ?? client.os)}
+                    </span>
+                    <span class="support" title={formatDateTime(client.lastSeenAt)}>
+                      Активен {formatRelative(client.lastSeenAt)}
+                    </span>
+                  </span>
+                  <span class="trail">с {formatDate(client.firstSeenAt)}</span>
                 </li>
               {/each}
             </ul>

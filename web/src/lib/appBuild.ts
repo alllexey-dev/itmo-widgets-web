@@ -7,6 +7,8 @@ const CHANNELS: Record<string, string> = {
   testflight: 'TestFlight',
   sideload: 'Установлено вручную',
   dev: 'Отладочная сборка',
+  web: 'Сайт',
+  custom: 'Своя сборка',
 };
 
 /** The distribution channel; a channel this web does not know yet shows as sent. */
@@ -15,7 +17,7 @@ export function channelLabel(distribution: string): string {
 }
 
 /** "2.3.0-beta.1 (20291)". */
-export function buildLabel(version: string, build: number | null | undefined): string {
+export function buildLabel(version: string, build: number | string | null | undefined): string {
   return build == null ? version : `${version} (${build})`;
 }
 

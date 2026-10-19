@@ -7,6 +7,7 @@ import { fail, mockSession, ok, server, userOf } from '../../test/server';
 import type {
   AppVersion,
   AppVersionRequest,
+  Clients,
   ClientVersions,
   ModerationSettings,
   Platform,
@@ -189,6 +190,57 @@ const COOKIE_VALUE = 'synthetic-keycloak-identity-0123456789';
 /** Assembled from parts, so a search for leaked keys finds nothing. */
 const GEMINI_KEY = 'AIza' + '0'.repeat(35);
 
+const clientStats: Clients = {
+  kinds: [
+    {
+      kind: 'ANDROID',
+      active1d: 300,
+      active7d: 520,
+      active30d: 610,
+      builds: [
+        {
+          custom: false,
+          version: '2.3.0',
+          channel: 'play',
+          source: 'alllexey-dev/ITMO.Widgets',
+          active7d: 480,
+          active30d: 560,
+        },
+        {
+          custom: true,
+          version: '2.3.0',
+          channel: 'custom',
+          source: 'someone/ITMO.Widgets',
+          active7d: 3,
+          active30d: 4,
+        },
+      ],
+      platforms: [
+        { name: '36', active30d: 400 },
+        { name: null, active30d: 10 },
+      ],
+    },
+    {
+      kind: 'WEB',
+      active1d: 5,
+      active7d: 20,
+      active30d: 31,
+      builds: [
+        {
+          custom: false,
+          version: '1a2b3c4',
+          channel: 'web',
+          source: null,
+          active7d: 20,
+          active30d: 31,
+        },
+      ],
+      platforms: [{ name: 'chrome/131', active30d: 25 }],
+    },
+  ],
+  history: [],
+};
+
 function mockSystem({
   clients = (): Response => ok(clientVersions),
 }: { clients?: (load: number) => Response } = {}) {
@@ -223,6 +275,7 @@ function mockSystem({
     }),
     http.get('*/api/admin/system/sport', () => ok(sport)),
     http.get('*/api/admin/system/client-versions', () => clients(++clientLoads)),
+    http.get('*/api/admin/system/clients', () => ok(clientStats)),
   );
   return {
     clientLoads: () => clientLoads,
@@ -279,6 +332,37 @@ afterEach(() => {
 });
 
 describe('SystemPage', () => {
+  describe('clients', () => {
+    const card = async () => screen.findByRole('region', { name: 'Клиенты' });
+    const rows = async (name: string) =>
+      within(await within(await card()).findByRole('list', { name }))
+        .getAllByRole('listitem')
+        .map((row) => row.textContent?.replace(/\s+/g, ' ').trim());
+
+    it('shows official and custom builds apart, then systems', async () => {
+      mockSystem();
+      renderApp('/admin/system');
+
+      expect(await rows('Официальные сборки')).toEqual([
+        '2.3.0 560 Google Play · alllexey-dev/ITMO.Widgets · за 7 дней: 480',
+      ]);
+      expect(await rows('Свои сборки')).toEqual([
+        '2.3.0 4 Своя сборка · someone/ITMO.Widgets · за 7 дней: 3',
+      ]);
+      expect(await rows('Системы')).toEqual(['Android API 36 400', 'Не указано 10']);
+    });
+
+    it('switches to the site and its browsers', async () => {
+      mockSystem();
+      renderApp('/admin/system');
+
+      await userEvent.click(await within(await card()).findByRole('radio', { name: 'Сайт' }));
+
+      expect(await rows('Браузеры')).toEqual(['Chrome 131 25']);
+      expect(within(await card()).queryByRole('list', { name: 'Свои сборки' })).toBeNull();
+    });
+  });
+
   describe('client versions', () => {
     const rowsOf = async (card: HTMLElement) =>
       within(await within(card).findByRole('list', { name: 'Устройства по версиям' }))

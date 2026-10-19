@@ -276,6 +276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/system/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["adminSystem_clients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/system/credentials": {
         parameters: {
             query?: never;
@@ -1790,6 +1806,24 @@ export interface components {
             /** @enum {string} */
             targetType: "SUBJECT_RESOURCE" | "TEACHER_REVIEW";
         };
+        AdminClient: {
+            base: string | null;
+            browser: string | null;
+            build: string | null;
+            channel: string | null;
+            commit: string | null;
+            custom: boolean;
+            /** Format: date-time */
+            firstSeenAt: string;
+            /** @enum {string} */
+            kind: "ANDROID" | "IOS" | "WEB" | "AGENT";
+            /** Format: date-time */
+            lastSeenAt: string;
+            name: string | null;
+            os: string | null;
+            source: string | null;
+            version: string;
+        };
         AdminClientBuild: {
             /** Format: int32 */
             build: number;
@@ -1799,6 +1833,47 @@ export interface components {
             /** @enum {string} */
             platform: "ANDROID" | "IOS";
             version: string;
+        };
+        AdminClientBuildGroup: {
+            /** Format: int64 */
+            active30d: number;
+            /** Format: int64 */
+            active7d: number;
+            channel: string | null;
+            custom: boolean;
+            source: string | null;
+            version: string;
+        };
+        AdminClientCount: {
+            /** Format: int64 */
+            active30d: number;
+            name: string | null;
+        };
+        AdminClientDay: {
+            /** Format: int64 */
+            active1d: number;
+            /** Format: int64 */
+            active30d: number;
+            /** Format: int64 */
+            active7d: number;
+            custom: boolean;
+            /** Format: date */
+            day: string;
+            /** @enum {string} */
+            kind: "ANDROID" | "IOS" | "WEB" | "AGENT";
+            version: string;
+        };
+        AdminClientKind: {
+            /** Format: int64 */
+            active1d: number;
+            /** Format: int64 */
+            active30d: number;
+            /** Format: int64 */
+            active7d: number;
+            builds: components["schemas"]["AdminClientBuildGroup"][];
+            /** @enum {string} */
+            kind: "ANDROID" | "IOS" | "WEB" | "AGENT";
+            platforms: components["schemas"]["AdminClientCount"][];
         };
         AdminClientVersionWindow: {
             /** Format: int64 */
@@ -1810,6 +1885,10 @@ export interface components {
         AdminClientVersions: {
             last30d: components["schemas"]["AdminClientVersionWindow"];
             last7d: components["schemas"]["AdminClientVersionWindow"];
+        };
+        AdminClients: {
+            history: components["schemas"]["AdminClientDay"][];
+            kinds: components["schemas"]["AdminClientKind"][];
         };
         AdminDashboard: {
             days: components["schemas"]["AdminDashboardDay"][];
@@ -2084,6 +2163,7 @@ export interface components {
         };
         AdminUserDetail: {
             agentAccess: boolean;
+            clients: components["schemas"]["AdminClient"][];
             /** Format: date-time */
             createdAt: string;
             devices: components["schemas"]["AdminDevice"][];
@@ -2175,6 +2255,11 @@ export interface components {
         };
         ApiResponseAdminClientVersions: {
             data: components["schemas"]["AdminClientVersions"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseAdminClients: {
+            data: components["schemas"]["AdminClients"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
@@ -3640,6 +3725,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseAdminClientVersions"];
+                };
+            };
+        };
+    };
+    adminSystem_clients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminClients"];
                 };
             };
         };

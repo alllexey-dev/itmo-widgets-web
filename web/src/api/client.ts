@@ -1,3 +1,4 @@
+import { clientHeader } from './clientHeader';
 import type { components } from './schema';
 /**
  * Thin `fetch` wrapper for our `/api/**`. The browser is authenticated by the
@@ -5,6 +6,7 @@ import type { components } from './schema';
  * `X-Web-Request: 1`, which the backend requires for cookie sessions (CSRF).
  * A 401 `unauthorized` first rotates the cookies through the httpOnly
  * `iw_refresh` cookie and repeats the request once.
+ * Every request names the web build and the browser in `X-Client` (client statistics).
  * Every backend response is an `ApiResponse` envelope that is unwrapped here.
  */
 
@@ -39,6 +41,11 @@ export const CLIENT_ERROR_CODES = {
   network: 'network',
   http: 'http_error',
 } as const;
+
+const CLIENT = clientHeader(
+  navigator.userAgent,
+  import.meta.env.VITE_REVISION as string | undefined,
+);
 
 export class ApiError extends Error {
   readonly status: number;
@@ -125,7 +132,11 @@ async function readJson(response: Response): Promise<unknown> {
 
 async function send(path: string, options: RequestOptions): Promise<Response> {
   const method = options.method ?? 'GET';
-  const headers: Record<string, string> = { Accept: 'application/json', ...options.headers };
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'X-Client': CLIENT,
+    ...options.headers,
+  };
   if (method !== 'GET') headers['X-Web-Request'] = '1';
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
   try {

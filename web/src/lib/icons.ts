@@ -3,6 +3,7 @@
 // lock, refresh, search, content_copy, error, inbox, check_circle, chevron_right, arrow_back, warning
 // and a few more.
 import { defineIcons } from '@alllexey/ui';
+import i_terminal from '@material-symbols/svg-400/rounded/terminal.svg?raw';
 import i_home from '@material-symbols/svg-400/rounded/home.svg?raw';
 import i_group from '@material-symbols/svg-400/rounded/group.svg?raw';
 import i_fitness_center from '@material-symbols/svg-400/rounded/fitness_center.svg?raw';
@@ -56,6 +57,7 @@ import f_settings from '@material-symbols/svg-400/rounded/settings-fill.svg?raw'
 import f_history from '@material-symbols/svg-400/rounded/history-fill.svg?raw';
 
 defineIcons({
+  terminal: i_terminal,
   home: i_home,
   group: i_group,
   fitness_center: i_fitness_center,
