@@ -4,7 +4,7 @@ import type { ApiEnvelope } from '../api/client';
 import source from '../api/openapi.source?raw';
 import snapshot from '../api/openapi.json?raw';
 import type { components } from '../api/schema';
-import type { LoginStatus } from '../features/auth/login';
+import type { ClaimStatus, PairingKind } from '../features/auth/pairing';
 import type { Role, User } from '../lib/session.svelte';
 
 type Schemas = components['schemas'];
@@ -27,10 +27,11 @@ describe('generated API aliases', () => {
   it('keeps roles closed despite the loose string schema', () => {
     expectTypeOf<Role>().toEqualTypeOf<'MODERATOR' | 'ADMIN'>();
     expectTypeOf<User['roles']>().toEqualTypeOf<Role[]>();
-    expectTypeOf<Omit<User, 'roles'>>().toEqualTypeOf<Omit<Schemas['WebMe'], 'roles'>>();
+    expectTypeOf<User['connection']>().toEqualTypeOf<Schemas['ConnectionInfo']>();
   });
 
-  it('keeps the sign-in poll states', () => {
-    expectTypeOf<LoginStatus>().toEqualTypeOf<'PENDING' | 'APPROVED' | 'EXPIRED'>();
+  it('keeps the pairing kinds and claim states', () => {
+    expectTypeOf<PairingKind>().toEqualTypeOf<'CONNECT' | 'RENEW'>();
+    expectTypeOf<ClaimStatus>().toEqualTypeOf<'PENDING' | 'OPENED' | 'CLAIMED'>();
   });
 });

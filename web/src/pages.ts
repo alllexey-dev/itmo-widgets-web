@@ -7,6 +7,7 @@ export const pages: PageTable = {
   person: { load: () => import('./features/people/PersonPage.svelte') },
   sport: { load: () => import('./features/sport/SportPage.svelte') },
   me: { load: () => import('./features/profile/ProfilePage.svelte') },
+  devices: { load: () => import('./features/devices/DevicesPage.svelte') },
   moderation: { load: () => import('./features/moderation/ModerationPage.svelte') },
   restrictions: { load: () => import('./features/moderation/ModerationPage.svelte') },
   dashboard: { load: () => import('./features/dashboard/DashboardPage.svelte') },

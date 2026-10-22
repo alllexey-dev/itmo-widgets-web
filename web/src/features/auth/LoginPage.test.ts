@@ -7,7 +7,7 @@ import {
   challengeOf,
   fail,
   mockChallenges,
-  mockPoll,
+  mockClaim,
   mockSession,
   mockSignedOut,
   ok,
@@ -15,6 +15,7 @@ import {
   userOf,
 } from '../../test/server';
 import { mockStudentSources } from '../../test/student';
+import { keyCommitment, verificationCode } from './pairing';
 
 // A signed-in user lands on Главная, which loads the student cards.
 beforeEach(() => void mockStudentSources());
@@ -32,37 +33,79 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const LINK = /^http:\/\/localhost(:\d+)?\/pair#v1\.([A-Z2-9]{8})\.([\w-]{43})\.([\w-]{22})$/;
+
+function decode(text: string): Uint8Array {
+  const binary = atob(text.replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+/** Copies the pairing link the QR encodes and splits it into its parts. */
+async function copiedLink(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole('button', { name: 'Скопировать ссылку для приложения' }),
+  );
+  const link = await navigator.clipboard.readText();
+  const [, , code = '', pk = '', s = ''] = LINK.exec(link) ?? [];
+  return { link, code, publicKey: decode(pk), secret: decode(s) };
+}
+
 describe('LoginPage', () => {
-  it('shows the QR, the code in groups of four and the time left', async () => {
+  it('shows the QR, the code to compare and the time left', async () => {
     mockSignedOut();
     mockChallenges('ABCDEFGH');
-    mockPoll();
+    mockClaim();
 
     renderApp('/login');
 
-    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'QR-код для входа' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Вход на сайт' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'QR-код для входа' })).toBeInTheDocument();
+    expect(screen.getByText(/^\d{3} \d{3}$/)).toBeInTheDocument();
     expect(screen.getByText('2:00')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Скачать' })).toHaveAttribute('href', '/#download');
   });
 
-  it('waits for the app and goes home once the sign-in is approved', async () => {
+  it('creates a web connection whose commitment and code match the link', async () => {
+    const user = userEvent.setup();
+    mockSignedOut();
+    const challenges = mockChallenges('ABCDEFGH');
+    mockClaim();
+    renderApp('/login');
+
+    const { link, code, publicKey, secret } = await copiedLink(user);
+
+    expect(link).toMatch(LINK);
+    expect(code).toBe('ABCDEFGH');
+    expect(challenges.bodies).toEqual([
+      {
+        kind: 'CONNECT',
+        client: 'web',
+        keyCommitment: await keyCommitment(publicKey, secret),
+        name: expect.any(String),
+        version: 'local',
+        scopes: ['user'],
+      },
+    ]);
+    const [{ challengeId } = challengeOf('unused')] = challenges.issued;
+    expect(
+      screen.getByText(await verificationCode(challengeId, publicKey, secret)),
+    ).toBeInTheDocument();
+  });
+
+  it('waits for the app and goes home once the claim succeeds', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     let signedIn = false;
-    let polls = 0;
-    server.use(
-      http.get('*/api/web/auth/me', () => (signedIn ? ok(userOf([])) : fail(401, 'unauthorized'))),
-    );
+    let claims = 0;
+    mockSession(() => (signedIn ? userOf([]) : null));
     mockChallenges('ABCDEFGH');
-    mockPoll(() => {
-      polls += 1;
-      if (polls < 2) return 'PENDING';
+    mockClaim(() => {
+      claims += 1;
+      if (claims < 2) return 'PENDING';
       signedIn = true;
-      return 'APPROVED';
+      return 'CLAIMED';
     });
     renderApp('/login');
-    expect(await screen.findByText('Ждём подтверждения в приложении')).toBeInTheDocument();
+    expect(await screen.findByText('Ждём, когда приложение отсканирует QR')).toBeInTheDocument();
 
     await vi.advanceTimersByTimeAsync(2_000);
 
@@ -70,44 +113,61 @@ describe('LoginPage', () => {
     expect(location.pathname).toBe('/app/');
   });
 
-  it('shows a new code when the backend reports the old one expired', async () => {
+  it('asks to compare the code once the phone opened it and gives it ten minutes', async () => {
     mockSignedOut();
-    mockChallenges('ABCDEFGH', 'KMNPQRST');
-    mockPoll((code) => (code === 'ABCDEFGH' ? 'EXPIRED' : 'PENDING'));
+    mockChallenges('ABCDEFGH');
+    mockClaim(() => 'OPENED');
 
     renderApp('/login');
 
-    expect(await screen.findByText('KMNP QRST')).toBeInTheDocument();
-    expect(screen.queryByText('ABCD EFGH')).not.toBeInTheDocument();
+    expect(await screen.findByText('Сверьте код и подтвердите в приложении')).toBeInTheDocument();
+    expect(screen.getByText('10:00')).toBeInTheDocument();
+  });
+
+  it('shows a new code when the backend no longer knows the old one', async () => {
+    mockSignedOut();
+    const challenges = mockChallenges('ABCDEFGH', 'KMNPQRST');
+    let claims = 0;
+    server.use(
+      http.post('*/api/pair/challenges/:id/claim', () => {
+        claims += 1;
+        return claims === 1 ? fail(404, 'not_found') : ok({ status: 'PENDING' });
+      }),
+    );
+
+    renderApp('/login');
+
+    await waitFor(() => expect(challenges.created()).toBe(2));
+    expect(await screen.findByText('Ждём, когда приложение отсканирует QR')).toBeInTheDocument();
   });
 
   it('shows a new code when the countdown ends', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockSignedOut();
-    mockChallenges('ABCDEFGH', 'KMNPQRST');
-    mockPoll();
+    const challenges = mockChallenges('ABCDEFGH', 'KMNPQRST');
+    mockClaim();
     renderApp('/login');
-    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    expect(await screen.findByText('2:00')).toBeInTheDocument();
 
     await vi.advanceTimersByTimeAsync(120_000);
 
-    expect(await screen.findByText('KMNP QRST')).toBeInTheDocument();
+    await waitFor(() => expect(challenges.created()).toBe(2));
   });
 
   it('stops after five renewals in a row and waits for the user', async () => {
     mockSignedOut();
     const challenges = mockChallenges('ABCDEFGH');
-    mockPoll(() => 'EXPIRED');
+    server.use(http.post('*/api/pair/challenges/:id/claim', () => fail(404, 'not_found')));
     renderApp('/login');
 
-    const renew = await screen.findByRole('button', { name: 'Показать новый код' });
-    expect(screen.getByText('Код устарел')).toBeInTheDocument();
+    const renew = await screen.findByRole('button', { name: 'Показать новый QR-код' });
+    expect(screen.getByText('QR-код устарел')).toBeInTheDocument();
     expect(challenges.created()).toBe(6);
 
-    mockPoll();
+    mockClaim();
     await userEvent.click(renew);
 
-    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'QR-код для входа' })).toBeInTheDocument();
     expect(challenges.created()).toBe(7);
   });
 
@@ -115,14 +175,14 @@ describe('LoginPage', () => {
     mockSignedOut();
     let attempts = 0;
     server.use(
-      http.post('*/api/web/auth/challenges', () => {
+      http.post('*/api/pair/challenges', () => {
         attempts += 1;
         return attempts === 1
-          ? fail(429, 'rate_limited', 'Too many login codes, try again later')
+          ? fail(429, 'rate_limited', 'Too many challenges, try again later')
           : ok(challengeOf('ABCDEFGH'));
       }),
     );
-    mockPoll();
+    mockClaim();
     renderApp('/login');
 
     expect(
@@ -130,7 +190,7 @@ describe('LoginPage', () => {
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Повторить' }));
 
-    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'QR-код для входа' })).toBeInTheDocument();
     expect(
       screen.queryByText('Слишком много попыток, подождите пару минут'),
     ).not.toBeInTheDocument();
@@ -139,51 +199,51 @@ describe('LoginPage', () => {
   it('explains other failures without the backend message', async () => {
     mockSignedOut();
     server.use(
-      http.post('*/api/web/auth/challenges', () => fail(500, 'internal_server_error', 'boom')),
+      http.post('*/api/pair/challenges', () => fail(500, 'internal_server_error', 'boom')),
     );
 
     renderApp('/login');
 
-    expect(await screen.findByText('Не удалось получить код')).toBeInTheDocument();
+    expect(await screen.findByText('Не удалось получить QR-код')).toBeInTheDocument();
     expect(screen.getByText('Попробуйте ещё раз')).toBeInTheDocument();
   });
 
-  it('tells the user when the server cannot be reached and keeps polling', async () => {
+  it('tells the user when the server cannot be reached and keeps claiming', async () => {
     mockSignedOut();
     mockChallenges('ABCDEFGH');
-    let polls = 0;
+    let claims = 0;
     server.use(
-      http.get('*/api/web/auth/challenges/:id', () => {
-        polls += 1;
-        return polls === 1 ? Response.error() : ok({ status: 'PENDING' as const });
+      http.post('*/api/pair/challenges/:id/claim', () => {
+        claims += 1;
+        return claims === 1 ? Response.error() : ok({ status: 'PENDING' });
       }),
     );
 
     renderApp('/login');
 
     expect(await screen.findByText('Нет связи с сервером, пробуем снова')).toBeInTheDocument();
-    expect(await screen.findByText('Ждём подтверждения в приложении')).toBeInTheDocument();
+    expect(await screen.findByText('Ждём, когда приложение отсканирует QR')).toBeInTheDocument();
   });
 
-  it('pauses polling while the tab is hidden and polls again on return', async () => {
+  it('pauses claiming while the tab is hidden and claims again on return', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mockSignedOut();
     mockChallenges('ABCDEFGH');
-    let polls = 0;
-    mockPoll(() => {
-      polls += 1;
+    let claims = 0;
+    mockClaim(() => {
+      claims += 1;
       return 'PENDING';
     });
     renderApp('/login');
-    await waitFor(() => expect(polls).toBe(1));
+    await waitFor(() => expect(claims).toBe(1));
 
     setTabHidden(true);
     await vi.advanceTimersByTimeAsync(10_000);
-    const pollsWhileHidden = polls;
+    const claimsWhileHidden = claims;
     setTabHidden(false);
 
-    expect(pollsWhileHidden).toBe(1);
-    await waitFor(() => expect(polls).toBe(2));
+    expect(claimsWhileHidden).toBe(1);
+    await waitFor(() => expect(claims).toBe(2));
   });
 
   it('sends a signed-in user home', async () => {
@@ -195,33 +255,14 @@ describe('LoginPage', () => {
     expect(location.pathname).toBe('/app/');
   });
 
-  it('asks to open a code scanned by a phone camera in the app', async () => {
+  it('ignores the code links of the removed sign-in', async () => {
     mockSignedOut();
     const challenges = mockChallenges('KMNPQRST');
-    mockPoll();
-    renderApp('/login?code=abcdefgh');
+    mockClaim();
 
-    expect(
-      await screen.findByRole('heading', { name: 'Откройте этот код в приложении ITMO.Widgets' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('ABCD EFGH')).toBeInTheDocument();
-    expect(challenges.created()).toBe(0);
+    renderApp('/login?code=ABCDEFGH');
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Войти в браузере на этом устройстве' }),
-    );
-
-    expect(await screen.findByText('KMNP QRST')).toBeInTheDocument();
-    expect(location.search).toBe('');
-  });
-
-  it('ignores a scanned value that is not a sign-in code', async () => {
-    mockSignedOut();
-    mockChallenges('KMNPQRST');
-    mockPoll();
-
-    renderApp('/login?code=not-a-code');
-
-    expect(await screen.findByText('KMNP QRST')).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'QR-код для входа' })).toBeInTheDocument();
+    expect(challenges.created()).toBe(1);
   });
 });

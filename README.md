@@ -179,7 +179,7 @@ docker compose up -d --force-recreate
 
 На обоих хостах: `/`, `/privacy.html`, `/delete-account`,
 `/.well-known/assetlinks.json` (`application/json`), `/u/<isu>`, `/sport/<id>`, `/pair`,
-`/app` (301 на `/app/`), `/app/`, `/app/login` (код создаётся),
+`/app` (301 на `/app/`), `/app/`, `/app/login` (QR создаётся),
 `/api/app/version-info`; в консоли браузера нет ошибок CSP; `platform doctor`
 без изменений.
 

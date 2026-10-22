@@ -15,14 +15,13 @@
   import { router } from '../../lib/router.svelte';
   import { session } from '../../lib/session.svelte';
   import { LoginFlow } from './challenge.svelte';
-  import { formatLoginCode, loginUrl, parseLoginCode } from './login';
+  import type { PairingKind } from './pairing';
   import QrCode from './QrCode.svelte';
 
-  const scanned = $derived(parseLoginCode(router.query.get('code')));
-  // `?next=` comes from "Войти" in the shell's sign-in dialogs: a signed-in user asked to sign in again.
+  // `?next=` comes from "Войти" in the shell's dialogs: a signed-in user is asked for a fresh approval.
   const requested = router.query.get('next');
   const next = requested?.startsWith('/') && !requested.startsWith('/login') ? requested : null;
-  let checking = $state(true);
+  let kind = $state<PairingKind | null>(null);
   let flow = $state<LoginFlow | null>(null);
 
   function approved() {
@@ -37,17 +36,17 @@
     void session.ensure().then(() => {
       if (!active) return;
       if (session.user && !next) router.go('/', { replace: true });
-      else checking = false;
+      else kind = session.user ? 'RENEW' : 'CONNECT';
     });
     return () => {
       active = false;
     };
   });
 
-  // The code is created only for a visitor who will see it: not while checking, not for a scanned code.
+  // The code is created only once the page knows which one it needs.
   $effect(() => {
-    if (checking || scanned) return;
-    const created = new LoginFlow(approved);
+    if (!kind) return;
+    const created = new LoginFlow(kind, approved);
     flow = created;
     // Starting reads the flow's own state; it must not become a dependency of this effect.
     untrack(() => created.start());
@@ -61,12 +60,12 @@
     return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
   }
 
-  async function copy(code: string) {
+  async function copy(link: string) {
     try {
-      await navigator.clipboard.writeText(code);
-      snackbars.show('Код скопирован');
+      await navigator.clipboard.writeText(link);
+      snackbars.show('Ссылка скопирована');
     } catch {
-      snackbars.error('Не удалось скопировать код');
+      snackbars.error('Не удалось скопировать ссылку');
     }
   }
 </script>
@@ -74,36 +73,27 @@
 <div class="page">
   <TopBar brand="ITMO.Widgets" brandHref="/" />
 
-  {#if checking}
+  {#if !kind}
     <main class="center">
       <LoadingIndicator size={56} label="Проверяем вход" />
-    </main>
-  {:else if scanned}
-    <main class="center">
-      <section class="m3-card scanned" aria-labelledby="scanned-title">
-        <Shape shape="cookie9" size={56} tone="secondary">
-          <Icon name="smartphone" size={32} />
-        </Shape>
-        <h1 id="scanned-title" class="m3-title-large">
-          Откройте этот код в приложении ITMO.Widgets
-        </h1>
-        <p class="code" translate="no">{formatLoginCode(scanned)}</p>
-        <p class="m3-muted">Профиль → Вход на сайт → введите код</p>
-        <button class="m3-btn text" onclick={() => router.go('/login', { replace: true })}>
-          <Icon name="login" />
-          Войти в браузере на этом устройстве
-        </button>
-      </section>
     </main>
   {:else}
     <main class="layout">
       <section class="intro">
-        <h1 class="title">Вход на сайт</h1>
-        <p class="lead m3-muted">
-          Пароль не нужен: вход подтверждает приложение ITMO.Widgets на вашем телефоне.
-        </p>
+        {#if kind === 'RENEW'}
+          <h1 class="title">Подтвердите вход на телефоне</h1>
+          <p class="lead m3-muted">
+            Для действий модератора и администратора вход подтверждается раз в 7 дней. Этот браузер
+            останется подключённым.
+          </p>
+        {:else}
+          <h1 class="title">Вход на сайт</h1>
+          <p class="lead m3-muted">
+            Пароль не нужен: вход подтверждает приложение ITMO.Widgets на вашем телефоне.
+          </p>
+        {/if}
         <ol class="steps">
-          {#each ['Откройте ITMO.Widgets на телефоне', 'Профиль → Вход на сайт', 'Отсканируйте QR или введите код'] as step, index (step)}
+          {#each ['Откройте ITMO.Widgets на телефоне', 'Профиль → Устройства → Подключить устройство', 'Отсканируйте QR и сверьте код'] as step, index (step)}
             <li>
               <Shape shape="cookie6" size={40} tone="secondary">
                 <b>{index + 1}</b>
@@ -115,41 +105,40 @@
         <p class="hint m3-muted">Нет приложения? <a href="/#download">Скачать</a></p>
       </section>
 
-      <section class="m3-card high panel" aria-label="Код для входа">
+      <section class="m3-card high panel" aria-label="QR-код для входа">
         {#if view.kind === 'active'}
           {@const { challenge, remaining, status, offline } = view}
           <div class="qr-tile">
-            <QrCode value={loginUrl(challenge.code)} label="QR-код для входа" />
+            <QrCode value={challenge.link} label="QR-код для входа" />
           </div>
           <div class="code-block">
-            <span class="m3-label-large m3-muted">Код для входа</span>
-            <div class="code-row">
-              <span class="code" translate="no">{formatLoginCode(challenge.code)}</span>
-              <button
-                class="m3-icon-btn"
-                onclick={() => copy(challenge.code)}
-                aria-label="Скопировать код"
-              >
-                <Icon name="content_copy" />
-              </button>
-            </div>
+            <span class="m3-label-large m3-muted">Код в приложении</span>
+            <span class="code" translate="no">{challenge.sas}</span>
+            <span class="m3-body-small m3-muted">Подтверждайте, только если код совпадает</span>
             <div class="countdown">
               <WavyProgress value={remaining} max={challenge.lifetime} />
               <span class="m3-body-small m3-muted">
-                Код действует ещё <span class="time">{formatSeconds(remaining)}</span>
+                QR-код действует ещё <span class="time">{formatSeconds(remaining)}</span>
               </span>
             </div>
           </div>
+          <button class="m3-btn text copy" onclick={() => copy(challenge.link)}>
+            <Icon name="content_copy" />
+            Скопировать ссылку для приложения
+          </button>
           <p class="status" role="status">
-            {#if status === 'APPROVED'}
+            {#if status === 'CLAIMED'}
               <Icon name="check_circle" size={20} />
               Вход подтверждён
             {:else if offline}
               <Icon name="cloud_off" size={20} />
               Нет связи с сервером, пробуем снова
+            {:else if status === 'OPENED'}
+              <m3-loading-indicator size="20" aria-hidden="true"></m3-loading-indicator>
+              Сверьте код и подтвердите в приложении
             {:else}
               <m3-loading-indicator size="20" aria-hidden="true"></m3-loading-indicator>
-              Ждём подтверждения в приложении
+              Ждём, когда приложение отсканирует QR
             {/if}
           </p>
         {:else if view.kind === 'failed'}
@@ -163,7 +152,7 @@
           {:else}
             <EmptyState
               error
-              title="Не удалось получить код"
+              title="Не удалось получить QR-код"
               text={errorText(view.error, 'Попробуйте ещё раз')}
             >
               <button class="m3-btn tonal" onclick={() => flow?.renew()}>
@@ -175,17 +164,17 @@
         {:else if view.kind === 'expired'}
           <EmptyState
             icon="timer_off"
-            title="Код устарел"
+            title="QR-код устарел"
             text="Покажем новый, когда будете готовы."
           >
             <button class="m3-btn" onclick={() => flow?.renew()}>
               <Icon name="refresh" />
-              Показать новый код
+              Показать новый QR-код
             </button>
           </EmptyState>
         {:else}
           <div class="qr-tile waiting">
-            <LoadingIndicator size={56} label="Получаем код" />
+            <LoadingIndicator size={56} label="Получаем QR-код" />
           </div>
         {/if}
       </section>
@@ -278,18 +267,13 @@
     flex-direction: column;
     align-items: center;
     gap: 8px;
-  }
-  .code-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    text-align: center;
   }
   .code {
     margin: 0;
     font: 600 32px/1.2 var(--md-mono);
     letter-spacing: 0.12em;
     white-space: nowrap;
-    user-select: all;
   }
   .countdown {
     width: 100%;
@@ -318,19 +302,6 @@
     color: var(--md-on-surface-variant);
     font: var(--md-body-medium);
   }
-  .scanned {
-    max-width: 480px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 32px 24px;
-    text-align: center;
-  }
-  .scanned h1,
-  .scanned p {
-    margin: 0;
-  }
   @media (max-width: 860px) {
     .layout {
       grid-template-columns: 1fr;
@@ -349,8 +320,8 @@
       gap: 20px;
       min-height: 0;
     }
-    /* On a phone the user types the code into the app on the same phone: the code goes first. */
-    .code-block {
+    /* On a phone the QR cannot be scanned by the same phone: the link for the app goes first. */
+    .copy {
       order: -1;
     }
     .qr-tile {

@@ -46,6 +46,8 @@ import i_shield_person from '@material-symbols/svg-400/rounded/shield_person.svg
 import i_block from '@material-symbols/svg-400/rounded/block.svg?raw';
 import i_task_alt from '@material-symbols/svg-400/rounded/task_alt.svg?raw';
 import i_table from '@material-symbols/svg-400/rounded/table.svg?raw';
+import i_smart_toy from '@material-symbols/svg-400/rounded/smart_toy.svg?raw';
+import i_devices from '@material-symbols/svg-400/rounded/devices.svg?raw';
 import f_home from '@material-symbols/svg-400/rounded/home-fill.svg?raw';
 import f_group from '@material-symbols/svg-400/rounded/group-fill.svg?raw';
 import f_fitness_center from '@material-symbols/svg-400/rounded/fitness_center-fill.svg?raw';
@@ -100,6 +102,8 @@ defineIcons({
   block: i_block,
   task_alt: i_task_alt,
   table: i_table,
+  smart_toy: i_smart_toy,
+  devices: i_devices,
   'home-fill': f_home,
   'group-fill': f_group,
   'fitness_center-fill': f_fitness_center,

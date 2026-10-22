@@ -163,15 +163,15 @@
   </Dialog>
 {:else if session.reauth}
   <Dialog
-    title="Для действий администратора войдите заново"
-    text="Подтвердите вход в приложении, и эта страница откроется снова."
+    title="Подтвердите вход на телефоне"
+    text="Для действий модератора и администратора вход подтверждается раз в 7 дней. Отсканируйте QR-код в приложении, и эта страница откроется снова."
     icon="lock"
     shape="sunny"
     onclose={() => (session.reauth = false)}
   >
     {#snippet actions()}
       <button class="m3-btn text" onclick={() => (session.reauth = false)}>Не сейчас</button>
-      <button class="m3-btn" onclick={() => session.reauthenticate()}>Войти</button>
+      <button class="m3-btn" onclick={() => session.reauthenticate()}>Подтвердить</button>
     {/snippet}
   </Dialog>
 {/if}

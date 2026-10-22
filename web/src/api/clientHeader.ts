@@ -26,12 +26,21 @@ export function browserOf(userAgent: string): string {
   return 'other';
 }
 
-/** [revision] is the git commit the image was built from (`REVISION`), `local` for other builds. */
+function commitOf(revision: string | undefined): string | undefined {
+  return revision && /^[0-9a-f]{7,40}$/.test(revision) ? revision : undefined;
+}
+
+/** The web build: the short commit the image was built from (`REVISION`), `local` for other builds. */
+export function webVersion(revision: string | undefined): string {
+  return commitOf(revision)?.slice(0, 7) ?? 'local';
+}
+
+/** [revision] is the git commit the image was built from (`REVISION`). */
 export function clientHeader(userAgent: string, revision: string | undefined): string {
-  const commit = revision && /^[0-9a-f]{7,40}$/.test(revision) ? revision : undefined;
+  const commit = commitOf(revision);
   const pairs: [string, string | undefined][] = [
     ['kind', 'web'],
-    ['version', commit ? commit.slice(0, 7) : 'local'],
+    ['version', webVersion(revision)],
     ['channel', 'web'],
     ['commit', commit],
     ['browser', browserOf(userAgent)],

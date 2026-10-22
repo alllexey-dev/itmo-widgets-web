@@ -3,7 +3,7 @@
 How the web app in `web/` is put together: serving, routing, the session, data
 loading, the API client, the feature layout, tests and the bundle. The visual
 side is in [`design.md`](design.md); the backend contracts are
-`docs/contracts/web.md` and `docs/contracts/admin.md` in `itmo-widgets-backend`.
+`docs/contracts/connections.md` and `docs/contracts/admin.md` in `itmo-widgets-backend`.
 
 ## Serving
 
@@ -26,8 +26,8 @@ the icons (`src/lib/icons.ts`), then mounts `src/App.svelte`. `App` renders `Log
 `src/lib/Shell.svelte` for everything else, plus the package's `Snackbars`.
 
 `src/lib/router.svelte.ts` is a small history router under `BASE` (`/app`, from
-Vite's base). Hash routing is not an option: the released app, the login QR and
-the AASA open `/app/login?code=...`, and admin bookmarks use `/app/admin/*`. A
+Vite's base). Hash routing is not an option: links from the apps and admin
+bookmarks use `/app/...` paths. A
 typed table maps each path pattern to a `Route`, the `Access` it needs
 (`anonymous`, `user`, `moderator`, `admin`) and the rail `Section` that is
 active on it. Folded pages keep their old addresses inside another section:
@@ -56,35 +56,34 @@ history entry and drops empty values. Section documents list their parameters.
 
 ## Session
 
+- The browser is a connected client (`web`) of the user's account: the httpOnly
+  `iw_client` cookie (`Path=/api`) carries its connection token, which never
+  reaches JavaScript ([Auth](features/auth.md)).
 - `src/lib/session.svelte.ts` holds `session`: `ensure()` loads
-  `GET /api/web/auth/me` (`isu`, `name`, `pictureUrl`, `groups`, `roles`) once,
-  concurrent callers share the request; roles the web does not know are ignored.
+  `GET /api/client/me` (`isu`, `connection`), `/api/users/me/data` (`name`,
+  `pictureUrl`, `groups`) and `/api/users/me/roles` together, once; concurrent
+  callers share the request; roles the web does not know are ignored.
 - `hasAccess(user, access)` is the only role rule: `ADMIN` implies moderator
   rights. The backend enforces access; the UI only hides.
-- Backend keeps the session in two httpOnly cookies: `iw_session`, an access
-  token for one hour, and `iw_refresh`, which `POST /api/web/auth/refresh`
-  rotates together with it. On a 401 other than `reauth_required` the API client
-  refreshes once and repeats the request; concurrent requests share one refresh,
-  tabs take turns through the Web Lock `iw-session-refresh` and reuse a refresh
-  another tab finished after the request was sent (`localStorage`
-  `iw-session-refreshed-at`). A refresh that fails with another status fails the
-  request and keeps the session.
-- The API client reports a lost session (`onSessionLost`) on a 401 from any
-  request that the refresh did not save, except `401 reauth_required`. A visitor who never got in goes
+- Nothing refreshes: the connection lives until it is revoked or unused for 30
+  days. The API client reports a lost session (`onSessionLost`) on a 401 from
+  any request, except `401 reauth_required`. A visitor who never got in goes
   straight to `/login`; a signed-in user sees the modal `Сессия истекла` with
   `Войти` first, so the page under it does not vanish. On `/login` the signal is
   ignored: the login page checks the session itself.
 - A 403 keeps the session and shows the page's access error (`src/lib/LoadError.svelte`).
-- `401 reauth_required` (a moderator or admin route with a
-  session older than 7 days) is not a lost session: the client calls
+- `401 reauth_required` (a moderator or admin route with a phone approval
+  older than 7 days) is not a lost session: the client calls
   `onReauthRequired` instead, the shell shows the dismissible dialog
-  `Для действий администратора войдите заново`, and the student sections keep
-  working. Its `Войти` opens `/login?next=<path>` without signing out; the
-  lost-session `Войти` also passes `next`. After approval the login page forgets
-  cached responses and returns to `next` (an app path, never `/login`).
-- `session.logout()` posts `/api/web/auth/logout`, forgets the user and every
-  cached response and goes to `/login`. A lost session on that request (an
-  expired cookie) counts as signed out, not as a failed sign-out.
+  `Подтвердите вход на телефоне`, and the student sections keep working. Its
+  `Подтвердить` opens `/login?next=<path>` without signing out, which shows a
+  `RENEW` QR; the lost-session `Войти` also passes `next` and gets a `CONNECT`
+  QR. After the claim the login page forgets cached responses and returns to
+  `next` (an app path, never `/login`).
+- `session.logout()` sends `DELETE /api/client/self` (Backend revokes the
+  connection and clears the cookie), forgets the user and every cached
+  response and goes to `/login`. A 401 on that request (a connection already
+  revoked) counts as signed out, not as a failed sign-out.
 
 ## Data loading
 
@@ -113,12 +112,14 @@ All HTTP goes through `src/api/client.ts`:
 - `api.get/post/put/patch/delete<T>(path, ...)` over `apiRequest`, with
   `credentials: 'same-origin'`, `Accept: application/json`, JSON bodies and a
   `query` object (empty values are dropped).
+- Every request carries `Accept-Language: ru`, the UI language, for texts
+  Backend localizes (scope titles and descriptions).
 - Every request carries `X-Client: kind=web; version=<commit or local>;
   channel=web; commit=<sha>; browser=<family>/<major>` (`src/api/clientHeader.ts`;
   Backend client statistics). The commit comes from the image's `REVISION`
   build argument as `VITE_REVISION`; the raw user agent is never sent.
 - Every non-GET request carries `X-Web-Request: 1`, which Backend requires for
-  cookie sessions (CSRF, answer `403 csrf` otherwise).
+  cookie requests (CSRF, answer `403 csrf` otherwise).
 - The `ApiResponse` envelope `{success, data, error: {message, code}}` is
   unwrapped; the promise resolves with `data`.
 - Failures throw `ApiError(message, status, code)` with `sessionLost` (a 401
@@ -226,8 +227,11 @@ Vitest runs in jsdom with `src/test/setup.ts`:
   Tests do not register the package's custom elements (jsdom has no
   constructable stylesheets), so they render as plain elements.
 - Helpers in `server.ts`: `ok(data)` and `fail(status, code)` build backend
-  envelopes; `userOf(roles)`, `mockSession`, `mockSignedOut` (401 on `/me`),
-  `mockChallenges` and `mockPoll` for sign-in.
+  envelopes; `userOf(roles)` and `connectionOf()`, `mockSession` (the three
+  session requests; a function answering null is 401), `mockSignedOut`,
+  `mockChallenges` (creates and renewals, with their bodies) and `mockClaim`
+  for the phone approval. `fixtures/user-devices.json` is Backend's golden
+  `userDevices.json`.
 - `src/test/admin.ts` holds synthetic admin answers (`pageOf`,
   `credentialsOf`, `sportStatusOf`, `aiSummariesOf`, `reviewsSyncOf`,
   `dashboardOf`) and `mockStaffSources` for every source of the staff home;
@@ -284,12 +288,12 @@ downloaded Playwright headless shell and downloads nothing).
 
 | Path under `/app/` | Rail section | Role | Document |
 |---|---|---|---|
-| `/login`, `/login?code=` | - | signed out | [Auth](features/auth.md) |
+| `/login`, `/login?next=` | - | signed out, or re-approval | [Auth](features/auth.md) |
 | `/` | Главная | everyone | [Home](features/home.md) |
 | `/friends` | Друзья | everyone | [Friends](features/friends.md) |
 | `/u/:isu` | Друзья | everyone | [People](features/people.md) |
 | `/sport` | Спорт | everyone | [Sport](features/sport.md) |
-| `/me` | Профиль | everyone | [Profile](features/profile.md) |
+| `/me`, `/me/devices` | Профиль | everyone | [Profile](features/profile.md) |
 | `/admin/moderation`, `/admin/restrictions` | Модерация | moderator | [Moderation](features/moderation.md) |
 | `/admin/dashboard` | Главная | administrator | [Dashboard](features/dashboard.md) |
 | `/admin/users`, `/admin/users/:isu` | Пользователи | administrator | [Users](features/users.md) |

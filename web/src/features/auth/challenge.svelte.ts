@@ -1,11 +1,19 @@
 import { ApiError } from '../../api/client';
-import { createChallenge, pollChallenge, type LoginChallenge, type LoginStatus } from './login';
+import {
+  claim,
+  createChallenge,
+  type ClaimStatus,
+  type LoginChallenge,
+  type PairingKind,
+} from './pairing';
 
 const POLL_INTERVAL_MS = 2_000;
 const CLOCK_TICK_MS = 1_000;
 /** The backend code lifetime, used when the browser clock disagrees with the server's. */
 const DEFAULT_LIFETIME_MS = 2 * 60_000;
 const MAX_LIFETIME_MS = 10 * 60_000;
+/** Backend gives an opened code 10 minutes from the first open. */
+const OPENED_LIFETIME_MS = 10 * 60_000;
 /**
  * Codes replaced without a click; then the page waits for the user. Five renewals are
  * about 12 minutes, below the backend limit of 10 codes per address in 10 minutes.
@@ -27,7 +35,7 @@ export type LoginState =
       challenge: ActiveChallenge;
       /** Milliseconds until the code expires. */
       remaining: number;
-      status: LoginStatus;
+      status: ClaimStatus;
       /** The last poll did not reach the server; polling goes on. */
       offline: boolean;
     };
@@ -45,21 +53,22 @@ function pageVisible(): boolean {
 }
 
 /**
- * Phone sign-in for this browser: creates a code once, polls it every 2 s while the tab is
- * visible and the code is alive, replaces an expired code up to five times in a row and calls
- * `onApproved` once the app confirms. `start()` on mount, `stop()` on destroy.
+ * Phone approval of this browser: creates a challenge of [kind] once, claims it every 2 s while
+ * the tab is visible and the code is alive, replaces an expired code up to five times in a row and
+ * calls `onApproved` once the claim succeeds. `start()` on mount, `stop()` on destroy.
  */
 export class LoginFlow {
   challenge = $state.raw<ActiveChallenge | null>(null);
-  status = $state<LoginStatus>('PENDING');
+  status = $state<ClaimStatus>('PENDING');
   creating = $state(false);
   createError = $state<Error | null>(null);
   offline = $state(false);
-  /** 404 on a poll: an unknown id or a wrong secret, the code is gone for this browser. */
+  /** 404 on a claim: expired, unknown or already claimed, the code is gone for this browser. */
   gone = $state(false);
   now = $state(Date.now());
   renewals = $state(0);
 
+  #kind: PairingKind;
   #onApproved: () => void;
   /** The code already replaced automatically; each code is replaced at most once. */
   #renewedFor: ActiveChallenge | null = null;
@@ -69,7 +78,8 @@ export class LoginFlow {
   #stopped = false;
   #onVisibility = () => this.#wake();
 
-  constructor(onApproved: () => void) {
+  constructor(kind: PairingKind, onApproved: () => void) {
+    this.#kind = kind;
     this.#onApproved = onApproved;
   }
 
@@ -116,7 +126,7 @@ export class LoginFlow {
   }
 
   get #stale(): boolean {
-    return this.challenge !== null && (this.#timeUp || this.status === 'EXPIRED' || this.gone);
+    return this.challenge !== null && (this.#timeUp || this.gone);
   }
 
   async #create(automatic = false): Promise<void> {
@@ -126,7 +136,7 @@ export class LoginFlow {
     this.#cancelPoll();
     this.#inFlight?.abort();
     try {
-      const created = activate(await createChallenge());
+      const created = activate(await createChallenge(this.#kind));
       if (this.#stopped) return;
       if (automatic) this.renewals += 1;
       this.challenge = created;
@@ -190,8 +200,15 @@ export class LoginFlow {
     const controller = new AbortController();
     this.#inFlight = controller;
     try {
-      const status = await pollChallenge(challenge, controller.signal);
+      const status = await claim(challenge, controller.signal);
       if (controller.signal.aborted || this.challenge !== challenge) return;
+      if (status === 'OPENED' && this.status === 'PENDING') {
+        this.challenge = {
+          ...challenge,
+          lifetime: OPENED_LIFETIME_MS,
+          deadline: Date.now() + OPENED_LIFETIME_MS,
+        };
+      }
       this.status = status;
       this.offline = false;
     } catch (error) {
@@ -201,7 +218,7 @@ export class LoginFlow {
     } finally {
       if (this.#inFlight === controller) this.#inFlight = null;
     }
-    if (this.status === 'APPROVED') {
+    if (this.status === 'CLAIMED') {
       this.stop();
       this.#onApproved();
       return;

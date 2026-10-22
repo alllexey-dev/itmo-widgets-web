@@ -6,7 +6,7 @@ const MESSAGES: Record<string, string> = {
   not_found: 'Не найдено',
   rate_limited: 'Слишком много запросов, попробуйте позже',
   csrf: 'Обновите страницу и попробуйте снова',
-  reauth_required: 'Для действий администратора войдите заново',
+  reauth_required: 'Подтвердите вход на телефоне',
 };
 
 /**

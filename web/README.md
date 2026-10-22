@@ -23,7 +23,7 @@
 - [Журнал](docs/features/audit.md)
 - [Архитектура](docs/architecture.md), [дизайн](docs/design.md)
 
-Контракты бэкенда: `docs/contracts/web.md` и `docs/contracts/admin.md`
+Контракты бэкенда: `docs/contracts/connections.md` и `docs/contracts/admin.md`
 в репозитории `itmo-widgets-backend`.
 
 ## Запуск
@@ -45,13 +45,13 @@ npm run dev
 
 Ограничения локального запуска:
 
-- Коды создаёт dev-бэкенд, поэтому подтверждать их нужно debug-сборкой
+- QR создаёт dev-бэкенд, поэтому подтверждать вход нужно debug-сборкой
   приложения: она ходит в dev-бэкенд, release - в прод.
-- QR с `http://localhost` приложение не примет (оно берёт только ссылки
-  `https://.../app/login?code=`), код нужно ввести вручную.
-- Cookie сессии выдаётся с `Secure`, `SameSite=Strict` и `Path=/api`; не все
-  браузеры сохраняют такую cookie на `http://localhost`. Вход целиком
-  проверяйте на `https://dev.widgets.alllexey.dev/app/`.
+- Ссылку с `http://localhost/pair#...` приложение не примет (оно берёт только
+  свои хосты), поэтому с локального сервера войти нельзя.
+- Cookie подключения `iw_client` выдаётся с `Secure`, `SameSite=Strict` и
+  `Path=/api`; не все браузеры сохраняют такую cookie на `http://localhost`.
+  Вход целиком проверяйте на `https://dev.widgets.alllexey.dev/app/`.
 - Для разделов модератора и администратора нужна роль на dev-бэкенде.
 
 Без бэкенда и без входа все разделы показывает `npm run csp-preview -- --serve`

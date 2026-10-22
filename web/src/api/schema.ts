@@ -404,102 +404,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/agent/access": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["agent_access"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/agent/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["agent_events"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/agent/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["agent_me"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/agent/pair/session": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["agentPairing_createSessionPairing"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/agent/self": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["agent_revokeSelf"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/agent/tokens": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["agent_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/app/version": {
         parameters: {
             query?: never;
@@ -525,6 +429,86 @@ export interface paths {
         };
         get: operations["app_appVersionInfo"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/client/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["client_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/client/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["client_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/client/pair/renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["client_renew"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/client/self": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["client_revokeSelf"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/client/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["client_status"];
         post?: never;
         delete?: never;
         options?: never;
@@ -829,23 +813,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["agentPairing_createPairing"];
+        post: operations["pairing_createChallenge"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/pair/challenges/{id}": {
+    "/api/pair/challenges/{challengeId}/claim": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["agentPairing_pollPairing"];
+        get?: never;
         put?: never;
-        post?: never;
+        post: operations["pairing_claim"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1412,16 +1396,16 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/me/connections": {
+    "/api/users/me/connections/{id}/itmo-ended": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["pairing_connections"];
+        get?: never;
         put?: never;
-        post?: never;
+        post: operations["connections_itmoEnded"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1437,7 +1421,39 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["pairing_revokeConnection"];
+        post: operations["connections_revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/me/connections/{id}/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["connections_updateScopes"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/me/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["user_consent"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1452,6 +1468,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["user_myData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/me/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["connections_devices"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1476,6 +1508,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/me/installs/{instanceId}/sign-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["connections_signOutInstall"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/me/pair/{challengeId}/approve": {
         parameters: {
             query?: never;
@@ -1485,23 +1533,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["pairing_approvePairing"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/users/me/pair/{challengeId}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["pairing_rejectPairing"];
+        post: operations["pairing_approve"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1517,7 +1549,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["pairing_openPairing"];
+        post: operations["pairing_open"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1572,38 +1604,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/me/web-login/{challengeId}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["user_approveWebLogin"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/users/me/web-login/{code}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["user_webLoginPreview"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/users/{isu}": {
         parameters: {
             query?: never;
@@ -1630,86 +1630,6 @@ export interface paths {
         get: operations["user_friends"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/auth/challenges": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["webAuth_createChallenge"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/auth/challenges/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["webAuth_poll"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/auth/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["webAuth_logout"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/auth/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["webAuth_me"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/auth/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["webAuth_refresh"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1816,7 +1736,7 @@ export interface components {
             /** Format: date-time */
             firstSeenAt: string;
             /** @enum {string} */
-            kind: "ANDROID" | "IOS" | "WEB" | "AGENT";
+            kind: "ANDROID" | "IOS" | "WEB" | "AGENT" | "MCP";
             /** Format: date-time */
             lastSeenAt: string;
             name: string | null;
@@ -1860,7 +1780,7 @@ export interface components {
             /** Format: date */
             day: string;
             /** @enum {string} */
-            kind: "ANDROID" | "IOS" | "WEB" | "AGENT";
+            kind: "ANDROID" | "IOS" | "WEB" | "AGENT" | "MCP";
             version: string;
         };
         AdminClientKind: {
@@ -1872,7 +1792,7 @@ export interface components {
             active7d: number;
             builds: components["schemas"]["AdminClientBuildGroup"][];
             /** @enum {string} */
-            kind: "ANDROID" | "IOS" | "WEB" | "AGENT";
+            kind: "ANDROID" | "IOS" | "WEB" | "AGENT" | "MCP";
             platforms: components["schemas"]["AdminClientCount"][];
         };
         AdminClientVersionWindow: {
@@ -2195,49 +2115,6 @@ export interface components {
             name: string;
             pictureUrl: string | null;
         };
-        AgentAccess: {
-            enabled: boolean;
-        };
-        AgentEvent: {
-            /** Format: date-time */
-            expiresAt: string;
-            id: string;
-            /** Format: date-time */
-            occurredAt: string;
-            /** @description The payload of the push of the same type, nulls omitted */
-            payload: {
-                [key: string]: unknown;
-            };
-            /** Format: int64 */
-            seq: number;
-            type: string;
-        };
-        AgentEventsPage: {
-            events: components["schemas"]["AgentEvent"][];
-            gap: boolean;
-            hasMore: boolean;
-            /** Format: int64 */
-            nextCursor: number;
-        };
-        AgentIdentity: {
-            /** Format: int32 */
-            isu: number;
-            name: string;
-            scopes: ("sport" | "friends:read" | "schedule:write")[];
-            /** Format: uuid */
-            tokenId: string;
-        };
-        AgentTokenInfo: {
-            /** Format: date-time */
-            createdAt: string;
-            /** @enum {string} */
-            createdVia: "PAIR" | "APP" | "WEB";
-            hint: string;
-            /** Format: uuid */
-            id: string;
-            name: string;
-            scopes: ("sport" | "friends:read" | "schedule:write")[];
-        };
         ApiResponseAdminAgentAccess: {
             data: components["schemas"]["AdminAgentAccess"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
@@ -2318,38 +2195,33 @@ export interface components {
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
-        ApiResponseAgentAccess: {
-            data: components["schemas"]["AgentAccess"] | null;
-            error: components["schemas"]["ErrorDetails"] | null;
-            success: boolean;
-        };
-        ApiResponseAgentEventsPage: {
-            data: components["schemas"]["AgentEventsPage"] | null;
-            error: components["schemas"]["ErrorDetails"] | null;
-            success: boolean;
-        };
-        ApiResponseAgentIdentity: {
-            data: components["schemas"]["AgentIdentity"] | null;
-            error: components["schemas"]["ErrorDetails"] | null;
-            success: boolean;
-        };
         ApiResponseAppVersionInfo: {
             data: components["schemas"]["AppVersionInfo"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
-        ApiResponseCreatedAgentToken: {
-            data: components["schemas"]["CreatedAgentToken"] | null;
+        ApiResponseApprovedPairing: {
+            data: components["schemas"]["ApprovedPairing"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseClientEventsPage: {
+            data: components["schemas"]["ClientEventsPage"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseClientMe: {
+            data: components["schemas"]["ClientMe"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseConnectionInfo: {
+            data: components["schemas"]["ConnectionInfo"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
         ApiResponseCreatedChallenge: {
             data: components["schemas"]["CreatedChallenge"] | null;
-            error: components["schemas"]["ErrorDetails"] | null;
-            success: boolean;
-        };
-        ApiResponseCreatedPairing: {
-            data: components["schemas"]["CreatedPairing"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
@@ -2360,11 +2232,6 @@ export interface components {
         };
         ApiResponseListAdminServiceCredential: {
             data: components["schemas"]["AdminServiceCredential"][] | null;
-            error: components["schemas"]["ErrorDetails"] | null;
-            success: boolean;
-        };
-        ApiResponseListConnectionInfo: {
-            data: components["schemas"]["ConnectionInfo"][] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
@@ -2443,8 +2310,8 @@ export interface components {
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
-        ApiResponsePairingPoll: {
-            data: components["schemas"]["PairingPoll"] | null;
+        ApiResponsePairingClaimResponse: {
+            data: components["schemas"]["PairingClaimResponse"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
@@ -2497,6 +2364,11 @@ export interface components {
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
+        ApiResponseUserDevices: {
+            data: components["schemas"]["UserDevices"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
         ApiResponseUserLookupResponse: {
             data: components["schemas"]["UserLookupResponse"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
@@ -2517,79 +2389,98 @@ export interface components {
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
-        ApiResponseWebLoginPoll: {
-            data: components["schemas"]["WebLoginPoll"] | null;
-            error: components["schemas"]["ErrorDetails"] | null;
-            success: boolean;
-        };
-        ApiResponseWebLoginPreview: {
-            data: components["schemas"]["WebLoginPreview"] | null;
-            error: components["schemas"]["ErrorDetails"] | null;
-            success: boolean;
-        };
-        ApiResponseWebMe: {
-            data: components["schemas"]["WebMe"] | null;
-            error: components["schemas"]["ErrorDetails"] | null;
-            success: boolean;
-        };
         AppVersionInfo: {
             latestVersion: string;
             minVersion: string;
             note: string;
         };
         ApprovePairingRequest: {
-            scopes: ("sport" | "friends:read" | "schedule:write")[] | null;
+            itmo: components["schemas"]["ItmoSession"] | null;
+            scopes: ("sport" | "friends:read" | "schedule:write" | "reviews:read" | "links:read" | "sport:queue" | "user")[] | null;
             sealedBundle: string | null;
+        };
+        ApprovedPairing: {
+            /** Format: uuid */
+            connectionId: string;
+        };
+        ClaimPairingRequest: {
+            claimSecret: string;
+        };
+        ClientEvent: {
+            /** Format: date-time */
+            expiresAt: string;
+            id: string;
+            /** Format: date-time */
+            occurredAt: string;
+            /** @description The payload of the push of the same type, nulls omitted */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: int64 */
+            seq: number;
+            type: string;
+        };
+        ClientEventsPage: {
+            events: components["schemas"]["ClientEvent"][];
+            gap: boolean;
+            hasMore: boolean;
+            /** Format: int64 */
+            nextCursor: number;
+        };
+        ClientMe: {
+            connection: components["schemas"]["ConnectionInfo"];
+            /** Format: int32 */
+            isu: number;
+        };
+        ClientStatusRequest: {
+            /** @enum {string} */
+            itmo: "ok" | "closed" | "none";
+            version?: string | null;
         };
         ConnectionInfo: {
             /** Format: date-time */
+            approvedAt: string;
+            /** @enum {string} */
+            client: "agent" | "mcp" | "web";
+            /** Format: date-time */
             createdAt: string;
-            current: boolean;
             /** Format: uuid */
             id: string;
-            itmoSession: boolean;
+            itmo: components["schemas"]["ItmoSession"] | null;
             /** @enum {string} */
-            kind: "WEB_SESSION" | "AGENT";
+            itmoStatus: "ok" | "closed" | "none";
             /** Format: date-time */
             lastUsedAt: string | null;
             live: boolean;
-            name: string | null;
-            scopes: ("sport" | "friends:read" | "schedule:write")[] | null;
-            userAgent: string | null;
-        };
-        CreateAgentTokenRequest: {
             name: string;
-            scopes: ("sport" | "friends:read" | "schedule:write")[];
+            platform: string | null;
+            /** Format: date-time */
+            revokedAt: string | null;
+            scopes: components["schemas"]["ScopeGrant"][];
+            version: string | null;
         };
-        CreatePairingRequest: {
+        ConsentRequest: {
+            /** Format: int32 */
+            version: number;
+        };
+        CreateChallengeRequest: {
+            /** @enum {string} */
+            client: "agent" | "mcp" | "web";
             keyCommitment: string;
             /** @enum {string} */
-            kind: "WEB_SESSION" | "AGENT" | "AGENT_SESSION" | "WEB_ITMO";
+            kind: "CONNECT" | "RENEW";
             name: string;
+            platform?: string | null;
+            scopes?: ("sport" | "friends:read" | "schedule:write" | "reviews:read" | "links:read" | "sport:queue" | "user")[] | null;
             version?: string | null;
         };
-        CreateSessionPairingRequest: {
-            keyCommitment: string;
-        };
-        CreatedAgentToken: {
-            info: components["schemas"]["AgentTokenInfo"];
-            token: string;
-        };
         CreatedChallenge: {
+            /** Format: uuid */
+            challengeId: string;
+            claimSecret: string;
             code: string;
             /** Format: date-time */
             expiresAt: string;
-            /** Format: uuid */
-            id: string;
-            pollSecret: string;
-        };
-        CreatedPairing: {
-            code: string;
-            /** Format: date-time */
-            expiresAt: string;
-            /** Format: uuid */
-            id: string;
-            pollSecret: string;
         };
         DecisionRestriction: {
             /** @enum {string} */
@@ -2599,7 +2490,7 @@ export interface components {
         };
         ErrorDetails: {
             /** @enum {string} */
-            code: "invalid_request" | "invalid_request_data" | "validation_error" | "unauthorized" | "reauth_required" | "permission_denied" | "access_denied" | "restricted" | "csrf" | "recent_sign_in_required" | "not_found" | "business_rule_violation" | "conflict" | "rate_limited" | "internal_server_error";
+            code: "invalid_request" | "invalid_request_data" | "validation_error" | "unauthorized" | "reauth_required" | "permission_denied" | "access_denied" | "restricted" | "csrf" | "client_session" | "not_enrolled" | "recent_sign_in_required" | "not_found" | "business_rule_violation" | "conflict" | "rate_limited" | "internal_server_error";
             message: string;
         };
         FriendSportBooking: {
@@ -2620,6 +2511,27 @@ export interface components {
         };
         IdTokenRequest: {
             idToken: string;
+        };
+        InstallInfo: {
+            current: boolean;
+            deviceName: string | null;
+            /** Format: date-time */
+            firstSeenAt: string;
+            /** Format: uuid */
+            instanceId: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+            os: string | null;
+            /** @enum {string} */
+            platform: "ANDROID" | "IOS";
+            pushEnabled: boolean;
+            sid: string | null;
+            version: string;
+        };
+        ItmoSession: {
+            /** Format: date-time */
+            expiresAt: string;
+            sid: string;
         };
         LessonDto: {
             building: string | null;
@@ -2780,25 +2692,28 @@ export interface components {
             /** Format: date */
             writtenOn: string;
         };
-        PairingPoll: {
-            agentToken: components["schemas"]["CreatedAgentToken"] | null;
+        PairingClaimResponse: {
+            connection: components["schemas"]["ConnectionInfo"] | null;
             sealedBundle: string | null;
             /** @enum {string} */
-            status: "PENDING" | "OPENED" | "APPROVED" | "REJECTED" | "EXPIRED";
+            status: "PENDING" | "OPENED" | "CLAIMED";
+            token: string | null;
         };
         PairingPreview: {
             /** Format: uuid */
             challengeId: string;
-            /** Format: date-time */
-            createdAt: string;
+            /** @enum {string} */
+            client: "agent" | "mcp" | "web";
+            /** Format: uuid */
+            connectionId: string | null;
             /** Format: date-time */
             expiresAt: string;
-            keyCommitment: string | null;
+            keyCommitment: string;
             /** @enum {string} */
-            kind: "WEB_SESSION" | "AGENT" | "AGENT_SESSION" | "WEB_ITMO";
-            name: string | null;
-            scopes: ("sport" | "friends:read" | "schedule:write")[] | null;
-            userAgent: string | null;
+            kind: "CONNECT" | "RENEW";
+            name: string;
+            platform: string | null;
+            requestedScopes: components["schemas"]["ScopeInfo"][];
             version: string | null;
         };
         PinSubjectLinkRequest: {
@@ -2813,6 +2728,9 @@ export interface components {
             fcmToken: string;
             /** @enum {string|null} */
             platform?: "ANDROID" | "IOS" | null;
+        };
+        RenewChallengeRequest: {
+            keyCommitment: string;
         };
         ResourceVoteRequest: {
             /** Format: int32 */
@@ -2843,6 +2761,16 @@ export interface components {
             flowIds: number[];
             subjectTitle?: string | null;
             text: string;
+        };
+        ScopeGrant: {
+            granted: boolean;
+            scope: components["schemas"]["ScopeInfo"];
+        };
+        ScopeInfo: {
+            description: string;
+            /** @enum {string} */
+            id: "sport" | "friends:read" | "schedule:write" | "reviews:read" | "links:read" | "sport:queue" | "user";
+            title: string;
         };
         ServiceCredentialRequest: {
             value: string;
@@ -3200,6 +3128,9 @@ export interface components {
         UnregisterDeviceRequest: {
             fcmToken: string;
         };
+        UpdateScopesRequest: {
+            scopes: ("sport" | "friends:read" | "schedule:write" | "reviews:read" | "links:read" | "sport:queue" | "user")[];
+        };
         UserCapabilities: {
             canViewFriends: boolean;
             canViewSchedule: boolean;
@@ -3215,6 +3146,10 @@ export interface components {
             isu: number;
             name: string;
             pictureUrl: string | null;
+        };
+        UserDevices: {
+            connections: components["schemas"]["ConnectionInfo"][];
+            installs: components["schemas"]["InstallInfo"][];
         };
         UserLookupRequest: {
             isus: number[];
@@ -3251,27 +3186,6 @@ export interface components {
         UserSportBookingsResponse: {
             entries: components["schemas"]["SportQueueEntry"][];
             lessonIds: number[];
-        };
-        WebLoginPoll: {
-            /** @enum {string} */
-            status: "PENDING" | "APPROVED" | "EXPIRED";
-        };
-        WebLoginPreview: {
-            /** Format: uuid */
-            challengeId: string;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            expiresAt: string;
-            userAgent: string | null;
-        };
-        WebMe: {
-            groups: components["schemas"]["GroupData"][];
-            /** Format: int32 */
-            isu: number;
-            name: string;
-            pictureUrl: string | null;
-            roles: string[];
         };
     };
     responses: never;
@@ -3933,138 +3847,6 @@ export interface operations {
             };
         };
     };
-    agent_access: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAgentAccess"];
-                };
-            };
-        };
-    };
-    agent_events: {
-        parameters: {
-            query?: {
-                after?: number;
-                wait?: number;
-                itmo?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAgentEventsPage"];
-                };
-            };
-        };
-    };
-    agent_me: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseAgentIdentity"];
-                };
-            };
-        };
-    };
-    agentPairing_createSessionPairing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateSessionPairingRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseCreatedPairing"];
-                };
-            };
-        };
-    };
-    agent_revokeSelf: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseUnit"];
-                };
-            };
-        };
-    };
-    agent_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateAgentTokenRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseCreatedAgentToken"];
-                };
-            };
-        };
-    };
     app_appVersion: {
         parameters: {
             query?: never;
@@ -4103,6 +3885,118 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseAppVersionInfo"];
+                };
+            };
+        };
+    };
+    client_events: {
+        parameters: {
+            query?: {
+                after?: number;
+                wait?: number;
+                itmo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseClientEventsPage"];
+                };
+            };
+        };
+    };
+    client_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseClientMe"];
+                };
+            };
+        };
+    };
+    client_renew: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenewChallengeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseCreatedChallenge"];
+                };
+            };
+        };
+    };
+    client_revokeSelf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseUnit"];
+                };
+            };
+        };
+    };
+    client_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseUnit"];
                 };
             };
         };
@@ -4561,7 +4455,7 @@ export interface operations {
             };
         };
     };
-    agentPairing_createPairing: {
+    pairing_createChallenge: {
         parameters: {
             query?: never;
             header?: never;
@@ -4570,7 +4464,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreatePairingRequest"];
+                "application/json": components["schemas"]["CreateChallengeRequest"];
             };
         };
         responses: {
@@ -4580,23 +4474,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseCreatedPairing"];
+                    "*/*": components["schemas"]["ApiResponseCreatedChallenge"];
                 };
             };
         };
     };
-    agentPairing_pollPairing: {
+    pairing_claim: {
         parameters: {
             query?: never;
-            header: {
-                "X-Poll-Secret": string;
-            };
+            header?: never;
             path: {
-                id: string;
+                challengeId: string;
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimPairingRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -4604,7 +4500,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponsePairingPoll"];
+                    "*/*": components["schemas"]["ApiResponsePairingClaimResponse"];
                 };
             };
         };
@@ -5424,11 +5320,13 @@ export interface operations {
             };
         };
     };
-    pairing_connections: {
+    connections_itmoEnded: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -5439,12 +5337,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseListConnectionInfo"];
+                    "*/*": components["schemas"]["ApiResponseUnit"];
                 };
             };
         };
     };
-    pairing_revokeConnection: {
+    connections_revoke: {
         parameters: {
             query?: never;
             header?: never;
@@ -5454,6 +5352,56 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseUnit"];
+                };
+            };
+        };
+    };
+    connections_updateScopes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateScopesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseConnectionInfo"];
+                };
+            };
+        };
+    };
+    user_consent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -5486,6 +5434,26 @@ export interface operations {
             };
         };
     };
+    connections_devices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseUserDevices"];
+                };
+            };
+        };
+    };
     user_updateIdTokenData: {
         parameters: {
             query?: never;
@@ -5510,7 +5478,29 @@ export interface operations {
             };
         };
     };
-    pairing_approvePairing: {
+    connections_signOutInstall: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instanceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseUnit"];
+                };
+            };
+        };
+    };
+    pairing_approve: {
         parameters: {
             query?: never;
             header?: never;
@@ -5531,34 +5521,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseUnit"];
+                    "*/*": components["schemas"]["ApiResponseApprovedPairing"];
                 };
             };
         };
     };
-    pairing_rejectPairing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challengeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseUnit"];
-                };
-            };
-        };
-    };
-    pairing_openPairing: {
+    pairing_open: {
         parameters: {
             query?: never;
             header?: never;
@@ -5664,50 +5632,6 @@ export interface operations {
             };
         };
     };
-    user_approveWebLogin: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challengeId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseUnit"];
-                };
-            };
-        };
-    };
-    user_webLoginPreview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                code: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseWebLoginPreview"];
-                };
-            };
-        };
-    };
     user_profile: {
         parameters: {
             query?: never;
@@ -5748,110 +5672,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseListUserProfile"];
-                };
-            };
-        };
-    };
-    webAuth_createChallenge: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseCreatedChallenge"];
-                };
-            };
-        };
-    };
-    webAuth_poll: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Poll-Secret": string;
-            };
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseWebLoginPoll"];
-                };
-            };
-        };
-    };
-    webAuth_logout: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseUnit"];
-                };
-            };
-        };
-    };
-    webAuth_me: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseWebMe"];
-                };
-            };
-        };
-    };
-    webAuth_refresh: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApiResponseUnit"];
                 };
             };
         };

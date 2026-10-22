@@ -3,6 +3,7 @@
   import { errorText } from '../../api/errors';
   import { formatDate } from '../../lib/format';
   import LoadError from '../../lib/LoadError.svelte';
+  import { href } from '../../lib/router.svelte';
   import { displayName, roleLabel, session } from '../../lib/session.svelte';
   import { restrictions, RESTRICTIONS_PATH } from './api';
   import { groupLine, RESTRICTED } from './labels';
@@ -80,19 +81,32 @@
     <div class="stack">
       <section class="m3-card" aria-labelledby="profile-session">
         <h2 id="profile-session" class="m3-section-title">Этот вход</h2>
-        <p class="m3-body-large">Вы вошли на сайт, подтвердив вход в приложении.</p>
-        <p class="m3-body-medium m3-muted">
-          Вход продлевается сам и закончится после 30 дней без действий.
+        <p class="m3-body-large">
+          {user.connection.name}: подключён в приложении {formatDate(user.connection.createdAt)}
         </p>
+        <p class="m3-body-medium m3-muted">Вход закончится после 30 дней без действий.</p>
         {#if role}
           <p class="m3-body-medium m3-muted">
-            Для действий модератора и администратора вход нужно подтверждать раз в 7 дней.
+            Для действий модератора и администратора вход нужно подтверждать на телефоне раз в 7
+            дней, последний раз — {formatDate(user.connection.approvedAt)}.
           </p>
         {/if}
         <button class="m3-btn tonal out" disabled={leaving} onclick={logout}>
           <Icon name="logout" />
           Выйти
         </button>
+      </section>
+
+      <section class="m3-card" aria-labelledby="profile-devices">
+        <h2 id="profile-devices" class="m3-section-title">Устройства</h2>
+        <p class="m3-body-medium m3-muted">
+          Подключённые браузеры, агенты и MCP, телефоны с приложением. Потеряли телефон? Отключите
+          доступ отсюда.
+        </p>
+        <a class="m3-btn tonal out" href={href('/me/devices')}>
+          <Icon name="devices" />
+          Открыть устройства
+        </a>
       </section>
     </div>
   </div>
