@@ -84,28 +84,29 @@ Telegram или на почту, подтверждение входом в ве
 
 ## Скриншоты лендинга
 
-Снимки экранов — те же кадры демо-режима, что и для карточки Google Play: их
-снимает `StoreScreenshotCapture` из Android-проекта на вымышленных данных
-(1080 × 1920, светлая и тёмная тема, в `vibe/store-screenshots/{light,dark}/`
-репозитория приложения). Картинки виджетов снимает `WidgetPreviewImageCapture`
-(`vibe/store-screenshots/widgets/{light,night}/`). Реальных аккаунтов в кадрах
-нет.
+Снимки экранов — кадры демо-режима из `vibe/showcase/` репозитория приложения
+(описание каждого файла — в его `index.md`): Android `android/{light,dark}/`
+(1080 × 2400) и iPhone `ios/` (1206 × 2622, тёмные — с суффиксом `-dark`).
+Реальных аккаунтов в кадрах нет. Настройки и «Уведомления» на лендинг не
+берём: в демо они показывают «Сервер ITMO.Widgets: Не подключено».
 
 Имена файлов в `site/img/{light,dark}/` постоянные, поэтому обновлённые снимки
 просто заменяют старые:
 
 | Кадр | Файл |
 |---|---|
-| `01-home`, `02-schedule`, `03-lesson`, `04-recordbook`, `05-subject` | `home`, `schedule`, `lesson`, `recordbook`, `subject` |
-| `06-sport`, `07-sport-mine`, `08-teacher`, `09-friends`, `11-qr` | `sport`, `sport-mine`, `teacher`, `friends`, `qr` |
-| `widget_*_preview` | то же имя; QR-виджет — только светлый |
+| Android `02-today`, `09-lesson`, `13-recordbook`, `16-subject-scores` | `home`, `lesson`, `recordbook`, `subject` |
+| Android `24-sport-sign`, `20-sport-mine`, `31-teacher-reviews`, `11-friend-picker`, `28-me` | `sport`, `sport-mine`, `teacher`, `friends`, `me` |
+| Android `05-pass`, `40-widgets-more` | `qr`, `widgets` |
+| iPhone `04-pass`, `22-teacher`, `37-map` | `ios-pass`, `ios-teacher`, `ios-map` |
+
+Кадр обрезается сверху до 9:16 (у `ios-pass` — снизу, чтобы попал QR-код) и
+сжимается до 540 × 960:
 
 ```bash
-magick 01-home.png -resize 540x960 -quality 82 site/img/light/home.webp
-magick widget_lesson_list_preview.png -resize 600x -quality 82 site/img/dark/widget_lesson_list_preview.webp
+magick 02-today.png -gravity North -crop 1080x1920+0+0 +repage -resize 540x960 -quality 82 site/img/light/home.webp
+magick 04-pass-dark.png -gravity South -crop 1206x2144+0+0 +repage -resize 540x960 -quality 82 site/img/dark/ios-pass.webp
 ```
-
-Тёмные кадры виджетов берутся из `widgets/night/`, QR-виджет — `-resize 300x`.
 
 ## Локальный просмотр
 
