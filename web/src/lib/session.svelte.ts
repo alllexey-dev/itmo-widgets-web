@@ -5,8 +5,21 @@ import { BASE, router, type Access } from './router.svelte';
 
 export type Role = 'MODERATOR' | 'ADMIN';
 
-/** `GET /api/web/auth/me`; roles the web does not know are ignored. */
-export type User = Omit<components['schemas']['WebMe'], 'roles'> & { roles: Role[] };
+const ROLES: readonly string[] = ['MODERATOR', 'ADMIN'] satisfies Role[];
+
+export type Connection = components['schemas']['ConnectionInfo'];
+
+/**
+ * This browser's connection (`GET /api/client/me`) with the user's profile (`/api/users/me/data`) and
+ * roles (`/api/users/me/roles`); roles the web does not know are ignored.
+ */
+export type User = Pick<
+  components['schemas']['UserData'],
+  'isu' | 'name' | 'pictureUrl' | 'groups'
+> & {
+  roles: Role[];
+  connection: Connection;
+};
 
 export function hasAccess(user: User | null, access: Access): boolean {
   if (access === 'anonymous') return true;
@@ -35,9 +48,9 @@ export function roleLabel(user: User): string | null {
 type Status = 'idle' | 'loading' | 'ready' | 'signedOut' | 'failed';
 
 /**
- * The signed-in user of this browser. A 401 other than `reauth_required` means the cookie session is
- * gone: a visitor who never got in goes straight to the login page, a user who was signed in sees
- * "Сессия истекла" first. A 403 is a page's access error and keeps the session.
+ * The signed-in user of this browser. A 401 other than `reauth_required` means the connection is
+ * gone (revoked or idle): a visitor who never got in goes straight to the login page, a user who was
+ * signed in sees "Сессия истекла" first. A 403 is a page's access error and keeps the session.
  */
 class Session {
   user = $state<User | null>(null);
@@ -45,7 +58,7 @@ class Session {
   error = $state<Error | null>(null);
   /** The session ended while the user was working; the shell shows the modal dialog. */
   lost = $state(false);
-  /** A staff action needs a fresh sign-in (401 `reauth_required`); the session still works. */
+  /** A staff action needs a fresh phone approval (401 `reauth_required`); the session still works. */
   reauth = $state(false);
   #request: Promise<void> | null = null;
 
@@ -54,7 +67,7 @@ class Session {
     onReauthRequired(() => (this.reauth = Boolean(this.user)));
   }
 
-  /** Loads `/me` once; concurrent callers share the request. */
+  /** Loads the user once; concurrent callers share the request. */
   ensure(): Promise<void> {
     if (this.status === 'ready' || this.status === 'signedOut') return Promise.resolve();
     return this.reload();
@@ -67,9 +80,9 @@ class Session {
 
   async logout(): Promise<void> {
     try {
-      await api.post<unknown>('/api/web/auth/logout');
+      await api.delete<unknown>('/api/client/self');
     } catch (error) {
-      // An expired session is already signed out.
+      // A revoked or idle connection is already signed out.
       if (!(error instanceof ApiError && error.sessionLost)) throw error;
     }
     this.#signOut();
@@ -83,7 +96,7 @@ class Session {
     router.go(loginPath(back), { replace: true });
   }
 
-  /** "Войти" in the re-login dialog: the session stays, so going back keeps the page working. */
+  /** "Подтвердить" in the re-approval dialog: the session stays, so going back keeps the page working. */
   reauthenticate(): void {
     this.reauth = false;
     router.go(loginPath(here()));
@@ -102,7 +115,19 @@ class Session {
     this.status = 'loading';
     this.error = null;
     try {
-      this.user = await api.get<User>(SESSION_PATH);
+      const [me, data, roles] = await Promise.all([
+        api.get<components['schemas']['ClientMe']>(SESSION_PATH),
+        api.get<components['schemas']['UserData']>('/api/users/me/data'),
+        api.get<string[]>('/api/users/me/roles'),
+      ]);
+      this.user = {
+        isu: me.isu,
+        name: data.name,
+        pictureUrl: data.pictureUrl,
+        groups: data.groups,
+        roles: roles.filter((role): role is Role => ROLES.includes(role)),
+        connection: me.connection,
+      };
       this.status = 'ready';
     } catch (error) {
       if (error instanceof ApiError && error.sessionLost) {

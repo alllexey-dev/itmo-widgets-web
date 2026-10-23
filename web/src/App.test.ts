@@ -7,9 +7,10 @@ import { pages } from './pages';
 import { mockStaffSources, pageOf } from './test/admin';
 import { renderApp } from './test/render';
 import {
+  connectionOf,
   fail,
   mockChallenges,
-  mockPoll,
+  mockClaim,
   mockSession,
   mockSignedOut,
   ok,
@@ -21,6 +22,11 @@ import { mockStudentSources, profileOf } from './test/student';
 // Главная loads the student cards for everybody.
 beforeEach(() => void mockStudentSources());
 afterEach(() => vi.useRealTimers());
+
+/** The login page shows its QR once the challenge is created. */
+function loginQr() {
+  return screen.findByRole('img', { name: 'QR-код для входа' });
+}
 
 function rail() {
   return within(screen.getByRole('complementary', { name: 'Навигация' }));
@@ -124,10 +130,13 @@ describe('Shell', () => {
 
   it('offers a retry when the profile does not load', async () => {
     let attempts = 0;
+    mockSession(userOf([]));
     server.use(
-      http.get('*/api/web/auth/me', () => {
+      http.get('*/api/client/me', () => {
         attempts += 1;
-        return attempts === 1 ? fail(500, 'internal_server_error') : ok(userOf([]));
+        return attempts === 1
+          ? fail(500, 'internal_server_error')
+          : ok({ isu: 400001, connection: connectionOf() });
       }),
     );
     renderApp('/');
@@ -165,21 +174,19 @@ describe('Session', () => {
   it('sends a visitor to the login page after 401 unauthorized on /me', async () => {
     mockSignedOut();
     mockChallenges('ABCDEFGH');
-    mockPoll();
+    mockClaim();
 
     renderApp('/admin/users');
 
-    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    expect(await loginQr()).toBeInTheDocument();
     expect(location.pathname).toBe('/app/login');
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
   it('asks a signed-in user to sign in again after a 401 and then shows the login page', async () => {
     let lost = false;
+    mockSession(() => (lost ? null : userOf(['ADMIN'])));
     server.use(
-      http.get('*/api/web/auth/me', () =>
-        lost ? fail(401, 'unauthorized') : ok(userOf(['ADMIN'])),
-      ),
       http.get('*/api/admin/users', () => {
         lost = true;
         return fail(401, 'unauthorized');
@@ -187,7 +194,7 @@ describe('Session', () => {
     );
     mockStaffSources();
     mockChallenges('ABCDEFGH');
-    mockPoll();
+    mockClaim();
     renderApp('/');
     await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ');
 
@@ -195,7 +202,7 @@ describe('Session', () => {
 
     const dialog = await screen.findByRole('alertdialog', { name: 'Сессия истекла' });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Войти' }));
-    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    expect(await loginQr()).toBeInTheDocument();
     expect(location.pathname).toBe('/app/login');
   });
 
@@ -216,13 +223,13 @@ describe('Session', () => {
     },
   );
 
-  it('asks a staff user with an old sign-in to sign in again and keeps the session', async () => {
+  it('asks a staff user with an old approval to confirm on the phone and keeps the session', async () => {
     mockSession(userOf(['ADMIN']));
     server.use(http.get('*/api/admin/users', () => fail(401, 'reauth_required')));
     renderApp('/admin/users');
 
     const dialog = await screen.findByRole('dialog', {
-      name: 'Для действий администратора войдите заново',
+      name: 'Подтвердите вход на телефоне',
     });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Не сейчас' }));
 
@@ -232,7 +239,7 @@ describe('Session', () => {
     expect(rail().getByRole('link', { name: /Анна Смирнова/ })).toBeInTheDocument();
   });
 
-  it('returns to the staff page after the fresh sign-in is approved', async () => {
+  it('returns to the staff page after the phone approves again', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     let fresh = false;
     mockSession(userOf(['ADMIN']));
@@ -241,18 +248,23 @@ describe('Session', () => {
         fresh ? ok(pageOf([], request)) : fail(401, 'reauth_required'),
       ),
     );
-    mockChallenges('ABCDEFGH');
-    mockPoll(() => {
+    const challenges = mockChallenges('ABCDEFGH');
+    mockClaim(() => {
       fresh = true;
-      return 'APPROVED';
+      return 'CLAIMED';
     });
     renderApp('/admin/users?q=P3212');
     const dialog = await screen.findByRole('dialog', {
-      name: 'Для действий администратора войдите заново',
+      name: 'Подтвердите вход на телефоне',
     });
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Войти' }));
-    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Подтвердить' }));
+    expect(await loginQr()).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Подтвердите вход на телефоне' }),
+    ).toBeInTheDocument();
+    // A fresh approval of this connection, not a second connection.
+    expect(challenges.bodies).toEqual([{ keyCommitment: expect.any(String) }]);
     await vi.advanceTimersByTimeAsync(2_000);
 
     await waitFor(() => expect(location.pathname).toBe('/app/admin/users'));
@@ -263,37 +275,37 @@ describe('Session', () => {
 
   it('signs out through the rail and returns to the login page', async () => {
     let signedIn = true;
+    mockSession(() => (signedIn ? userOf([]) : null));
     server.use(
-      http.get('*/api/web/auth/me', () => (signedIn ? ok(userOf([])) : fail(401, 'unauthorized'))),
-      http.post('*/api/web/auth/logout', ({ request }) => {
+      http.delete('*/api/client/self', ({ request }) => {
         if (request.headers.get('X-Web-Request') !== '1') return fail(403, 'csrf');
         signedIn = false;
         return ok(null);
       }),
     );
     mockChallenges('ABCDEFGH');
-    mockPoll();
+    mockClaim();
     renderApp('/');
     await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ');
 
     await userEvent.click(rail().getByRole('button', { name: 'Выйти' }));
 
-    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    expect(await loginQr()).toBeInTheDocument();
     await waitFor(() => expect(location.pathname).toBe('/app/login'));
     expect(signedIn).toBe(false);
   });
 
-  it('signs out quietly when the session has already expired', async () => {
+  it('signs out quietly when the connection is already revoked', async () => {
     mockSession(userOf([]));
-    server.use(http.post('*/api/web/auth/logout', () => fail(401, 'unauthorized')));
+    server.use(http.delete('*/api/client/self', () => fail(401, 'unauthorized')));
     mockChallenges('ABCDEFGH');
-    mockPoll();
+    mockClaim();
     renderApp('/');
     await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ');
 
     await userEvent.click(rail().getByRole('button', { name: 'Выйти' }));
 
-    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    expect(await loginQr()).toBeInTheDocument();
     expect(location.pathname).toBe('/app/login');
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(screen.queryByText('Не удалось выйти')).not.toBeInTheDocument();
@@ -301,7 +313,7 @@ describe('Session', () => {
 
   it('reports a failed sign-out and stays', async () => {
     mockSession(userOf([]));
-    server.use(http.post('*/api/web/auth/logout', () => fail(500, 'internal_server_error')));
+    server.use(http.delete('*/api/client/self', () => fail(500, 'internal_server_error')));
     renderApp('/');
     await screen.findByText('Анна Смирнова · P3212, 2 курс, ФПИиКТ');
 

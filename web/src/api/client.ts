@@ -1,17 +1,20 @@
 import { clientHeader } from './clientHeader';
 import type { components } from './schema';
 /**
- * Thin `fetch` wrapper for our `/api/**`. The browser is authenticated by the
- * httpOnly `iw_session` cookie on the same origin; changing requests carry
- * `X-Web-Request: 1`, which the backend requires for cookie sessions (CSRF).
- * A 401 `unauthorized` first rotates the cookies through the httpOnly
- * `iw_refresh` cookie and repeats the request once.
- * Every request names the web build and the browser in `X-Client` (client statistics).
+ * Thin `fetch` wrapper for our `/api/**`. The browser is a connected client: the
+ * httpOnly `iw_client` cookie on the same origin carries its connection token;
+ * changing requests carry `X-Web-Request: 1`, which the backend requires for
+ * cookie requests (CSRF).
+ * Every request names the web build and the browser in `X-Client` (client statistics)
+ * and the UI language in `Accept-Language` (Backend texts such as scope titles).
  * Every backend response is an `ApiResponse` envelope that is unwrapped here.
  */
 
 /** `dev.alllexey.itmowidgets.core.model.ApiResponse` from itmo-widgets-core. */
-export type ApiEnvelope<T> = Omit<components['schemas']['ApiResponseWebMe'], 'data' | 'error'> & {
+export type ApiEnvelope<T> = Omit<
+  components['schemas']['ApiResponseClientMe'],
+  'data' | 'error'
+> & {
   data: T | null;
   // Older releases and non-Backend errors can use codes outside this snapshot.
   error: (Omit<components['schemas']['ErrorDetails'], 'code'> & { code: string | null }) | null;
@@ -30,10 +33,9 @@ export interface RequestOptions {
   signal?: AbortSignal;
 }
 
-export const SESSION_PATH = '/api/web/auth/me';
-export const REFRESH_PATH = '/api/web/auth/refresh';
+export const SESSION_PATH = '/api/client/me';
 
-/** 401 on an admin or moderator route whose session is older than Backend allows there. */
+/** 401 on an admin or moderator route when the phone approved this browser too long ago. */
 export const REAUTH_REQUIRED = 'reauth_required';
 
 /** Error codes produced by the client itself rather than by the backend. */
@@ -51,7 +53,7 @@ export class ApiError extends Error {
   readonly status: number;
   /** Backend `ApiResponse.error.code`, e.g. `not_found`, `rate_limited`, `csrf`. */
   readonly code: string;
-  /** The cookie session is gone: a 401 other than `reauth_required`. */
+  /** The connection is gone (revoked or idle): a 401 other than `reauth_required`. */
   readonly sessionLost: boolean;
 
   constructor(message: string, status: number, code: string) {
@@ -88,7 +90,7 @@ export function onSessionLost(listener: Listener): () => void {
   return subscribe(sessionLostListeners, listener);
 }
 
-/** A staff action needs a fresh sign-in; the session itself still works. */
+/** A staff action needs a fresh approval on the phone; the connection itself still works. */
 export function onReauthRequired(listener: Listener): () => void {
   return subscribe(reauthListeners, listener);
 }
@@ -134,6 +136,7 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
   const method = options.method ?? 'GET';
   const headers: Record<string, string> = {
     Accept: 'application/json',
+    'Accept-Language': 'ru',
     'X-Client': CLIENT,
     ...options.headers,
   };
@@ -153,53 +156,9 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
   }
 }
 
-function isUnauthorized(response: Response, payload: unknown): boolean {
-  return (
-    response.status === 401 && !(isEnvelope(payload) && payload.error?.code === REAUTH_REQUIRED)
-  );
-}
-
-/** When this tab or another one last rotated the cookies, `Date.now()`. */
-const REFRESHED_AT_KEY = 'iw-session-refreshed-at';
-let refreshing: Promise<boolean> | null = null;
-
-/**
- * Rotates the session cookies; false when Backend ended the session. One refresh
- * at a time in this tab and, through a Web Lock, across tabs; a refresh another
- * tab finished after [sentAt] is reused, since the cookies are shared.
- */
-function refreshSession(sentAt: number): Promise<boolean> {
-  refreshing ??= withRefreshLock(async () => {
-    if (Number(localStorage.getItem(REFRESHED_AT_KEY)) > sentAt) return true;
-    const rotated = await postRefresh();
-    if (rotated) localStorage.setItem(REFRESHED_AT_KEY, String(Date.now()));
-    return rotated;
-  }).finally(() => (refreshing = null));
-  return refreshing;
-}
-
-function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
-  // Browsers without Web Locks only lose cross-tab serialization; Backend tolerates a concurrent refresh.
-  return 'locks' in navigator ? navigator.locks.request('iw-session-refresh', task) : task();
-}
-
-async function postRefresh(): Promise<boolean> {
-  const response = await send(REFRESH_PATH, { method: 'POST' });
-  if (response.ok) return true;
-  if (response.status === 401) return false;
-  // A failing Backend is not a lost session: the request fails instead.
-  throw new ApiError(`HTTP ${response.status}`, response.status, CLIENT_ERROR_CODES.http);
-}
-
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const sentAt = Date.now();
-  let response = await send(path, options);
-  let payload = await readJson(response);
-  if (isUnauthorized(response, payload) && (await refreshSession(sentAt))) {
-    response = await send(path, options);
-    payload = await readJson(response);
-  }
-
+  const response = await send(path, options);
+  const payload = await readJson(response);
   if (!response.ok || (isEnvelope(payload) && !payload.success)) {
     const error = isEnvelope(payload) ? payload.error : null;
     const failure = new ApiError(

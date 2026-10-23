@@ -4,7 +4,15 @@ import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import type { components } from '../../api/schema';
 import { renderApp } from '../../test/render';
-import { fail, mockChallenges, mockPoll, mockSession, ok, server, userOf } from '../../test/server';
+import {
+  fail,
+  mockChallenges,
+  mockClaim,
+  mockSession,
+  ok,
+  server,
+  userOf,
+} from '../../test/server';
 import { inDays, privacyOf, recorder } from '../../test/student';
 
 type Restriction = components['schemas']['UserRestriction'];
@@ -149,28 +157,44 @@ describe('ProfilePage', () => {
     renderApp('/me');
 
     const card = await screen.findByRole('region', { name: 'Этот вход' });
+    expect(
+      within(card).getByText(/Chrome, macOS: подключён в приложении 2 окт/),
+    ).toBeInTheDocument();
     expect(within(card).getByText(/после 30 дней без действий/)).toBeInTheDocument();
     expect(within(card).queryByText(/раз в 7 дней/) !== null).toBe(staff);
   });
 
   it('signs out from this sign-in card', async () => {
     let signedIn = true;
+    mockSession(() => (signedIn ? userOf([]) : null));
     server.use(
-      http.get('*/api/web/auth/me', () => (signedIn ? ok(userOf([])) : fail(401, 'unauthorized'))),
-      http.post('*/api/web/auth/logout', () => {
+      http.delete('*/api/client/self', () => {
         signedIn = false;
         return ok(null);
       }),
     );
     mockProfile();
     mockChallenges('ABCDEFGH');
-    mockPoll();
+    mockClaim();
     renderApp('/me');
     const session = await screen.findByRole('region', { name: 'Этот вход' });
 
     await userEvent.click(within(session).getByRole('button', { name: 'Выйти' }));
 
-    expect(await screen.findByText('ABCD EFGH')).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'QR-код для входа' })).toBeInTheDocument();
     expect(location.pathname).toBe('/app/login');
+  });
+
+  it('links to the devices', async () => {
+    mockSession(userOf([]));
+    mockProfile();
+
+    renderApp('/me');
+
+    const card = await screen.findByRole('region', { name: 'Устройства' });
+    expect(within(card).getByRole('link', { name: 'Открыть устройства' })).toHaveAttribute(
+      'href',
+      '/app/me/devices',
+    );
   });
 });

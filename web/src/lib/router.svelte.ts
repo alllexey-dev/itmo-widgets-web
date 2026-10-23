@@ -1,5 +1,5 @@
-// History router under /app/. Hash routing is not an option: the released app 2.2, the login QR and the
-// AASA open /app/login?code=..., and admin bookmarks use /app/admin/* paths.
+// History router under /app/. Hash routing is not an option: links from the apps and admin bookmarks use
+// /app/... paths.
 
 /** Who may open a route; the backend enforces access, the UI only hides. */
 export type Access = 'anonymous' | 'user' | 'moderator' | 'admin';
@@ -15,6 +15,7 @@ export type Route =
   | { name: 'person'; isu: number }
   | { name: 'sport' }
   | { name: 'me' }
+  | { name: 'devices' }
   | { name: 'moderation' }
   | { name: 'restrictions' }
   | { name: 'dashboard' }
@@ -50,6 +51,13 @@ const ROUTES: readonly RouteSpec[] = [
   },
   { pattern: /^\/sport$/, access: 'user', section: 'sport', make: () => ({ name: 'sport' }) },
   { pattern: /^\/me$/, access: 'user', section: 'me', make: () => ({ name: 'me' }) },
+  // Folded: Профиль -> Устройства.
+  {
+    pattern: /^\/me\/devices$/,
+    access: 'user',
+    section: 'me',
+    make: () => ({ name: 'devices' }),
+  },
   {
     pattern: /^\/admin\/moderation$/,
     access: 'moderator',

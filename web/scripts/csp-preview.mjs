@@ -29,12 +29,80 @@ const serve = process.argv.includes('--serve');
 const ROLES = { student: [], moderator: ['MODERATOR'], admin: ['ADMIN'], 'stale-admin': ['ADMIN'] };
 const ok = (data) => ({ success: true, data, error: null });
 const failure = (code, message) => ({ success: false, data: null, error: { code, message } });
+const scope = (id, title, description, granted) => ({ scope: { id, title, description }, granted });
+const connectionOf = (id, client, name, scopes, extra = {}) => ({
+  id,
+  client,
+  name,
+  version: '1.2.0',
+  platform: client === 'agent' ? 'linux' : null,
+  scopes,
+  createdAt: new Date(Date.now() - 20 * 86_400_000).toISOString(),
+  approvedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+  lastUsedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+  live: client === 'agent',
+  itmo: null,
+  itmoStatus: 'none',
+  revokedAt: null,
+  ...extra,
+});
+const BROWSER = connectionOf('00000000-0000-4000-8000-000000000603', 'web', 'Chrome, macOS', [
+  scope('user', 'Всё, что видно в приложении', 'Кроме входа в ИТМО', true),
+]);
+const DEVICES = {
+  connections: [
+    connectionOf(
+      '00000000-0000-4000-8000-000000000601',
+      'agent',
+      'nas',
+      [
+        scope('sport', 'Запись на физкультуру', 'Записывается по очередям вместо телефона', true),
+        scope('friends:read', 'Друзья', 'Видит список друзей', true),
+        scope(
+          'schedule:write',
+          'Расписание для друзей',
+          'Отправляет ваше расписание, чтобы друзья видели его без телефона',
+          false,
+        ),
+      ],
+      {
+        itmo: { sid: 'synthetic', expiresAt: new Date(Date.now() + 4 * 86_400_000).toISOString() },
+        itmoStatus: 'ok',
+      },
+    ),
+    BROWSER,
+  ],
+  installs: [
+    {
+      instanceId: '00000000-0000-4000-8000-000000000701',
+      platform: 'ANDROID',
+      deviceName: 'Google Pixel 8',
+      os: '36',
+      version: '2.4.0',
+      firstSeenAt: new Date(Date.now() - 40 * 86_400_000).toISOString(),
+      lastSeenAt: new Date(Date.now() - 3_600_000).toISOString(),
+      pushEnabled: true,
+      sid: null,
+      current: false,
+    },
+  ],
+};
 const userOf = (roles) => ({
   isu: 400001,
   name: 'Анна Смирнова',
+  givenName: 'Анна',
+  familyName: 'Смирнова',
+  gender: null,
   pictureUrl: null,
   groups: [{ name: 'P3212', course: 2, facultyShortName: 'ФПИиКТ' }],
+  capabilities: { canViewFriends: true, canViewSchedule: true, canViewSport: true },
   roles,
+});
+const CHALLENGE = () => ({
+  challengeId: '00000000-0000-4000-8000-000000000501',
+  code: 'K7MW3QXP',
+  claimSecret: 'synthetic-only',
+  expiresAt: new Date(Date.now() + 120_000).toISOString(),
 });
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -438,21 +506,26 @@ async function api(request, response, url) {
     const detail = userDetail(Number(userPath[1]));
     if (detail) body = ok(detail);
     else [status, body] = [404, failure('not_found', 'No synthetic user')];
-  } else if (path === '/api/web/auth/me') {
-    if (ROLES[role]) body = ok(userOf(ROLES[role]));
-    else [status, body] = [401, failure('unauthorized', 'Synthetic signed out')];
-  } else if (path === '/api/web/auth/logout' && request.method === 'POST') {
+  } else if (['/api/client/me', '/api/users/me/data', '/api/users/me/roles'].includes(path)) {
+    const user = ROLES[role] ? userOf(ROLES[role]) : undefined;
+    if (!user) [status, body] = [401, failure('unauthorized', 'Synthetic signed out')];
+    else if (path === '/api/client/me') body = ok({ isu: user.isu, connection: BROWSER });
+    else body = ok(path === '/api/users/me/roles' ? user.roles : user);
+  } else if (path === '/api/users/me/devices' && ROLES[role]) {
+    body = ok(DEVICES);
+  } else if (path === '/api/client/self' && request.method === 'DELETE') {
     response.setHeader('Set-Cookie', 'qa-role=signed-out; Path=/');
-    body = ok(null);
-  } else if (path === '/api/web/auth/challenges' && request.method === 'POST') {
-    body = ok({
-      id: 'synthetic-challenge',
-      code: 'K7MW3QXP',
-      pollSecret: 'synthetic-only',
-      expiresAt: new Date(Date.now() + 120_000).toISOString(),
-    });
-  } else if (path === '/api/web/auth/challenges/synthetic-challenge') {
-    body = ok({ status: 'PENDING' });
+    body = ok({});
+  } else if (
+    request.method === 'POST' &&
+    (path === '/api/pair/challenges' || path === '/api/client/pair/renew')
+  ) {
+    body = ok(CHALLENGE());
+  } else if (path === `/api/pair/challenges/${CHALLENGE().challengeId}/claim`) {
+    [status, body] = [
+      202,
+      ok({ status: 'PENDING', token: null, connection: null, sealedBundle: null }),
+    ];
   } else {
     [status, body] = [404, failure('not_found', 'No synthetic handler')];
   }
@@ -500,7 +573,6 @@ const server = createServer((request, response) => {
 
 const PAGES = [
   ['signed-out', '/app/login'],
-  ['signed-out', '/app/login?code=K7MW3QXP'],
   ['signed-out', '/app/admin/users'],
   ['student', '/app/'],
   ['student', '/app/friends'],
@@ -510,6 +582,7 @@ const PAGES = [
   ['student', '/app/u/999999'],
   ['student', '/app/sport'],
   ['student', '/app/me'],
+  ['student', '/app/me/devices'],
   ['student', '/app/admin/users'],
   ['student', '/app/no-such-page'],
   ['moderator', '/app/'],
@@ -530,6 +603,7 @@ const PAGES = [
   ['admin', '/app/sport'],
   ['admin', '/app/me'],
   ['stale-admin', '/app/admin/users'],
+  ['stale-admin', '/app/login?next=%2Fadmin%2Fusers'],
 ];
 
 /** Any headless shell Playwright already downloaded, newest first; this script never downloads one. */
