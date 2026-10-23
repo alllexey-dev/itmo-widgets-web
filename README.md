@@ -95,7 +95,7 @@ Telegram или на почту, подтверждение входом в ве
 
 | Кадр | Файл |
 |---|---|
-| Android `02-today`, `06-schedule`, `09-lesson`, `13-recordbook`, `16-subject-scores` | `home`, `schedule`, `lesson`, `recordbook`, `subject` |
+| Android `02-today`, `09-lesson`, `13-recordbook`, `16-subject-scores` | `home`, `lesson`, `recordbook`, `subject` |
 | Android `24-sport-sign`, `20-sport-mine`, `31-teacher-reviews`, `11-friend-picker`, `28-me` | `sport`, `sport-mine`, `teacher`, `friends`, `me` |
 | Android `05-pass`, `40-widgets-more` | `qr`, `widgets` |
 | iPhone `04-pass`, `22-teacher`, `37-map` | `ios-pass`, `ios-teacher`, `ios-map` |
