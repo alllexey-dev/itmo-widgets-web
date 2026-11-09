@@ -63,6 +63,7 @@ describe('AuditPage', () => {
       'Правила модерации',
       'Настройки модерации',
     ],
+    ['SPORT_SETTINGS_CHANGED', 'sport-settings', 'Лимит автозаписи', 'Автозапись на спорт'],
     ['REVIEWS_SYNC_STARTED', 'reviews-sync', 'Синхронизация отзывов', 'Отзывы'],
     [
       'SERVICE_CREDENTIAL_REPLACED',

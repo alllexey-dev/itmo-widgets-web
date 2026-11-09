@@ -7,6 +7,7 @@ export const ACTIONS: Record<string, { label: string; icon: string }> = {
   ROLE_GRANTED: { label: 'Выдана роль', icon: 'person_add' },
   ROLE_REVOKED: { label: 'Снята роль', icon: 'person_remove' },
   MODERATION_SETTINGS_CHANGED: { label: 'Правила модерации', icon: 'tune' },
+  SPORT_SETTINGS_CHANGED: { label: 'Лимит автозаписи', icon: 'fitness_center' },
   APP_VERSION_CHANGED: { label: 'Версия приложения', icon: 'upgrade' },
   REVIEWS_SYNC_STARTED: { label: 'Синхронизация отзывов', icon: 'sync' },
   SERVICE_CREDENTIAL_REPLACED: { label: 'Замена учётных данных', icon: 'key' },
@@ -18,6 +19,7 @@ export const ACTIONS: Record<string, { label: string; icon: string }> = {
 
 const TARGETS: Record<string, string> = {
   'moderation-settings': 'Настройки модерации',
+  'sport-settings': 'Автозапись на спорт',
   'app-version': 'Версия приложения',
   'reviews-sync': 'Отзывы',
   'ai-summaries': 'ИИ-сводки',
