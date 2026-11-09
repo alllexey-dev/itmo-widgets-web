@@ -1,18 +1,21 @@
 <script lang="ts">
   import { Loadable, Resource, StatusShape } from '@alllexey/ui';
   import LoadError from '../../lib/LoadError.svelte';
-  import { fetchSport, SPORT_PATH } from './api';
+  import { fetchSport, fetchSportSettings, SPORT_PATH, SPORT_SETTINGS_PATH } from './api';
+  import AutoSignLimitForm from './AutoSignLimitForm.svelte';
   import { formatDateTime, formatDuration, formatNumber, formatRelative } from '../../lib/format';
   import { SPORT_ERRORS, SPORT_HEALTH, SPORT_OUTCOMES } from './labels';
-  import type { SportErrorCategory, SportRun, SportStatus } from './types';
+  import type { SportErrorCategory, SportRun, SportSettings, SportStatus } from './types';
 
-  // The catalogue refresh of sport lessons and the entries waiting for auto-enrolment.
+  // The catalogue refresh of sport lessons, the entries waiting for auto-enrolment and the monthly limit.
   // `focused` moves focus (and the scroll) here once the data is in: /admin/sport opens Система here.
   let { focused = false }: { focused?: boolean } = $props();
 
   const SHOWN_RUNS = 5;
   const sport = new Resource<SportStatus>(SPORT_PATH, fetchSport);
   void sport.load();
+  const settings = new Resource<SportSettings>(SPORT_SETTINGS_PATH, fetchSportSettings);
+  void settings.load();
 
   let heading: HTMLHeadingElement;
   let allRuns = $state(false);
@@ -135,6 +138,18 @@
       <LoadError {error} title="Не удалось загрузить автозапись" onretry={() => sport.load()} />
     {/snippet}
   </Loadable>
+  <div class="limit">
+    <Loadable resource={settings} loadingLabel="Загружаем лимит">
+      {#snippet children(data)}
+        {#key `${data.autoSignLimit}:${data.updatedAt ?? 'default'}`}
+          <AutoSignLimitForm saved={data} onsaved={(saved) => (settings.data = saved)} />
+        {/key}
+      {/snippet}
+      {#snippet failed(error)}
+        <LoadError {error} title="Не удалось загрузить лимит" onretry={() => settings.load()} />
+      {/snippet}
+    </Loadable>
+  </div>
 </section>
 
 <style>
@@ -194,5 +209,8 @@
   }
   .more {
     margin-top: 8px;
+  }
+  .limit {
+    margin-top: 24px;
   }
 </style>

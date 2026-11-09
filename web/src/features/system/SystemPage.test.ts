@@ -13,6 +13,7 @@ import type {
   Platform,
   ServiceCredential,
   ServiceCredentialKey,
+  SportSettings,
   SportStatus,
 } from './types';
 
@@ -248,6 +249,8 @@ function mockSystem({
   const versionSaves: { platform: string | null; body: AppVersionRequest; csrf: string | null }[] =
     [];
   const settingsSaves: ModerationSettings[] = [];
+  const limitSaves: { body: unknown; csrf: string | null }[] = [];
+  let sportSettings: SportSettings = { autoSignLimit: 10, overridden: false, updatedAt: null };
   const current = { ...versions };
   let currentSettings = settings;
   const platformOf = (request: Request): Platform => {
@@ -274,6 +277,14 @@ function mockSystem({
       return ok(currentSettings);
     }),
     http.get('*/api/admin/system/sport', () => ok(sport)),
+    http.get('*/api/admin/system/sport/settings', () => ok(sportSettings)),
+    http.put('*/api/admin/system/sport/settings', async ({ request }) => {
+      const body = (await request.json()) as { autoSignLimit: number };
+      limitSaves.push({ body, csrf: request.headers.get('X-Web-Request') });
+      if (body.autoSignLimit > 100) return fail(400, 'invalid_request_data');
+      sportSettings = { ...body, overridden: true, updatedAt: new Date().toISOString() };
+      return ok(sportSettings);
+    }),
     http.get('*/api/admin/system/client-versions', () => clients(++clientLoads)),
     http.get('*/api/admin/system/clients', () => ok(clientStats)),
   );
@@ -281,6 +292,7 @@ function mockSystem({
     clientLoads: () => clientLoads,
     versionSaves,
     settingsSaves,
+    limitSaves,
     ...mockCredentials(() => credentials),
   };
 }
@@ -731,6 +743,66 @@ describe('SystemPage', () => {
       expect(within(runs).getByRole('img', { name: 'Сбой' })).toBeInTheDocument();
       expect(runs).toHaveTextContent('Ошибка: Сеть');
       expect(runs).toHaveTextContent('Получено 412, новых 0, изменено 3');
+    });
+
+    it('saves the monthly auto-sign limit for everybody', async () => {
+      const { limitSaves } = mockSystem();
+      renderApp('/admin/system');
+      const card = await screen.findByRole('region', { name: 'Автозапись на спорт' });
+      const limit = await within(card).findByRole('textbox', { name: 'Лимит автозаписи в месяц' });
+      expect(limit).toHaveValue('10');
+      expect(card).toHaveTextContent('По умолчанию сервера');
+      const save = within(card).getByRole('button', { name: 'Сохранить' });
+      expect(save).toBeDisabled();
+
+      await userEvent.clear(limit);
+      await userEvent.type(limit, '15');
+      await userEvent.click(save);
+
+      expect(await screen.findByText('Лимит сохранён')).toBeInTheDocument();
+      expect(limitSaves).toEqual([{ body: { autoSignLimit: 15 }, csrf: '1' }]);
+      await waitFor(() => expect(card).toHaveTextContent('Из настроек'));
+      expect(within(card).getByRole('textbox', { name: 'Лимит автозаписи в месяц' })).toHaveValue(
+        '15',
+      );
+      expect(within(card).getByRole('button', { name: 'Сохранить' })).toBeDisabled();
+    });
+
+    it('does not send a limit outside 0..100', async () => {
+      const { limitSaves } = mockSystem();
+      renderApp('/admin/system');
+      const card = await screen.findByRole('region', { name: 'Автозапись на спорт' });
+      const limit = await within(card).findByRole('textbox', { name: 'Лимит автозаписи в месяц' });
+
+      for (const text of ['101', '-1', '2.5']) {
+        await userEvent.clear(limit);
+        await userEvent.type(limit, text);
+        expect(limit).toHaveAccessibleDescription('От 0 до 100');
+        await userEvent.click(within(card).getByRole('button', { name: 'Сохранить' }));
+      }
+      expect(limitSaves).toHaveLength(0);
+    });
+
+    it('keeps the value when the server refuses it', async () => {
+      const { limitSaves } = mockSystem();
+      server.use(
+        http.put('*/api/admin/system/sport/settings', async ({ request }) => {
+          limitSaves.push({ body: await request.json(), csrf: null });
+          return fail(400, 'invalid_request_data');
+        }),
+      );
+      renderApp('/admin/system');
+      const card = await screen.findByRole('region', { name: 'Автозапись на спорт' });
+      const limit = await within(card).findByRole('textbox', { name: 'Лимит автозаписи в месяц' });
+
+      await userEvent.clear(limit);
+      await userEvent.type(limit, '0');
+      await userEvent.click(within(card).getByRole('button', { name: 'Сохранить' }));
+
+      expect(await screen.findByText('Лимит — от 0 до 100')).toBeInTheDocument();
+      expect(limitSaves).toHaveLength(1);
+      expect(limit).toHaveValue('0');
+      expect(card).toHaveTextContent('По умолчанию сервера');
     });
 
     it('opens Система at the sport card from the former sport page', async () => {

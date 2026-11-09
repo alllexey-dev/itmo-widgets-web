@@ -288,6 +288,11 @@ const ADMIN = {
     activeAutoSignEntries: 11,
     activeFreeSignEntries: 4,
   }),
+  '/api/admin/system/sport/settings': () => ({
+    autoSignLimit: 10,
+    overridden: true,
+    updatedAt: iso(-1440),
+  }),
   '/api/admin/reviews/summaries': () => ({
     enabled: true,
     running: false,
@@ -354,6 +359,7 @@ const ADMIN = {
     page(
       [
         ['ROLE_GRANTED', 'user:400002', 'role MODERATOR'],
+        ['SPORT_SETTINGS_CHANGED', 'sport-settings', 'autoSignLimit 3 -> 10'],
         ['APP_VERSION_CHANGED', 'app-version', 'IOS: latest 1.0 -> 1.1'],
         ['APP_VERSION_CHANGED', 'app-version', 'latest 2.2 -> 2.3; minimum 2.0 -> 2.1'],
         ['SERVICE_CREDENTIAL_REPLACED', 'credential:ISU_KEYCLOAK_IDENTITY', null],

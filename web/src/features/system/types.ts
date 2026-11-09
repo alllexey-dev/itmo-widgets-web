@@ -28,5 +28,17 @@ export type SportStatus = Omit<Schemas['AdminSportStatus'], 'outcomes7d' | 'erro
   errors7d: Partial<Record<SportErrorCategory, number>>;
 };
 
+/**
+ * Backend `AdminSportSettings` and its request (`GET`/`PUT /api/admin/system/sport/settings`). They are not in
+ * the OpenAPI snapshot yet: once a Backend master has them, refresh it and alias the schemas here instead.
+ */
+export interface SportSettings {
+  /** Every user's auto-sign entries per rolling 30 days, `0..100`; 0 stops new entries. */
+  autoSignLimit: number;
+  overridden: boolean;
+  updatedAt: string | null;
+}
+export type SportSettingsRequest = Pick<SportSettings, 'autoSignLimit'>;
+
 /** Moderation policies are keyed by the target type. */
 export type PolicyKey = 'SUBJECT_RESOURCE' | 'TEACHER_REVIEW';

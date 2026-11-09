@@ -38,6 +38,21 @@ Auto-enrolment status includes the last successful run, run count and mean
 duration over 7 days, enrolments waiting for auto-enrolment or a free place,
 errors over 7 days and the run list.
 
+Under it "Лимит автозаписи в месяц" edits every user's monthly auto-sign limit
+(Backend `GET`/`PUT /api/admin/system/sport/settings`, `docs/contracts/admin.md`
+and `docs/contracts/sport-automation.md`): how many auto-sign entries one person
+may spend over a rolling 30 days, a whole number from 0 to 100, 0 stopping new
+entries for everybody. Backend's default is 10. The field rejects anything else
+with "От 0 до 100" before a request; a 400 shows "Лимит — от 0 до 100" and keeps
+the typed value. A pill says whether the value is "Из настроек" or "По умолчанию
+сервера", with the time of the last change. A save applies to everyone at once
+and forgets the limit and the audit log. The settings load apart from the
+status, so a failed load of one keeps the other.
+
+`SportSettings` in `types.ts` is written by hand until a Backend `master` with
+the route is synced into the OpenAPI snapshot; then it becomes an alias of
+`AdminSportSettings`.
+
 ## App version
 
 App-version fields are latest, minimum and update note, per platform; a

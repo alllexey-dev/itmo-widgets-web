@@ -1,6 +1,7 @@
 # Audit - `/admin/audit`, administrator
 
-The log records who and when changed roles, moderation rules and app version,
+The log records who and when changed roles, moderation rules, the monthly
+auto-sign limit (`SPORT_SETTINGS_CHANGED`, target `sport-settings`) and app version,
 started review sync or AI recalculation, hid, showed or regenerated a teacher
 summary, or replaced credentials (without values). Actions are listed in
 Backend `docs/contracts/admin.md` (Audit); an unknown action shows its own name.

@@ -9,6 +9,8 @@ import type {
   Platform,
   ServiceCredential,
   ServiceCredentialKey,
+  SportSettings,
+  SportSettingsRequest,
   SportStatus,
 } from './types';
 
@@ -16,6 +18,17 @@ const AUDIT_PREFIX = '/api/admin/audit';
 
 export const SPORT_PATH = '/api/admin/system/sport';
 export const fetchSport = () => api.get<SportStatus>(SPORT_PATH);
+
+export const SPORT_SETTINGS_PATH = '/api/admin/system/sport/settings';
+export const fetchSportSettings = () => api.get<SportSettings>(SPORT_SETTINGS_PATH);
+
+/** The limit applies to every user at once. */
+export async function saveSportSettings(request: SportSettingsRequest): Promise<SportSettings> {
+  const saved = await api.put<SportSettings>(SPORT_SETTINGS_PATH, request);
+  forget(SPORT_SETTINGS_PATH);
+  forget(AUDIT_PREFIX);
+  return saved;
+}
 
 export const CLIENTS_PATH = '/api/admin/system/clients';
 export const fetchClients = () => api.get<Clients>(CLIENTS_PATH);
