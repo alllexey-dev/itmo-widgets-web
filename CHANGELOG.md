@@ -4,6 +4,7 @@ Dates are production deploys; before 2026-10-02 they are commit dates.
 
 ## Unreleased
 
+- Статистика → Обзор draws a 30-day line under Пользователи, Дружбы, Входы на сайт and Открытые заявки; Ждут места на спорт has none, since Backend keeps no daily count of waiting entries.
 - Needs Backend with alllexey-dev/itmo-widgets-backend#67 on both hosts first; API types come from Backend c719ab1.
 - Статистика draws every figure from Backend (`/api/admin/stats/*`, `/api/admin/system/sheet-rules`), with one period for the page (7, 30, 90, 365 days or all time); the examples are gone. People and retention are counted per account, installs apart.
 - Модерация: «Отменить» for 10 minutes after a decision, in the toast and in the decision log, with the reason when Backend refuses; Ограничения search by name or the start of an ISU number; review rows name the teacher, closed rows show their outcome and who decided, a withdrawn case links to the case that withdrew it, a lifted restriction names who lifted it.

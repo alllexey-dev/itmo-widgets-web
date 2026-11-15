@@ -105,6 +105,7 @@ describe('StatsPage', () => {
         // Retention over the latest 26 registration weeks; the rest over Backend's default 30 days.
         `${STATS}/audience?from=${from(COHORT_DAYS)}`,
         `${STATS}/features`,
+        `${STATS}/moderation`,
         `${STATS}/server`,
         `${STATS}/sport`,
       ],

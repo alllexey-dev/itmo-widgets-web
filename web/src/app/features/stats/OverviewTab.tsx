@@ -33,6 +33,7 @@ import {
   useCredentials,
   useDashboard,
   useFeatureStats,
+  useModerationStats,
   useReviewsSync,
   useServerStats,
   useSport,
@@ -75,6 +76,8 @@ import type {
   Clients,
   Credential,
   Dashboard,
+  FeatureStats,
+  ModerationStats,
   ReviewsSync,
   ServerStats,
   SportStats,
@@ -336,19 +339,44 @@ function HealthRow<T>({
 
 // ---------------------------------------------------------------- tiles
 
-function totalsTiles({ totals }: Dashboard): TileView[] {
+/** Sources of the tile sparklines besides the dashboard; a tile draws its line once its source is in. */
+interface TrendSources {
+  features?: FeatureStats;
+  moderation?: ModerationStats;
+}
+
+/** The total at the end of each day, counted back from [total] by the [added] of the days after it. */
+function totalsBack(total: number, added: readonly number[]): number[] {
+  const out = new Array<number>(added.length);
+  let level = total;
+  for (let index = added.length - 1; index >= 0; index -= 1) {
+    out[index] = level;
+    level -= added[index];
+  }
+  return out;
+}
+
+function totalsTiles({ totals, days }: Dashboard, trends: TrendSources): TileView[] {
   const queues = totals.activeAutoSignEntries + totals.activeFreeSignEntries;
+  const recent = days.slice(-OVERVIEW_DAYS);
+  const featureDays = trends.features?.days.slice(-OVERVIEW_DAYS);
+  const moderationDays = trends.moderation?.days.slice(-OVERVIEW_DAYS);
   return [
     {
       label: METRIC_LABEL.users,
       hint: 'Аккаунты, которые хотя бы раз вошли через ITMO ID',
       value: formatInt(totals.users),
       note: `+${formatInt(totals.newUsers7d)} за 7 дней`,
+      spark: totalsBack(
+        totals.users,
+        recent.map((day) => day.newUsers),
+      ),
     },
     {
       label: METRIC_LABEL.friendships,
-      hint: 'Принятые заявки в друзья, за всё время',
+      hint: 'Принятые заявки в друзья, за всё время. Линия — новые дружбы по дням',
       value: formatInt(totals.friendships),
+      spark: featureDays?.map((day) => day.friendAccepts),
     },
     {
       label: SPORT_WAITING_LABEL.all,
@@ -361,12 +389,14 @@ function totalsTiles({ totals }: Dashboard): TileView[] {
       hint: WEB_SESSIONS_HINT,
       value: formatInt(totals.webSessions7d),
       note: 'за 7 дней',
+      spark: featureDays?.map((day) => day.connectionsCreated.web ?? 0),
     },
     {
       // The way to the queue is the line of the attention list above: one link, not two.
       label: METRIC_LABEL.openCases,
-      hint: 'Заявки модерации, по которым ещё нет решения',
+      hint: 'Заявки модерации, по которым ещё нет решения. Линия — сколько ждало в конце каждого дня',
       value: formatInt(totals.openCases),
+      spark: moderationDays?.map((day) => day.backlog),
     },
   ];
 }
@@ -453,6 +483,7 @@ export function OverviewTab({ onOpenTab }: { onOpenTab: (tab: TabId) => void }) 
   const sportStats = useSportStats(DEFAULT_PERIOD.days);
   const server = useServerStats(DEFAULT_PERIOD.days);
   const features = useFeatureStats(DEFAULT_PERIOD.days);
+  const moderation = useModerationStats(DEFAULT_PERIOD.days);
 
   const items = attentionOf({
     dashboard: dashboard.data,
@@ -477,7 +508,7 @@ export function OverviewTab({ onOpenTab }: { onOpenTab: (tab: TabId) => void }) 
       <Attention checks={checks} items={items} onOpenTab={onOpenTab} />
       <TileGrid count={6}>
         <Tiles resource={dashboard} name="итоги">
-          {totalsTiles}
+          {(data) => totalsTiles(data, { features: features.data, moderation: moderation.data })}
         </Tiles>
         <Tiles resource={clients} name="статистику клиентов">
           {clientTiles}
