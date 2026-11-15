@@ -1,3 +1,4 @@
+import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { useMediaQuery } from '@astryxdesign/core/hooks';
@@ -7,7 +8,7 @@ import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { pixel, proportional, Table, type TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { Token } from '@astryxdesign/core/Token';
-import { History } from 'lucide-react';
+import { History, SearchX } from 'lucide-react';
 import { useApiQuery } from '../../lib/data';
 import { formatDateTime } from '../../lib/format';
 import { IconTile } from '../../lib/IconTile';
@@ -17,11 +18,12 @@ import { PageHeader } from '../../lib/PageHeader';
 import { Pagination } from '../../lib/Pagination';
 import { useQueryState } from '../../lib/router';
 import './audit.css';
-import { actionOf, detailsOf, nameOrFallback, targetOf } from './labels';
-import type { AuditEntry, AuditPage as AuditPageData, TargetUser } from './types';
+import { AuditFilterBar } from './AuditFilterBar';
+import { AUDIT_QUERY, filtersOf, hasFilters, NO_FILTERS, type AuditFilters } from './filters';
+import { actionOf, detailsOf, nameOrFallback, personLine, targetOf } from './labels';
+import type { AuditEntry, AuditPage as AuditPageData } from './types';
 
 const AUDIT_PATH = '/api/admin/audit';
-const USERS_PATH = '/api/admin/users';
 const PAGE_SIZE = 20;
 
 /**
@@ -60,48 +62,43 @@ function Action({ entry }: { entry: AuditEntry }) {
 }
 
 /**
- * A user the entry is about. The entry carries only the ISU, so the name comes from the user's
- * card: the same cached answer the card itself shows. Until it arrives, and for a user Backend no
- * longer has, the ISU alone is the link.
+ * A user or a teacher the entry is about, by the name Backend stored with the entry. A user that is
+ * gone or has no name, and a teacher nobody has a name for, is the ISU alone.
  */
-function UserTarget({ isu, isSmall }: { isu: number; isSmall?: boolean }) {
-  const card = useApiQuery<TargetUser>(`${USERS_PATH}/${isu}`);
+function Target({ entry, isSmall }: CellProps) {
+  const target = targetOf(entry.target, entry.targetName);
   const type = isSmall ? 'supporting' : 'body';
-  const href = `/admin/users/${isu}`;
-  if (!card.data) {
+  if (target.kind === 'raw') return <Mono>{target.text}</Mono>;
+  if (target.kind === 'place') {
     return (
-      <Link href={href} type={type} hasUnderline>
-        ИСУ {isu}
+      <Link href={target.href} type={type} hasUnderline>
+        {target.text}
+      </Link>
+    );
+  }
+  if (target.name === null) {
+    return (
+      <Link href={target.href} type={type} hasUnderline>
+        {personLine(target)}
       </Link>
     );
   }
   const name = (
-    <Link href={href} type={type} hasUnderline>
-      {nameOrFallback(card.data.user.name)}
+    <Link href={target.href} type={type} hasUnderline>
+      {target.name}
     </Link>
   );
   return isSmall ? (
     <>
-      {name} · ИСУ {isu}
+      {name} · {personLine(target)}
     </>
   ) : (
     <VStack gap={0}>
       {name}
       <Text type="supporting" color="secondary" hasTabularNumbers>
-        ИСУ {isu}
+        {personLine(target)}
       </Text>
     </VStack>
-  );
-}
-
-function Target({ entry, isSmall }: CellProps) {
-  const target = targetOf(entry.target);
-  if (target.kind === 'user') return <UserTarget isu={target.isu} isSmall={isSmall} />;
-  if (target.kind === 'raw') return <Mono>{target.text}</Mono>;
-  return (
-    <Link href={target.href} type={isSmall ? 'supporting' : 'body'} hasUnderline>
-      {target.text}
-    </Link>
   );
 }
 
@@ -206,12 +203,19 @@ function AuditList({ entries }: { entries: AuditEntry[] }) {
   );
 }
 
-/** `/admin/audit`: who changed or started what, newest first. */
+/** `/admin/audit`: who changed or started what, newest first, narrowed by who, what and when. */
 export default function AuditPage() {
-  const [query, setQuery] = useQueryState({ page: 0 });
+  const [query, setQuery] = useQueryState(AUDIT_QUERY);
   const page = Math.max(0, Math.trunc(query.page));
+  const filters = filtersOf(query);
+  const isFiltered = hasFilters(filters);
   const isNarrow = useMediaQuery(NARROW);
-  const audit = useApiQuery<AuditPageData>(AUDIT_PATH, { page, size: PAGE_SIZE });
+  const audit = useApiQuery<AuditPageData>(AUDIT_PATH, { ...filters, page, size: PAGE_SIZE });
+
+  // Another filter is another list: it starts from its first page.
+  const change = (patch: Partial<Record<keyof AuditFilters, string | null>>) =>
+    setQuery({ ...patch, page: null });
+  const clear = () => setQuery({ ...NO_FILTERS, page: null });
 
   return (
     <VStack gap={6}>
@@ -219,35 +223,55 @@ export default function AuditPage() {
         title="Журнал"
         text="Кто и когда менял роли и доступы, правила модерации, версию приложения и учётные данные или запускал синхронизацию и ИИ-сводки"
       />
-      <Card padding={0}>
-        <Loadable
-          resource={audit}
-          label="Загружаем журнал"
-          errorTitle="Не удалось загрузить журнал"
-        >
-          {(list) => (
-            <>
-              {list.items.length === 0 ? (
-                <EmptyState
-                  icon={<History size={32} />}
-                  title="Записей пока нет"
-                  description="Здесь появятся изменения, которые делают администраторы"
+      <VStack gap={3}>
+        <AuditFilterBar
+          filters={filters}
+          entries={audit.data?.items ?? []}
+          total={audit.data?.total}
+          onChange={change}
+          onClear={clear}
+        />
+        <Card padding={0}>
+          <Loadable
+            resource={audit}
+            label="Загружаем журнал"
+            errorTitle="Не удалось загрузить журнал"
+          >
+            {(list) => (
+              <>
+                {list.items.length > 0 ? (
+                  isNarrow ? (
+                    <AuditList entries={list.items} />
+                  ) : (
+                    <AuditTable entries={list.items} />
+                  )
+                ) : isFiltered ? (
+                  <EmptyState
+                    icon={<SearchX size={32} />}
+                    title="Ничего не нашлось"
+                    description="Ни одна запись не подходит под выбранные условия"
+                    actions={
+                      <Button label="Сбросить фильтры" variant="secondary" onClick={clear} />
+                    }
+                  />
+                ) : (
+                  <EmptyState
+                    icon={<History size={32} />}
+                    title="Записей пока нет"
+                    description="Здесь появятся изменения, которые делают администраторы"
+                  />
+                )}
+                <Pagination
+                  page={page}
+                  size={PAGE_SIZE}
+                  total={list.total}
+                  onChange={(next) => setQuery({ page: next })}
                 />
-              ) : isNarrow ? (
-                <AuditList entries={list.items} />
-              ) : (
-                <AuditTable entries={list.items} />
-              )}
-              <Pagination
-                page={page}
-                size={PAGE_SIZE}
-                total={list.total}
-                onChange={(next) => setQuery({ page: next })}
-              />
-            </>
-          )}
-        </Loadable>
-      </Card>
+              </>
+            )}
+          </Loadable>
+        </Card>
+      </VStack>
     </VStack>
   );
 }

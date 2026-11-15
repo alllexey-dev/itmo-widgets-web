@@ -5,12 +5,14 @@ import type {
   CasePage,
   Dashboard,
   Devices,
-  Lesson,
+  FriendDay,
   QueueEntry,
   ReviewsSync,
   ServiceCredential,
   SportSection,
+  SportStats,
   SportStatus,
+  ServerStats,
   UserProfile,
 } from './types';
 
@@ -31,6 +33,10 @@ export const sportAutomation = get<SportStatus>('/api/admin/system/sport');
 export const aiSummaries = get<AiSummaries>('/api/admin/reviews/summaries');
 export const reviewsSync = get<ReviewsSync>('/api/admin/reviews/sync');
 export const dashboard = get<Dashboard>('/api/admin/dashboard');
+// Statistics of the default period (the last 30 Moscow days, ending today): Backend picks today, so
+// a visitor's clock ahead of Moscow cannot ask for a day in the future.
+export const sportStats = get<SportStats>('/api/admin/stats/sport');
+export const serverStats = get<ServerStats>('/api/admin/stats/server');
 
 export const devices = get<Devices>('/api/users/me/devices');
 
@@ -56,52 +62,30 @@ export const sportOverview: Source<SportOverview> = {
   },
 };
 
-/** How many friends' schedules one visit of Главная asks for. */
-export const FRIENDS_ASKED = 20;
-
-export interface FriendDay {
-  friend: UserProfile;
-  /** The friend's lessons of the day, ordered by start. */
-  lessons: Lesson[];
-}
-
 export interface FriendsToday {
-  /** All accepted friends, including those who keep the schedule closed. */
-  friends: number;
+  /** Friends with a lesson that day whose schedule is open to the visitor, as Backend orders them. */
   days: FriendDay[];
+  /** Whether the visitor has any friend; asked only when `days` is empty, to tell the two apart. */
+  hasFriends: boolean;
 }
 
 /**
- * The friends who open their schedule to the visitor, each with the lessons of one Moscow day
- * (`YYYY-MM-DD`). Backend has no single request for it, so every friend is one request, at most
- * `FRIENDS_ASKED` of them.
+ * The friends with a lesson on one Moscow day (`YYYY-MM-DD`): one request whatever their number.
+ * Backend leaves out a friend who hides the schedule or has no lesson that day without marking
+ * them, so an empty answer cannot say why; only then the friend list is read, to tell "no friends"
+ * apart. The key lies under `/api/friends`, so a friendship change refreshes the panel.
  */
 export function friendsToday(date: string): Source<FriendsToday> {
   return {
     key: `/api/friends/today?date=${date}`,
     fetch: async (signal) => {
-      const friends = await api.get<UserProfile[]>('/api/friends', { signal });
-      const open = friends
-        .filter((friend) => friend.user.capabilities?.canViewSchedule === true)
-        .slice(0, FRIENDS_ASKED);
-      const days = await Promise.all(
-        open.map(async (friend): Promise<FriendDay | null> => {
-          try {
-            const lessons = await api.get<Lesson[]>(
-              `/api/schedule/lessons/user/${friend.user.isu}`,
-              { query: { from: date, to: date }, signal },
-            );
-            return { friend, lessons };
-          } catch (error) {
-            // The friend closed the schedule or left since the list was read: not a failure.
-            if (error instanceof ApiError && (error.isForbidden || error.status === 404)) {
-              return null;
-            }
-            throw error;
-          }
-        }),
-      );
-      return { friends: friends.length, days: days.filter((day) => day !== null) };
+      const days = await api.get<FriendDay[]>('/api/schedule/friends', {
+        query: { date },
+        signal,
+      });
+      if (days.length > 0) return { days, hasFriends: true };
+      const friends = await api.get<unknown[]>('/api/friends', { signal });
+      return { days, hasFriends: friends.length > 0 };
     },
   };
 }

@@ -237,6 +237,8 @@ export function caseItemOf(overrides: Partial<CaseItem> = {}, minutes?: number):
     review: null,
     author: null,
     reportCount: 0,
+    outcome: null,
+    withdrawnByCaseId: null,
     ...overrides,
   };
 }
@@ -258,8 +260,345 @@ export function restrictionOf(overrides: Partial<Restriction> = {}): Restriction
     expiresAt: null,
     revokedAt: null,
     revokedByIsu: null,
+    revokedByName: null,
     active: true,
     caseId: `00000000-0000-4000-8000-${id}`,
+    ...overrides,
+  };
+}
+
+// ---------------------------------------------------------------- statistics of a period
+
+/** The answers below cover the 30 days of September 2026, like `daysOf` of the dashboard. */
+const PERIOD_END = '2026-09-30';
+const PERIOD_DAYS = 30;
+
+/** The dates of [days] days ending on [end], oldest first. */
+export function datesOf(days = PERIOD_DAYS, end = PERIOD_END): string[] {
+  return Array.from({ length: days }, (_, index) => dayBefore(end, days - 1 - index));
+}
+
+/**
+ * The audience of September: 1 220 accounts before it and one new a day, so 1 250 at its end like
+ * the dashboard; 700 people active in 30 days; six registration weeks.
+ */
+export function audienceStatsOf(
+  overrides: Partial<Schemas['AdminAudienceStats']> = {},
+): Schemas['AdminAudienceStats'] {
+  const dates = datesOf();
+  return {
+    from: dates[0] ?? PERIOD_END,
+    to: PERIOD_END,
+    usersBefore: 1220,
+    days: dates.map((date) => ({ date, newUsers: 1 })),
+    activePeople: { active1d: 300, active7d: 520, active30d: 700 },
+    peopleHistory: dates.map((day, index) => ({
+      day,
+      active1d: 250 + index,
+      active7d: 480 + index,
+      active30d: 650 + index,
+    })),
+    retention: [
+      { weekStart: '2026-08-17', size: 40, retained: [36, 32, 30, 28, 26] },
+      { weekStart: '2026-08-24', size: 20, retained: [18, 16, 14, 12] },
+      { weekStart: '2026-08-31', size: 10, retained: [9, 8, 7] },
+      { weekStart: '2026-09-07', size: 10, retained: [8, 6] },
+      { weekStart: '2026-09-14', size: 5, retained: [4] },
+      { weekStart: '2026-09-21', size: 5, retained: [] },
+    ],
+    // The activity weeks were first collected on 2026-08-31: the earlier weeks have no count.
+    retentionClassic: [
+      { weekStart: '2026-08-17', size: 40, active: [null, null, 24, 20, 16] },
+      { weekStart: '2026-08-24', size: 20, active: [null, 12, 10, 8] },
+      { weekStart: '2026-08-31', size: 10, active: [10, 6, 5] },
+      { weekStart: '2026-09-07', size: 10, active: [9, 4] },
+      { weekStart: '2026-09-14', size: 5, active: [5] },
+      { weekStart: '2026-09-21', size: 5, active: [] },
+    ] as unknown as Schemas['AdminClassicCohort'][],
+    faculties: [
+      {
+        facultyShortName: 'ФИТиП',
+        facultyName: 'Факультет информационных технологий и программирования',
+        users: 700,
+        active30d: 420,
+      },
+      {
+        facultyShortName: 'ФПИиКТ',
+        facultyName: 'Факультет программной инженерии и компьютерной техники',
+        users: 500,
+        active30d: 250,
+      },
+      { facultyShortName: null, facultyName: null, users: 50, active30d: 5 },
+    ],
+    courses: [
+      { course: 1, users: 600, active30d: 400 },
+      { course: 2, users: 600, active30d: 270 },
+      { course: null, users: 50, active30d: 5 },
+    ],
+    ...overrides,
+  };
+}
+
+/** The features of September: two friend requests and one accept a day, a web connection a day. */
+export function featureStatsOf(
+  overrides: Partial<Schemas['AdminFeatureStats']> = {},
+): Schemas['AdminFeatureStats'] {
+  const dates = datesOf();
+  return {
+    from: dates[0] ?? PERIOD_END,
+    to: PERIOD_END,
+    users: 1250,
+    usersWithFriends: 500,
+    socialUsers: 610,
+    features: [
+      { feature: 'CONNECTIONS', events: 30, users: 25 },
+      { feature: 'FRIENDS', events: 60, users: 90 },
+      { feature: 'LINKS', events: 30, users: 20 },
+      { feature: 'SCHEDULE', events: null, users: 480 },
+      { feature: 'SPORT_AUTO_SIGN', events: 90, users: 70 },
+      { feature: 'TELEPORT', events: 3, users: 2 },
+    ],
+    days: dates.map((date, index) => ({
+      date,
+      friendRequests: 2,
+      friendAccepts: 1,
+      connectionsCreated: { agent: index % 10 === 0 ? 1 : 0, mcp: 0, web: 1 },
+      connectionsRevoked: { agent: 0, mcp: 0, web: index % 15 === 0 ? 1 : 0 },
+    })),
+    privacy: {
+      schedule: { ALL: 200, FRIENDS: 1000, NOBODY: 50 },
+      sport: { ALL: 100, FRIENDS: 900, NOBODY: 250 },
+      friends: { ALL: 300, FRIENDS: 900, NOBODY: 50 },
+    },
+    pairing: [
+      { client: 'agent', created: 6, opened: 5, approved: 4, claimed: 3, expired: 1 },
+      { client: 'mcp', created: 0, opened: 0, approved: 0, claimed: 0, expired: 0 },
+      { client: 'web', created: 44, opened: 35, approved: 30, claimed: 27, expired: 9 },
+    ],
+    ...overrides,
+  };
+}
+
+export function sportEntryStatsOf(
+  overrides: Partial<Schemas['AdminSportEntryStats']> = {},
+): Schemas['AdminSportEntryStats'] {
+  return {
+    created: 90,
+    outcomes: {
+      WAITING: 5,
+      NOTIFIED: 3,
+      SATISFIED: 60,
+      EXPIRED: 12,
+      GAVE_UP_NOTIFYING: 4,
+      CANCELLED: 6,
+    },
+    timed: 58,
+    medianSeconds: 6,
+    p90Seconds: 21,
+    ...overrides,
+  };
+}
+
+/** The sport of September: three auto entries and two queue entries a day. */
+export function sportStatsOf(
+  overrides: Partial<Schemas['AdminSportStats']> = {},
+): Schemas['AdminSportStats'] {
+  const dates = datesOf();
+  return {
+    from: dates[0] ?? PERIOD_END,
+    to: PERIOD_END,
+    days: dates.map((date) => ({
+      date,
+      autoSign: { created: 3, satisfied: 2 },
+      freeSign: { created: 2, satisfied: 1 },
+      signUps: 3,
+    })),
+    autoSign: sportEntryStatsOf(),
+    freeSign: sportEntryStatsOf({
+      created: 60,
+      outcomes: {
+        WAITING: 4,
+        NOTIFIED: 0,
+        SATISFIED: 30,
+        EXPIRED: 20,
+        GAVE_UP_NOTIFYING: 0,
+        CANCELLED: 6,
+      },
+      timed: 30,
+      medianSeconds: 95 * 60,
+      p90Seconds: 9 * 3600,
+    }),
+    subscriptions: {
+      active: 86,
+      stopped: { USER: 31, EXPIRED: 12 },
+      created: 14,
+      occurrences: { QUEUED: 40, LIMIT: 3, SKIPPED: 5 },
+    },
+    sections: [
+      {
+        sectionName: 'Плавание',
+        autoSignEntries: 40,
+        freeSignEntries: 20,
+        satisfied: 30,
+        medianWaitSeconds: 3600,
+      },
+      {
+        sectionName: 'Волейбол',
+        autoSignEntries: 10,
+        freeSignEntries: 10,
+        satisfied: 15,
+        medianWaitSeconds: null,
+      },
+    ],
+    slots: [
+      { weekday: 1, timeStart: '08:20', entries: 20, satisfied: 18 },
+      { weekday: 3, timeStart: '15:20', entries: 60, satisfied: 30 },
+      { weekday: 6, timeStart: '10:00', entries: 10, satisfied: 9 },
+    ],
+    ...overrides,
+  };
+}
+
+/** Reviews and moderation of September: a new review, two cases opened and resolved a day. */
+export function moderationStatsOf(
+  overrides: Partial<Schemas['AdminModerationStats']> = {},
+): Schemas['AdminModerationStats'] {
+  const dates = datesOf();
+  return {
+    from: dates[0] ?? PERIOD_END,
+    to: PERIOD_END,
+    ownReviews: 140,
+    days: dates.map((date) => ({
+      date,
+      newReviews: 1,
+      reviewVotes: 4,
+      externalReviewVotes: 2,
+      linkVotes: 3,
+      casesOpened: 2,
+      casesResolved: 2,
+      casesWithdrawn: 0,
+      backlog: 5,
+      reports: 1,
+    })),
+    cases: [
+      {
+        targetType: 'SUBJECT_RESOURCE',
+        reason: 'SUBMISSION',
+        opened: 50,
+        resolved: 48,
+        withdrawn: 0,
+        medianSecondsToDecision: 3600,
+        maxSecondsToDecision: 86400,
+      },
+    ],
+    decisions: [
+      { targetType: 'SUBJECT_RESOURCE', action: 'APPROVE', actor: 'MODERATOR', count: 30 },
+      { targetType: 'SUBJECT_RESOURCE', action: 'APPROVE', actor: 'POLICY', count: 10 },
+      { targetType: 'SUBJECT_RESOURCE', action: 'REJECT', actor: 'MODERATOR', count: 6 },
+      { targetType: 'TEACHER_REVIEW', action: 'APPROVE', actor: 'POLICY', count: 14 },
+    ],
+    reports: [
+      { targetType: 'SUBJECT_RESOURCE', reason: 'BROKEN', total: 12, dismissed: 4 },
+      { targetType: 'TEACHER_REVIEW', reason: 'OFFENSIVE', total: 8, dismissed: 1 },
+      { targetType: 'SUBJECT_RESOURCE', reason: 'SPAM', total: 10, dismissed: 5 },
+    ],
+    ...overrides,
+  };
+}
+
+/**
+ * The server of September, counted since its 1st: 1 000 requests a day with 4 server errors
+ * (0,4 %), 200 calls to My ITMO with 2 failures (1 %).
+ */
+export function serverStatsOf(
+  overrides: Partial<Schemas['AdminServerStats']> = {},
+): Schemas['AdminServerStats'] {
+  const dates = datesOf();
+  return {
+    from: dates[0] ?? PERIOD_END,
+    to: PERIOD_END,
+    collectedSince: dates[0] ?? PERIOD_END,
+    days: dates.map((date) => ({
+      date,
+      requests: 1000,
+      errors5xx: 4,
+      p50Millis: 40,
+      p95Millis: 200,
+      myItmoCalls: 200,
+      myItmoFailures: 2,
+      pushSent: 50,
+      pushFailed: 1,
+      pushTokenGone: 1,
+    })),
+    routes: [
+      {
+        group: 'sport',
+        requests: 18000,
+        errors4xx: 100,
+        errors5xx: 90,
+        p50Millis: 60,
+        p95Millis: 400,
+      },
+      {
+        group: 'friends',
+        requests: 9000,
+        errors4xx: 40,
+        errors5xx: 20,
+        p50Millis: 20,
+        p95Millis: 90,
+      },
+      {
+        group: 'beacons',
+        requests: 3000,
+        errors4xx: 0,
+        errors5xx: 10,
+        p50Millis: null,
+        p95Millis: null,
+      },
+    ],
+    myItmo: [
+      {
+        operation: 'sportSchedule',
+        calls: 5000,
+        failures: { AUTH: 40, HTTP: 10, NETWORK: 10, MAPPING: 0 },
+      },
+      {
+        operation: 'personality',
+        calls: 1000,
+        failures: { AUTH: 0, HTTP: 0, NETWORK: 0, MAPPING: 0 },
+      },
+    ],
+    push: [
+      {
+        type: 'SPORT_AUTO_SIGN_LESSONS_PAYLOAD',
+        sent: 1000,
+        failed: 20,
+        tokenGone: 20,
+        noDevice: 5,
+      },
+      { type: 'FRIENDSHIP_EVENT_PAYLOAD', sent: 500, failed: 10, tokenGone: 10, noDevice: 3 },
+    ],
+    ...overrides,
+  };
+}
+
+export function sheetRulesOf(
+  overrides: Partial<Schemas['AdminSheetRules']> = {},
+): Schemas['AdminSheetRules'] {
+  return {
+    enabled: true,
+    running: false,
+    runningSince: null,
+    statuses: { PENDING: 12, RUNNING: 0, READY: 184, INSUFFICIENT: 6, FAILED: 9 },
+    attempts: 3,
+    lastAnalyzedAt: minutesAgo(30),
+    errors: [
+      { error: 'closed', sheets: 6 },
+      { error: 'quota', sheets: 3 },
+    ],
+    budgetDay: PERIOD_END,
+    budgetUsed: 5,
+    dailyBudget: 40,
     ...overrides,
   };
 }
@@ -279,6 +618,12 @@ export interface StatsSources {
   openCases?: CaseItem[] | null;
   resolvedCases?: CaseItem[] | null;
   restrictions?: Restriction[] | null;
+  audience?: JsonBodyType | null;
+  features?: JsonBodyType | null;
+  sportStats?: JsonBodyType | null;
+  moderation?: JsonBodyType | null;
+  server?: JsonBodyType | null;
+  sheetRules?: JsonBodyType | null;
 }
 
 /**
@@ -307,6 +652,12 @@ export function mockStats(sources: StatsSources = {}): string[] {
     answer('/api/admin/reviews/verification', sources.verification, verificationOf()),
     answer('/api/admin/reviews/sync', sources.sync, reviewsSyncOf()),
     answer('/api/admin/reviews/summaries', sources.summaries, aiSummariesOf()),
+    answer('/api/admin/stats/audience', sources.audience, audienceStatsOf()),
+    answer('/api/admin/stats/features', sources.features, featureStatsOf()),
+    answer('/api/admin/stats/sport', sources.sportStats, sportStatsOf()),
+    answer('/api/admin/stats/moderation', sources.moderation, moderationStatsOf()),
+    answer('/api/admin/stats/server', sources.server, serverStatsOf()),
+    answer('/api/admin/system/sheet-rules', sources.sheetRules, sheetRulesOf()),
     http.get('*/api/admin/moderation/cases', ({ request }) => {
       note(request);
       const status = new URL(request.url).searchParams.get('status') ?? 'OPEN';

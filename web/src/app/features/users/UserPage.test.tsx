@@ -562,6 +562,7 @@ describe('UserPage', () => {
               expiresAt: '2026-04-10T10:00:00Z',
               revokedAt: '2026-01-20T10:00:00Z',
               revokedByIsu: 400001,
+              revokedByName: 'Анна Смирнова',
               active: false,
             }),
           ],
@@ -574,8 +575,65 @@ describe('UserPage', () => {
     expect(rowsOf(await panel('Ограничения'), 'Ограничения пользователя')).toEqual([
       'Публикация ссылок Действует Спам в ссылках с 1 мар., бессрочно Дело Снять',
       'Отзывы Истекло Оскорбления в отзыве 1 февр. — 8 февр. Дело',
-      'Все действия Снято Накрутка голосов 10 янв. — 20 янв. Дело',
+      'Все действия Снято Накрутка голосов 10 янв. — 20 янв. Кто снял: Анна Смирнова Дело',
     ]);
+    expect(
+      within(await panel('Ограничения')).getByRole('link', { name: 'Анна Смирнова' }),
+    ).toHaveAttribute('href', '/app/admin/users/400001');
+  });
+
+  it('names a lifted restriction by the ISU of whoever lifted it when Backend has no name', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockUsers(
+      [ivan],
+      [
+        adminUserDetailOf(ivan, {
+          restrictions: [
+            userRestrictionOf(ivan, {
+              active: false,
+              revokedAt: minutesAgo(60),
+              revokedByIsu: 400009,
+              revokedByName: null,
+            }),
+          ],
+        }),
+      ],
+    );
+
+    renderApp('/admin/users/311111');
+
+    const card = await panel('Ограничения');
+    expect(within(card).getByRole('link', { name: 'ИСУ 400009' })).toHaveAttribute(
+      'href',
+      '/app/admin/users/400009',
+    );
+  });
+
+  it('names who lifted a restriction right after the revoke', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockUsers([ivan]);
+    renderApp('/admin/users/311111');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Снять' }));
+    await userEvent.click(
+      within(screen.getByRole('alertdialog', { name: 'Снять ограничение?' })).getByRole('button', {
+        name: 'Снять',
+      }),
+    );
+
+    const list = screen.getByRole('list', { name: 'Ограничения пользователя' });
+    expect(await within(list).findByText(/Кто снял/)).toHaveTextContent('Кто снял: Анна Смирнова');
+  });
+
+  it('opens what the audit log says about the user', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockUsers([ivan]);
+    renderApp('/admin/users/311111');
+
+    expect(await screen.findByRole('link', { name: 'Записи в журнале' })).toHaveAttribute(
+      'href',
+      '/app/admin/audit?target=user:311111',
+    );
   });
 
   it('links a restriction to its case and to the restrictions of the user', async () => {

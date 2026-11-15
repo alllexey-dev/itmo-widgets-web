@@ -2,8 +2,8 @@
   color: var(--color-text-secondary);
 }
 
-/* The figures of the week. The column count follows the width of the card and always divides the
-   number of figures (four, or six with the examples), so no figure is left alone on a row. */
+/* The six figures of the week. The column count follows the width of the card and always divides
+   the number of figures (6, 3, 2 or 1 columns), so no figure is left alone on a row. */
 .home-week-box {
   container-type: inline-size;
 }
@@ -23,12 +23,6 @@
 @container (min-width: 560px) {
   .home-week[data-count='6'] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@container (min-width: 760px) {
-  .home-week[data-count='4'] {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

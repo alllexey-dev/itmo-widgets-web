@@ -6,7 +6,9 @@ import type {
   ModerationReport,
 } from '../../features/moderation/types';
 import {
+  decisionOf,
   linkTarget,
+  MODERATORS,
   minutesAgo,
   moderationBackend,
   moderationCase,
@@ -27,6 +29,13 @@ import { authorAt, AUTHORS, personOf, STAFF } from './people';
 
 const HOUR = 60;
 const DAY = 24 * HOUR;
+
+/** The other moderator of the demo; the visitor decides as `moderator` (`MODERATORS`). */
+const GLEB = 'moderator-gleb';
+const MODERATOR_NAMES = {
+  ...MODERATORS,
+  [GLEB]: { isu: STAFF.gleb.isu, name: STAFF.gleb.name },
+};
 
 function author(index: number) {
   const who = authorAt(index);
@@ -152,16 +161,7 @@ function decision(
   minutes: number,
   overrides: Partial<ModerationDecision> = {},
 ): ModerationDecision {
-  return {
-    id,
-    moderatorId: 'moderator',
-    action,
-    note: null,
-    restriction: null,
-    createdAt: minutesAgo(minutes),
-    actor: 'MODERATOR',
-    ...overrides,
-  };
+  return decisionOf(id, action, { createdAt: minutesAgo(minutes), ...overrides });
 }
 
 // --- Open cases, oldest decisions first in the queue order Backend uses (newest opened last here).
@@ -512,7 +512,11 @@ function resolved(): ModerationCase[] {
       {
         status: 'RESOLVED',
         openedAt: minutesAgo(2 * DAY + index * 90),
-        decisions: [decision(`demo-done-d-${index + 1}`, 'APPROVE', DAY + index * 90)],
+        decisions: [
+          decision(`demo-done-d-${index + 1}`, 'APPROVE', DAY + index * 90, {
+            moderatorId: index % 2 === 0 ? 'moderator' : GLEB,
+          }),
+        ],
       },
       target,
     );
@@ -589,12 +593,59 @@ function resolved(): ModerationCase[] {
     null,
   );
 
-  return [...approved, rejected, hidden, deleted];
+  return [...approved, rejected, hidden, deleted, swept()];
+}
+
+/**
+ * Everything of one author hidden from a case of theirs: the case stayed open with its link
+ * rejected and was then closed. Another waiting link of the author was withdrawn by it.
+ */
+function swept(): ModerationCase {
+  const seed = {
+    id: SWEEP_CASE,
+    title: 'Ответы к контрольной, все варианты',
+    url: 'https://example.com/otvety-kontrolnaya',
+    subjectName: 'Линейная алгебра',
+    ...author(3),
+  };
+  const target = linkTarget(seed);
+  target.revision = { ...target.revision, category: 'EXAM', status: 'REJECTED' };
+  target.link = { ...target.link, category: 'EXAM', status: 'REJECTED' };
+  return moderationCase(
+    seed,
+    {
+      status: 'RESOLVED',
+      openedAt: minutesAgo(2 * DAY + 40),
+      decisions: [
+        decision('demo-sweep-d-hide-all', 'HIDE_ALL_BY_USER', 2 * DAY, {
+          moderatorId: GLEB,
+          note: 'Платные ответы к контрольным',
+        }),
+        decision('demo-sweep-d-close', 'DISMISS', 2 * DAY - 2, { moderatorId: GLEB }),
+      ],
+    },
+    target,
+  );
 }
 
 // --- Withdrawn cases: closed without a decision of their own, listed under "Отозванные".
 
+/** The resolved case whose hiding of everything by its author withdrew `SWEPT_CASE`. */
+const SWEEP_CASE = 'demo-done-sweep';
+const SWEPT_CASE = 'demo-gone-swept';
+
 function withdrawn(): ModerationCase[] {
+  const sweptSeed = {
+    id: SWEPT_CASE,
+    title: 'Решения типового расчёта',
+    url: 'https://example.com/tipovoy-raschet',
+    subjectName: 'Линейная алгебра',
+    ...author(3),
+  };
+  const sweptLink = linkTarget(sweptSeed);
+  sweptLink.revision = { ...sweptLink.revision, category: 'TASKS', status: 'REJECTED' };
+  sweptLink.link = { ...sweptLink.link, category: 'TASKS', status: 'REJECTED' };
+
   const linkSeed = {
     id: 'demo-gone-link',
     title: 'Конспект к коллоквиуму',
@@ -618,6 +669,11 @@ function withdrawn(): ModerationCase[] {
   review.revision = { ...review.revision, status: 'WITHDRAWN' };
 
   return [
+    moderationCase(
+      sweptSeed,
+      { status: 'WITHDRAWN', openedAt: minutesAgo(2 * DAY + 90) },
+      sweptLink,
+    ),
     moderationCase(linkSeed, { status: 'WITHDRAWN', openedAt: minutesAgo(3 * DAY) }, link),
     reviewCase(reviewSeed, { status: 'WITHDRAWN', openedAt: minutesAgo(5 * DAY) }, review),
   ];
@@ -674,6 +730,7 @@ function demoRestrictions(): AdminRestriction[] {
       expiresAt: ended && !revoked ? minutesAgo(2 * HOUR) : term,
       revokedAt: revoked ? minutesAgo(5 * HOUR) : null,
       revokedByIsu: revoked ? STAFF.anna.isu : null,
+      revokedByName: revoked ? STAFF.anna.name : null,
       active: !ended,
       caseId: index === 0 ? 'demo-done-rejected' : `demo-done-${(index % 6) + 1}`,
     });
@@ -725,7 +782,8 @@ function showcaseRestrictions(): AdminRestriction[] {
       startsAt: minutesAgo(160 * DAY),
       expiresAt: null,
       revokedAt: minutesAgo(158 * DAY),
-      revokedByIsu: STAFF.anna.isu,
+      revokedByIsu: STAFF.gleb.isu,
+      revokedByName: STAFF.gleb.name,
       active: false,
       caseId: 'demo-done-4',
     }),
@@ -742,5 +800,8 @@ export const restrictions = [...showcaseRestrictions(), ...demoRestrictions()].s
 
 export const handlers: RequestHandler[] = [
   ...restrictionsBackend(restrictions).handlers,
-  ...moderationBackend(cases, restrictions).handlers,
+  ...moderationBackend(cases, restrictions, {
+    moderators: MODERATOR_NAMES,
+    withdrawnBy: { [SWEPT_CASE]: SWEEP_CASE },
+  }).handlers,
 ];

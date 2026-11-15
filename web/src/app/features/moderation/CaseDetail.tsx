@@ -2,7 +2,9 @@ import { Button } from '@astryxdesign/core/Button';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { Heading } from '@astryxdesign/core/Heading';
 import { IconButton } from '@astryxdesign/core/IconButton';
+import { Link } from '@astryxdesign/core/Link';
 import { Popover } from '@astryxdesign/core/Popover';
+import { useToast } from '@astryxdesign/core/Toast';
 import { Token, type TokenColor } from '@astryxdesign/core/Token';
 import {
   ArrowLeft,
@@ -39,8 +41,15 @@ import {
   REASONS,
   TARGET_TEXTS,
 } from './labels';
+import { canRevert, type RevertRequest } from './revert';
 import { useShortcuts } from './shortcuts';
-import type { CaseTarget, DecisionRequest, ModerationAction, ModerationCase } from './types';
+import type {
+  AdminCaseItem,
+  CaseTarget,
+  DecisionRequest,
+  ModerationAction,
+  ModerationCase,
+} from './types';
 
 interface Props {
   caseId: string;
@@ -52,7 +61,19 @@ interface Props {
   onRefused: () => void;
   /** Whether the buttons show their keys: where there is a keyboard to press them on. */
   hasKeys: boolean;
+  /**
+   * The row of the case in the queue on screen, when it is there: only the row knows which case
+   * withdrew this one.
+   */
+  row?: AdminCaseItem;
+  /** Takes a decision back; the queue does it, so an undo from the toast outlives this case. */
+  onUndo: (request: RevertRequest) => void;
+  /** The decision being taken back, while it is. */
+  revertingId: string | null;
 }
+
+/** Long enough to reach the undo of the toast; the log of the case keeps it for the whole window. */
+const UNDO_TOAST_MS = 10_000;
 
 /** A decision as it is sent, with the toast of the option it came from. */
 interface Decision {
@@ -60,10 +81,14 @@ interface Decision {
   done?: string;
 }
 
-/** A review is named ISU first, as its queue row is, so the two can be matched; then the name. */
+/**
+ * A review is named by its teacher, as its queue row is, and by ISU where nobody knows the name. The
+ * queue looks up only a few names per page, so a row may still show the ISU that the line under
+ * this title repeats.
+ */
 function titleOf(target: CaseTarget): string {
   if (target.targetType === 'SUBJECT_RESOURCE') return target.link.subjectName;
-  return `ИСУ ${target.review.teacherIsu} · ${target.review.teacherName ?? 'имя не найдено'}`;
+  return target.review.teacherName ?? `ИСУ ${target.review.teacherIsu}`;
 }
 
 /** What the case is about, under its title: the term of a link's subject, or that it is a review. */
@@ -71,8 +96,14 @@ function kindOf(target: CaseTarget): string {
   if (target.targetType === 'SUBJECT_RESOURCE') {
     return `Ссылка · ${periodLabel(target.link.periodKey)}`;
   }
-  const subject = target.revision.subjectTitle;
-  return subject ? `Отзыв о преподавателе · ${subject}` : 'Отзыв о преподавателе';
+  const { teacherName, teacherIsu } = target.review;
+  return [
+    'Отзыв о преподавателе',
+    teacherName ? `ИСУ ${teacherIsu}` : 'имя не найдено',
+    target.revision.subjectTitle,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 /**
@@ -125,9 +156,19 @@ const DECISION_AREA = '.mod-layout';
  * One case. The page mounts a new instance per case, so a dialog or a decision in flight never leaks
  * into the next one, and the next case can be decided while the lists of the previous one reload.
  */
-export function CaseDetail({ caseId, onBack, onDecided, onRefused, hasKeys }: Props) {
+export function CaseDetail({
+  caseId,
+  onBack,
+  onDecided,
+  onRefused,
+  hasKeys,
+  row,
+  onUndo,
+  revertingId,
+}: Props) {
   const user = useUser();
   const notify = useNotify();
+  const toast = useToast();
   const forget = useForget();
   const titleId = useId();
   const detail = useApiQuery<ModerationCase>(casePath(caseId));
@@ -139,7 +180,7 @@ export function CaseDetail({ caseId, onBack, onDecided, onRefused, hasKeys }: Pr
       const updated = await decide(caseId, request);
       // The moderator goes on at once; the queue and the counters catch up behind.
       setDialog(null);
-      notify.show(done ?? doneText(request.action, updated.targetType));
+      announce(done ?? doneText(request.action, updated.targetType), updated);
       onDecided(updated);
       return updated;
     },
@@ -151,6 +192,36 @@ export function CaseDetail({ caseId, onBack, onDecided, onRefused, hasKeys }: Pr
     },
   });
   const pending = decision.isPending;
+
+  /**
+   * The toast of a decision, with `Отменить` while Backend offers it. The button is reached by the
+   * pointer or by Tab, never by a single key: the keys that decide stay one press from a decision,
+   * and none of them is one press from an undo.
+   */
+  function announce(text: string, updated: ModerationCase) {
+    const latest = updated.decisions.at(-1);
+    if (!latest || !canRevert(latest)) {
+      notify.show(text);
+      return;
+    }
+    const request = { caseId: updated.id, targetType: updated.targetType, decision: latest };
+    const dismiss = toast({
+      body: text,
+      autoHideDuration: UNDO_TOAST_MS,
+      endContent: (
+        <Button
+          label="Отменить"
+          aria-label={`Отменить: ${text}`}
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            dismiss();
+            onUndo(request);
+          }}
+        />
+      ),
+    });
+  }
 
   function submit(request: DecisionRequest, done?: string) {
     if (pending) return;
@@ -293,8 +364,11 @@ export function CaseDetail({ caseId, onBack, onDecided, onRefused, hasKeys }: Pr
           >
             {(data) => {
               const reason = REASONS[data.reason];
+              // A reverted decision closed nothing; the one before it did.
               const closedAt =
-                data.status === 'OPEN' ? undefined : data.decisions.at(-1)?.createdAt;
+                data.status === 'OPEN'
+                  ? undefined
+                  : data.decisions.filter((item) => !item.revertedAt).at(-1)?.createdAt;
               return (
                 <article className="mod-case" aria-labelledby={titleId}>
                   <header className="mod-head">
@@ -325,15 +399,29 @@ export function CaseDetail({ caseId, onBack, onDecided, onRefused, hasKeys }: Pr
                   </header>
 
                   {data.status === 'WITHDRAWN' && target && texts ? (
-                    <p className="mod-note">
-                      {
-                        texts.withdrawn[
-                          target.revision.status === 'PENDING'
-                            ? 'WITHDRAWN'
-                            : target.revision.status
-                        ]
-                      }
-                    </p>
+                    row?.withdrawnByCaseId ? (
+                      <p className="mod-note">
+                        <span>
+                          {texts.withdrawnBy}{' '}
+                          <Link
+                            href={`/admin/moderation?case=${encodeURIComponent(row.withdrawnByCaseId)}`}
+                          >
+                            по другой заявке
+                          </Link>
+                          .
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="mod-note">
+                        {
+                          texts.withdrawn[
+                            target.revision.status === 'PENDING'
+                              ? 'WITHDRAWN'
+                              : target.revision.status
+                          ]
+                        }
+                      </p>
+                    )
                   ) : null}
 
                   {target && texts ? (
@@ -387,6 +475,11 @@ export function CaseDetail({ caseId, onBack, onDecided, onRefused, hasKeys }: Pr
                     decisions={data.decisions}
                     isClosed={data.status !== 'OPEN'}
                     isPlainClose={isPlainClose(data)}
+                    targetType={data.targetType}
+                    revertingId={revertingId}
+                    onUndo={(decision) =>
+                      onUndo({ caseId: data.id, targetType: data.targetType, decision })
+                    }
                   />
                 </article>
               );

@@ -2,28 +2,21 @@ import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
-import { Token } from '@astryxdesign/core/Token';
-import { Ban, UserX } from 'lucide-react';
+import { VStack } from '@astryxdesign/core/Stack';
+import { History, UserX } from 'lucide-react';
 import { useState } from 'react';
 import { ApiError } from '../../api/client';
 import { useApiMutation, useApiQuery } from '../../lib/data';
-import {
-  counted,
-  formatDate,
-  formatDateTime,
-  formatNumber,
-  formatRelative,
-} from '../../lib/format';
+import { formatDate, formatDateTime, formatNumber, formatRelative } from '../../lib/format';
 import { Loadable } from '../../lib/Loadable';
 import { PageHeader } from '../../lib/PageHeader';
 import { useIsu } from '../../lib/router';
 import { AccessCard } from './AccessCard';
-import { MODERATION_PATH, revokeRestriction, userPath } from './api';
+import { auditHref, MODERATION_PATH, revokeRestriction, userPath } from './api';
 import { CAPABILITY_ACTIONS, groupLine, nameOf, subjectOf } from './labels';
-import { RoleTokens } from './RoleTokens';
 import type { AdminRestriction, AdminUserDetail } from './types';
 import { ClientsPanel, DevicesPanel, GroupsPanel, RestrictionsPanel } from './UserPanels';
+import { UserMarks } from './UserMarks';
 import './users.css';
 
 function Stats({ detail }: { detail: AdminUserDetail }) {
@@ -49,25 +42,6 @@ function Stats({ detail }: { detail: AdminUserDetail }) {
         ))}
       </dl>
     </Card>
-  );
-}
-
-/** What the administrator should see before reading the card: the roles and what limits the user. */
-function Marks({ detail }: { detail: AdminUserDetail }) {
-  const active = detail.restrictions.filter((restriction) => restriction.active).length;
-  if (detail.roles.length === 0 && active === 0) return null;
-  return (
-    <HStack gap={1} vAlign="center" wrap="wrap">
-      <RoleTokens roles={detail.roles} />
-      {active > 0 ? (
-        <Token
-          size="sm"
-          color="orange"
-          icon={<Ban size={14} />}
-          label={counted(active, ['ограничение', 'ограничения', 'ограничений'])}
-        />
-      ) : null}
-    </HStack>
   );
 }
 
@@ -145,7 +119,24 @@ export default function UserPage() {
       <PageHeader
         back={{ href: '/admin/users', label: 'Пользователи' }}
         title={detail ? nameOf(detail.user) : 'Пользователь'}
-        titleEnd={detail ? <Marks detail={detail} /> : undefined}
+        titleEnd={
+          detail ? (
+            <UserMarks
+              roles={detail.roles}
+              activeRestrictions={detail.restrictions.filter((item) => item.active).length}
+            />
+          ) : undefined
+        }
+        actions={
+          detail ? (
+            <Button
+              label="Записи в журнале"
+              icon={<History size={16} />}
+              href={auditHref(isu)}
+              variant="secondary"
+            />
+          ) : undefined
+        }
         text={[`ИСУ ${isu}`, group ? groupLine(group) : null].filter(Boolean).join(' · ')}
       />
       {missing ? (

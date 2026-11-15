@@ -1,10 +1,11 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../../test/render';
 import { mockSession, userOf } from '../../test/server';
 import { mockStats } from '../../test/stats';
 import type * as Metrics from './metrics';
+import { COHORT_DAYS, daysBefore, moscowToday } from './period';
 
 // The examples of metrics without data are off here: these tests are about the real blocks, which
 // are the same with examples on (Examples.test.tsx).
@@ -30,6 +31,9 @@ const CREDENTIALS = '/api/admin/system/credentials';
 const SYNC = '/api/admin/reviews/sync';
 const SUMMARIES = '/api/admin/reviews/summaries';
 const VERIFICATION = '/api/admin/reviews/verification';
+const STATS = '/api/admin/stats';
+/** The first day of a period of [days] days that ends today. */
+const from = (days: number) => daysBefore(moscowToday(), days - 1);
 
 describe('StatsPage', () => {
   it('opens on the overview and is the selected section of the navigation', async () => {
@@ -88,7 +92,23 @@ describe('StatsPage', () => {
   });
 
   it.each([
-    ['overview', 'Пользователи', [DASHBOARD, SYNC, SUMMARIES, CLIENTS, CREDENTIALS, SPORT]],
+    [
+      'overview',
+      'Пользователи',
+      [
+        DASHBOARD,
+        SYNC,
+        SUMMARIES,
+        CLIENTS,
+        CREDENTIALS,
+        SPORT,
+        // Retention over the latest 26 registration weeks; the rest over Backend's default 30 days.
+        `${STATS}/audience?from=${from(COHORT_DAYS)}`,
+        `${STATS}/features`,
+        `${STATS}/server`,
+        `${STATS}/sport`,
+      ],
+    ],
     [
       'audience',
       'Активны за сутки',
@@ -98,10 +118,12 @@ describe('StatsPage', () => {
         '/api/admin/system/app-version?platform=IOS',
         '/api/admin/system/client-versions',
         CLIENTS,
+        `${STATS}/audience`,
+        `${STATS}/audience?from=${from(COHORT_DAYS)}`,
       ],
     ],
-    ['features', 'Дружбы', [DASHBOARD, CLIENTS]],
-    ['sport', 'Автозапись', [SPORT]],
+    ['features', 'Дружбы', [DASHBOARD, CLIENTS, `${STATS}/features`]],
+    ['sport', 'Автозапись', [SPORT, `${STATS}/sport`]],
     [
       'reviews',
       'Действующие ограничения',
@@ -112,9 +134,22 @@ describe('StatsPage', () => {
         SUMMARIES,
         SYNC,
         VERIFICATION,
+        `${STATS}/moderation`,
       ],
     ],
-    ['system', 'Каталог спорта', [SUMMARIES, SYNC, VERIFICATION, CREDENTIALS, SPORT]],
+    [
+      'system',
+      'Каталог спорта',
+      [
+        SUMMARIES,
+        SYNC,
+        VERIFICATION,
+        CREDENTIALS,
+        SPORT,
+        `${STATS}/server`,
+        '/api/admin/system/sheet-rules',
+      ],
+    ],
   ])('loads on the %s tab only what the tab shows', async (tab, group, paths) => {
     mockSession(userOf(['ADMIN']));
     const requested = mockStats();
@@ -122,33 +157,57 @@ describe('StatsPage', () => {
     renderApp(`/admin/dashboard?tab=${tab}`);
 
     expect(await screen.findByRole('group', { name: group })).toBeInTheDocument();
-    expect(asked(requested)).toEqual([...paths].sort());
+    await waitFor(() => expect(asked(requested)).toEqual([...paths].sort()));
   });
 
-  it.each([
-    ['overview', 5, 'Использование функций', 'Сбои My ITMO'],
-    ['audience', 5, 'Удержание по каждой неделе', 'Пользователи по факультетам и курсам'],
-    ['features', 7, 'Воронка сопряжения', 'Настройки приватности'],
-    ['sport', 9, 'Популярные секции', 'Ожидание в очереди'],
-    ['reviews', 5, 'Новые отзывы', 'Жалобы'],
-    ['system', 7, 'Время ответа', 'Доставка уведомлений'],
-  ])(
-    'lists on the %s tab the metrics that wait for Backend, folded and without data',
-    async (tab, count, first, second) => {
+  it('keeps one period for every tab and asks Backend for it', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requested = mockStats();
+    renderApp('/admin/dashboard?tab=sport');
+    await screen.findByRole('group', { name: 'Скорость автозаписи' });
+    expect(requested).toContain(`${STATS}/sport`);
+
+    const periods = screen.getByRole('radiogroup', { name: 'Период' });
+    await userEvent.click(within(periods).getByRole('radio', { name: '90 дней' }));
+
+    await waitFor(() => expect(requested).toContain(`${STATS}/sport?from=${from(90)}`));
+    expect(window.location.search).toBe('?tab=sport&period=90');
+
+    await userEvent.click(tabs().getByRole('button', { name: 'Отзывы и модерация' }));
+
+    await waitFor(() => expect(requested).toContain(`${STATS}/moderation?from=${from(90)}`));
+    expect(window.location.search).toBe('?tab=reviews&period=90');
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'Период' })).getByRole('radio', {
+        name: '90 дней',
+      }),
+    ).toBeChecked();
+    // Backend ends the period on its own today: the page never sends `to`.
+    expect(requested.some((path) => path.includes('to='))).toBe(false);
+  });
+
+  it('asks for the whole history under the limit of Backend', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requested = mockStats();
+
+    renderApp('/admin/dashboard?tab=system&period=all');
+
+    await screen.findByRole('group', { name: 'Каталог спорта' });
+    await waitFor(() => expect(requested).toContain(`${STATS}/server?from=${from(1099)}`));
+  });
+
+  it.each(['overview', 'audience', 'features', 'sport', 'reviews', 'system'])(
+    'draws every metric of the %s tab from Backend: nothing waits, nothing is an example',
+    async (tab) => {
       mockSession(userOf(['ADMIN']));
       mockStats();
       renderApp(`/admin/dashboard?tab=${tab}`);
 
-      const later = await screen.findByRole('button', { name: `Появится позже · ${count}` });
-      expect(later).toHaveAttribute('aria-expanded', 'false');
-      await userEvent.click(later);
+      await waitFor(() => expect(screen.queryAllByRole('progressbar')).toHaveLength(0));
 
-      expect(later).toHaveAttribute('aria-expanded', 'true');
-      expect(screen.getByText(first)).toBeInTheDocument();
-      expect(screen.getByText(second)).toBeInTheDocument();
-      // A planned metric is a name in the list: it has no tile and no panel of its own.
-      expect(screen.queryByRole('region', { name: first })).not.toBeInTheDocument();
-      expect(screen.queryByRole('group', { name: first })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Появится позже/ })).not.toBeInTheDocument();
+      expect(screen.queryByText('Здесь пока нечего показать')).not.toBeInTheDocument();
+      expect(document.querySelector('[data-example]')).toBeNull();
     },
   );
 

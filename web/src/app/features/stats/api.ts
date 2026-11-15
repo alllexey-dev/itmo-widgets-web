@@ -1,18 +1,25 @@
 // What the statistics page reads. Every source is a GET of the admin API; the keys are the request
 // paths, so the other admin sections share the cached answers.
 import { useApiQuery, type Resource } from '../../lib/data';
+import { periodQuery } from './period';
 import type {
   AiSummaries,
   AppVersion,
+  AudienceStats,
   CasesPage,
   Clients,
   ClientVersions,
   Credential,
   Dashboard,
   DevicePlatform,
+  FeatureStats,
+  ModerationStats,
   RestrictionsPage,
   ReviewsSync,
   ReviewVerification,
+  ServerStats,
+  SheetRules,
+  SportStats,
   SportStatus,
 } from './types';
 
@@ -42,3 +49,20 @@ export const useResolvedCases = (): Resource<CasesPage> =>
   useApiQuery('/api/admin/moderation/cases', { status: 'RESOLVED', page: 0, size: SAMPLE_SIZE });
 export const useActiveRestrictions = (): Resource<RestrictionsPage> =>
   useApiQuery('/api/admin/moderation/restrictions', { active: true, page: 0, size: SAMPLE_SIZE });
+
+// The statistics of a period: Backend counts the [days] days that end today (`period.tsx`).
+
+/** The audience of a period; `null` days reads nothing. */
+export const useAudienceStats = (days: number | null): Resource<AudienceStats> =>
+  useApiQuery(days === null ? null : '/api/admin/stats/audience', periodQuery(days ?? 0));
+export const useFeatureStats = (days: number): Resource<FeatureStats> =>
+  useApiQuery('/api/admin/stats/features', periodQuery(days));
+export const useSportStats = (days: number): Resource<SportStats> =>
+  useApiQuery('/api/admin/stats/sport', periodQuery(days));
+export const useModerationStats = (days: number): Resource<ModerationStats> =>
+  useApiQuery('/api/admin/stats/moderation', periodQuery(days));
+export const useServerStats = (days: number): Resource<ServerStats> =>
+  useApiQuery('/api/admin/stats/server', periodQuery(days));
+/** The sheet rules as they are now: no period. */
+export const useSheetRules = (): Resource<SheetRules> =>
+  useApiQuery('/api/admin/system/sheet-rules');

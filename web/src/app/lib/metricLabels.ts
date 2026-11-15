@@ -17,14 +17,19 @@ type Schemas = components['schemas'];
  * - `activeClients`: `AdminClients`, app installs and connections (web, agent, MCP) that made
  *   requests. It is another figure than `activeDevices`, counted from another table, so the two
  *   names never stand for each other;
+ * - `activePeople`: `AdminAudienceStats.activePeople` / `peopleHistory`, distinct people by the
+ *   latest activity of any of their clients, devices or connections. A person with a phone and a
+ *   browser is one, so it is a third figure next to `activeDevices` and `activeClients`;
  * - `webSessions`: `webSessions7d`, web connections created (a browser connected to an account);
- * - `serverErrors`: the share of 5xx answers, which Backend does not count yet.
+ * - `serverErrors`: the share of 5xx answers, `AdminServerDay.errors5xx / requests`;
+ * - `sportSignups`: entries of both kinds that got a place, `AdminSportStatsDay.signUps`.
  */
 export const METRIC_LABEL = {
   users: 'Пользователи',
   newUsers: 'Новые пользователи',
   activeDevices: 'Активные устройства',
   activeClients: 'Активные клиенты',
+  activePeople: 'Активные люди',
   webSessions: 'Входы на сайт',
   friendships: 'Дружбы',
   newLinks: 'Новые ссылки',

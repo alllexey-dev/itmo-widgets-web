@@ -5,13 +5,13 @@ given name (`givenName` of the session's user, else the first word of the name) 
 visitor's first group, then shows five blocks. Each block loads, empties and fails on its own, and
 nothing on the page changes data: every row leads to the section that does.
 
-| Block            | Who           | Requests                                                 | Leads to             |
-| ---------------- | ------------- | -------------------------------------------------------- | -------------------- |
-| Требует внимания | everyone      | the checks below                                         | the row's section    |
-| За 7 дней        | administrator | `GET /api/admin/dashboard`                               | `/admin/dashboard`   |
-| Друзья сейчас    | everyone      | `GET /api/friends`, then one schedule request per friend | `/u/:isu`            |
-| Спорт            | everyone      | both `entry/my` lists and `GET /api/sport/sections/my`   | `/sport`             |
-| Устройства       | everyone      | `GET /api/users/me/devices`                              | `/me/devices`, `/me` |
+| Block            | Who           | Requests                                                           | Leads to             |
+| ---------------- | ------------- | ------------------------------------------------------------------ | -------------------- |
+| Требует внимания | everyone      | the checks below                                                   | the row's section    |
+| За 7 дней        | administrator | `GET /api/admin/dashboard`, `/api/admin/stats/sport`, `/server`    | `/admin/dashboard`   |
+| Друзья сейчас    | everyone      | `GET /api/schedule/friends?date=`, `/api/friends` when it is empty | `/u/:isu`            |
+| Спорт            | everyone      | both `entry/my` lists and `GET /api/sport/sections/my`             | `/sport`             |
+| Устройства       | everyone      | `GET /api/users/me/devices`                                        | `/me/devices`, `/me` |
 
 ## Требует внимания
 
@@ -50,30 +50,52 @@ student's page asks nothing of the admin API.
 
 ## За 7 дней
 
-Four numbers and `Вся статистика`, named as on Статистика (`METRIC_LABEL` of `lib/metricLabels.ts`):
-new users (`newUsers7d`), active devices (`activeDevices7d`), web sign-ins (`webSessions7d`) and new
-links (the sum of `createdLinks` over the last 7 days). New users and new links also show the change
-against the week before, computed from `days`: the 7 full days before today against the 7 before
-those, because today is still growing; no change is shown when the earlier week is empty. Backend
-has no daily history for the other two numbers, so they have none. Everything else is on
-Статистика.
+Six numbers and `Вся статистика`, named as on Статистика (`METRIC_LABEL` of `lib/metricLabels.ts`).
+From the dashboard: new users (`newUsers7d`), active devices (`activeDevices7d`), web sign-ins
+(`webSessions7d`) and new links (the sum of `createdLinks` over the last 7 days). From the
+statistics routes, asked without a period, so Backend's default (the last 30 Moscow days, ending
+today) is read and a visitor's clock ahead of Moscow cannot ask for a day in the future:
 
-The grid follows the width of the card and its column count always divides the number of figures
-(four, or six with the examples): 6, 3, 2 or 1 columns, so no figure is left alone on a row.
+- `Записи на спорт`: the sum of `days[].signUps` of `/api/admin/stats/sport` over the last 7 days,
+  entries of both kinds satisfied on those days (the figure the contract names for this tile);
+- `Ошибки сервера`: `errors5xx / requests` of `/api/admin/stats/server` over the last 7 days, in
+  percent; a dash while no answer was counted (`collectedSince` is null or the week has no
+  requests).
+
+New users, new links and sport sign-ups show the change against the week before in percent, the
+error share in percentage points (fewer errors is the good direction). A change compares the 7 full
+days before today with the 7 before those, because today is still growing; no change is shown when
+the earlier week is empty, and for errors when it reaches before `collectedSince`, whose days are
+zeros, not a quiet server. Backend has no daily history for active devices and web sign-ins, so
+they have none. Everything else is on Статистика.
+
+The dashboard loads and fails as the card (`Не удалось загрузить сводку` with `Повторить`); each of
+the two statistics figures loads and fails in its own tile (`Не загрузилось` with `Повторить`), so
+the other figures stay. The three requests start together. Statistics are `ADMIN` only: a
+moderator's page never asks for them.
+
+The grid follows the width of the card and its column count always divides the six figures: 6, 3,
+2 or 1 columns, so no figure is left alone on a row.
 
 ## Друзья сейчас
 
-Who of the friends is at a lesson in Moscow time, from the schedules their apps uploaded. Backend
-has no single request for it, so the source (`friendsToday`, key `/api/friends/today?date=`) reads
-the friends and then today's lessons of each friend whose `canViewSchedule` is open, at most 20
-friends in the order of the list. A friend whose schedule answers 403 or 404 is skipped; any other
-failure fails the block.
+Who of the friends is at a lesson in Moscow time, from the schedules their apps uploaded. One
+request, `GET /api/schedule/friends?date=` for the visitor's Moscow day, answers every friend at
+once (`FriendDay`: the friend and the lessons of the day, ordered by start), in the order of the
+friends list. Backend leaves out a friend who hides the schedule or has no lesson that day and never
+marks them, so the page does not say which of the two it is. Only when the answer is empty the
+friend list (`/api/friends`) is read, to tell "no friends" apart. The cache key
+(`/api/friends/today?date=`) lies under `/api/friends`, so a friendship change refreshes the panel.
 
 A friend is shown while a lesson runs (`Предмет · ауд. N`, `до 11:30`) or until the next one today:
 `Перерыв до ...` for a pause of up to 30 minutes, `Окно до ...` for a longer one, `Занятия с ...`
 before the first lesson. Lessons come first, the one that ends soonest on top. Five rows are shown
-and the rest are counted; the rows follow the clock every 30 seconds. Empty states: no friends, no
-friend who opens the schedule, nobody at a lesson for the rest of the day.
+and the rest are counted; the rows follow the clock every 30 seconds, and the day changes at Moscow
+midnight. Empty states: no friends (`Друзей пока нет`), no friend with a lesson today that the
+visitor may see (`Сегодня у друзей нет занятий`), nobody at a lesson for the rest of the day
+(`Сейчас никто не на занятиях`). A failed request fails the block with `Повторить`.
+
+A person's page (`/u/:isu`) still reads one schedule with `GET /api/schedule/lessons/user/{isu}`.
 
 ## Спорт
 
@@ -107,34 +129,22 @@ opens `/me/devices`, where a device is disconnected. The last line of the card i
 
 ## Examples
 
-The approved design shows two figures Backend does not count yet. They are drawn as the last two
-tiles of `За 7 дней` with invented values, each with `ExampleMark` (`src/app/lib`, the yellow token
-`пример`) next to its label, so neither is read as a fact. The values are the shared ones of
-`lib/exampleValues.ts`, the same as on Статистика, and never come from the API.
-
-| Example                           | Why Backend cannot give it                  |
-| --------------------------------- | ------------------------------------------- |
-| `Записи на спорт` with its change | sport sign-ups are not counted              |
-| `Ошибки сервера` with its change  | the share of failed requests is not counted |
-
-Rules:
-
-- Examples are for the owner only. They live in the administrator's `За 7 дней`; a student and a
-  moderator never see one, and the panels every role sees have none.
-- A tile with a real number carries nothing invented, not even a change.
-- Nothing invented is ever said about the visitor's own data (there is no example sport booking).
-- `SHOW_EXAMPLES` in `features/home/examples.ts` is the one switch: off, the page shows only what
-  the sections above describe.
+Главная shows no invented value: the two figures that once were examples (`Записи на спорт`,
+`Ошибки сервера`) come from Backend now, so the page does not import `lib/exampleValues.ts` and
+draws no `ExampleMark`.
 
 ## Tests
 
 `HomePage.test.tsx` renders the whole app for a student, a moderator and an administrator: the
 greeting and the given name, no admin requests for a student, the request and freed-place rows,
 the order and the statuses of the sport rows (queues, an unmatched auto entry, sections), friends
-at a lesson and in a window on a fixed clock, a hidden schedule, the order of the devices, a failed
-block next to working ones, every staff row with its link, AI summaries that are off, checks that
-did not answer, the retry, staff rows above student ones, the week with its changes and its failure.
+at a lesson and in a window on a fixed clock, one request for the friends of the Moscow day
+without a cap, friends without a visible lesson, a day that is over, the failed friends block and
+its retry, the order of the devices, a failed block next to working ones, every staff row with its
+link, AI summaries that are off, checks that did not answer, the retry, staff rows above student
+ones, the six figures of the week with their changes, sport sign-ups, the error share in points,
+no comparison before the counters started, the dash without counters, a failed statistics tile
+next to working ones and its retry, the failed week; a moderator asks for no statistics.
 `friendsNow.test.ts`, `labels.test.ts` cover the rules of the rows that depend on the clock and on
-the name. The page tests run with the examples off; `HomePage with examples` turns the switch on
-and checks both examples with their marks, that the tiles of real figures carry nothing invented,
-and that a student and a moderator see no example at all.
+the name. The test backend (`socialBackend` of `test/student.ts`) and the demo answer
+`/api/schedule/friends` from the people's timetables as the contract says.

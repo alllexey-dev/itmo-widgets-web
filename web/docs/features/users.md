@@ -6,33 +6,45 @@ everything an administrator may see and change. The backend contract is `docs/co
 
 ## List - `/admin/users`
 
-`UsersPage` reads `GET /api/admin/users?query=&page=&size=20`: newest registrations first, `query`
-matches an ISU prefix or a part of the name or of a group name.
+`UsersPage` reads `GET /api/admin/users?query=&role=&restricted=&page=&size=20`: newest
+registrations first, `query` matches an ISU prefix or a part of the name or of a group name, and the
+filters combine with it (Backend's AND; `total` counts the filtered list).
 
 - The search field waits 300 ms after the last key, then writes the trimmed text to the address and
   asks Backend; a new search starts from the first page. The text is cut at 100 characters, Backend's
   limit. When the address changes by itself (the navigation item, back) the field follows it.
-- The address keeps `q` and `page` (zero-based); both are dropped when empty.
+- Two filters stand next to the search, each a closed trigger that reads as the whole clause once
+  set (`Роль: Модераторы`, `Ограничения: Есть`) and has a clear button:
+  - `Роль`: `Администраторы` (`role=ADMIN`) or `Модераторы` (`role=MODERATOR`);
+  - `Ограничения`: `Есть` (`restricted=true`, a restriction in force now) or `Нет`
+    (`restricted=false`).
+    A change starts from the first page.
+- The address keeps `q`, `role`, `restricted` and `page` (zero-based); all are dropped when empty. A
+  `role` or `restricted` Backend does not take (it answers 400) is ignored, not sent.
 - The total next to the field (`46 пользователей`) is the answer's `total`.
-- From 641 px the list is a table: name with the avatar, ISU, the first group, roles, registration
-  date. The name is the row's link; a click anywhere else in the row opens the user too, unless it
-  selects text. On a phone the same users are rows of a list: name, `ИСУ · group · date`, roles.
-- Roles are tokens, `Администратор` before `Модератор`; a user without roles has none.
+- From 641 px the list is a table: name with the avatar, ISU, the first group, roles and
+  restrictions, registration date. The name is the row's link; a click anywhere else in the row
+  opens the user too, unless it selects text. On a phone the same users are rows of a list: name,
+  `ИСУ · group · date`, then the marks.
+- The marks are the ones the card has next to its name: roles as tokens, `Администратор` before
+  `Модератор`, and for a user a restriction limits now the count from `activeRestrictions`
+  (`2 ограничения`, orange). A user with neither has `—` in the table and nothing on a phone.
 - A user whose app has not uploaded a name yet is `Без имени`, in the list and as the title of the
   card; a sentence about them says `Пользователь с ИСУ <isu>`.
-- The list has no filter by role or by restriction and no restriction mark: `GET /api/admin/users`
-  takes only `query`, and `AdminUserItem` carries roles but nothing about restrictions.
 
 States: a spinner until the first answer, the last page under the soft overlay while the next one
 loads, `Не удалось загрузить пользователей` with `Повторить`, `Никого не нашли` for a search without
-matches and `Пользователей пока нет` for an empty list.
+matches, the same with `Под выбранные условия никто не подходит` and `Сбросить фильтры` when a
+filter is set, and `Пользователей пока нет` for an empty list.
 
 ## Card - `/admin/users/:isu`
 
 `UserPage` reads `GET /api/admin/users/{isu}` (`AdminUserDetail`). The title is the user's name
 (`Пользователь` until it is known), with the ISU and the current group under it. Next to it
 (`titleEnd` of `PageHeader`) stand the roles and, when something limits the user now, the count of
-active restrictions (`2 ограничения`). `Пользователи` above leads back to the list (its `back`).
+active restrictions (`2 ограничения`), counted from the restrictions of the card. `Пользователи`
+above leads back to the list (its `back`); `Записи в журнале` opens the audit log narrowed to the
+user (`/admin/audit?target=user:<isu>`).
 
 The panels follow the figures. `Ограничения` comes first when a restriction is active and last
 when the user has only ended ones or none.
@@ -65,7 +77,9 @@ when the user has only ended ones or none.
   was last active and since when it is known. A kind this web does not know shows as sent. A
   Backend without client statistics sends none: `Нет данных о клиентах`.
 - **Ограничения**: the last 50 restrictions of every state: what is taken away, `Действует`,
-  `Истекло` or `Снято`, the reason and the period. `Дело` opens the case
+  `Истекло` or `Снято`, the reason and the period; a lifted one names who lifted it
+  (`Кто снял: Анна Смирнова`, from `revokedByName`, `ИСУ <isu>` when Backend has no name), a link to
+  their card. `Дело` opens the case
   (`/admin/moderation?case=<id>`), `Все ограничения` the user's list in the moderation section
   (`/admin/restrictions?isu=<isu>&all=1`). `Снять` on an active one asks for a confirmation that
   names what the user may do again, sends `POST /api/admin/moderation/restrictions/{id}/revoke`
@@ -82,14 +96,18 @@ page as it was.
   optional for an older Backend); `labels.ts`: names (`nameOf`, `subjectOf`), roles, platforms,
   capabilities, restriction states.
 - `UsersPage.tsx`, `UserPage.tsx`, `AccessCard.tsx`, `UserPanels.tsx` (groups, devices, clients,
-  restrictions), `RoleTokens.tsx`, `users.css`.
+  restrictions), `RoleTokens.tsx`, `UserMarks.tsx` (roles and the restriction count, in a row and
+  next to the name), `users.css`.
 
 ## Tests
 
-`UsersPage.test.tsx`: the table with groups and roles, the delayed search and its place in the
-address, the return to the first page on a new search, restoring `q` and `page`, the field
-following the address, paging, the empty and the failed list, opening a user from the name and
-from anywhere in the row, a user without a name, the phone list.
+`UsersPage.test.tsx`: the table with groups and roles, the restriction mark, the delayed search and
+its place in the address, the return to the first page on a new search, restoring `q` and `page`,
+the field following the address, paging, the role and the restriction filters (the request, the
+address, the return to the first page), filters combined with the search from the address, filter
+values Backend does not take, a filtered empty list and clearing it, the empty and the failed list,
+opening a user from the name and from anywhere in the row, a user without a name, the phone list
+with its marks.
 
 `UserPage.test.tsx`: figures, groups and restrictions, roles in the header, the mark of active
 restrictions and where their panel stands, what the devices and the clients are, a user without a
@@ -97,13 +115,17 @@ name, the way back, devices
 (without a reported build, with one, an unknown platform), clients (custom builds, an unknown
 kind, none), every empty panel, granting and taking away the moderator role with the confirmation
 and what it forgets, a cancelled and a refused change, the locked switch of an administrator, agent
-access both ways, revoking a restriction on a wide screen and on a phone, restriction states and
-links, an unknown user and a failed load with a retry.
+access both ways, revoking a restriction on a wide screen and on a phone, who lifted a restriction
+(by name, by ISU, right after a revoke), restriction states and links, the link to the user's
+audit entries, an unknown user and a failed load with a retry.
 
 Synthetic data and the Backend stand-in are in `src/app/test/admin.ts` (`adminUserOf`,
-`adminUserDetailOf`, `userRestrictionOf`, `usersBackend`, `mockUsers`), the phone width is
+`adminUserDetailOf`, `userRestrictionOf`, `usersBackend`, `mockUsers`; the stand-in filters by
+`role` and `restricted` like Backend, counts `activeRestrictions` from the cards and names the
+revoker), the phone width is
 `mockScreenWidth` (`src/app/test/screen.ts`). The demo answers are in `src/app/test/demo/admin.ts`:
-the list holds the whole demo population (`demo/people.ts`), and a card shows the restrictions the
-moderation demo keeps for that person. The times of a demo card hold together: nothing on it is
+the list holds the whole demo population (`demo/people.ts`) and filters it on the server side as the
+contract says; `activeRestrictions` of a row and the card's restrictions both come from what the
+moderation demo keeps for that person, so a revoke anywhere shows in the list too. The times of a demo card hold together: nothing on it is
 earlier than the registration, and the last activity is later than every device, client,
 restriction and log entry about the user.

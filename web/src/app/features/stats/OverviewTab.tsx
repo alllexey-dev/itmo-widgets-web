@@ -28,15 +28,19 @@ import {
   WEB_SESSIONS_HINT,
 } from '../../lib/metricLabels';
 import {
+  useAudienceStats,
   useClients,
   useCredentials,
   useDashboard,
+  useFeatureStats,
   useReviewsSync,
+  useServerStats,
   useSport,
+  useSportStats,
   useSummaries,
 } from './api';
 import { SegmentBar } from './charts';
-import { formatDay, formatInt } from './format';
+import { formatDay, formatInt, formatPct, formatValue } from './format';
 import { nightlyHint, NOW_HINT, TABS, type Tone } from './labels';
 import {
   activityChart,
@@ -51,9 +55,10 @@ import {
   syncHealth,
   type Health,
 } from './model';
-import { FeatureUsageExample, OverviewExampleTiles } from './ExampleBlocks';
 import { TimeChart } from './charts';
-import { DayPanel } from './panels';
+import { DayPanel, FeatureUsagePanel } from './panels';
+import { COHORT_DAYS, DEFAULT_PERIOD } from './period';
+import { retainedAfter, satisfiedShare, serverErrors, upstreamFailures } from './periodModel';
 import {
   Nothing,
   SourcePanel,
@@ -66,10 +71,13 @@ import {
 } from './parts';
 import type {
   AiSummaries,
+  AudienceStats,
   Clients,
   Credential,
   Dashboard,
   ReviewsSync,
+  ServerStats,
+  SportStats,
   SportStatus,
   TabId,
 } from './types';
@@ -378,6 +386,58 @@ function clientTiles(clients: Clients): TileView[] {
   ];
 }
 
+/** The weeks after registration the retention tile is about. */
+const RETAINED_WEEKS = 4;
+
+function retentionTiles({ retention }: AudienceStats): TileView[] {
+  const retained = retainedAfter(retention, RETAINED_WEEKS);
+  return [
+    {
+      label: 'Остаются через 4 недели',
+      hint: 'Доля новичков, которых видели через четыре недели после регистрации или позже, по последним 26 неделям регистрации',
+      value: retained ? formatPct(retained.share, 0) : '—',
+      note: retained
+        ? `по ${counted(retained.cohorts, ['неделе', 'неделям', 'неделям'])} регистрации`
+        : 'ни одна неделя регистрации ещё не прожила 4 недели',
+    },
+  ];
+}
+
+function autoSignTiles({ autoSign }: SportStats): TileView[] {
+  const share = satisfiedShare(autoSign);
+  return [
+    {
+      label: 'Автозапись сработала',
+      hint: 'Доля заявок на автозапись, созданных за 30 дней и уже завершённых, которые закончились записью',
+      value: share === null ? '—' : formatPct(share),
+      note:
+        share === null ? 'завершённых заявок за 30 дней нет' : 'из завершённых заявок за 30 дней',
+    },
+  ];
+}
+
+function serverTiles(stats: ServerStats): TileView[] {
+  const note = stats.collectedSince === null ? 'счётчики ещё не начали считать' : 'за 7 дней';
+  const errors = serverErrors(stats);
+  const upstream = upstreamFailures(stats);
+  return [
+    {
+      label: METRIC_LABEL.serverErrors,
+      hint: 'Доля ответов 5xx Бэкенда за 7 дней',
+      value: errors.share === null ? '—' : formatValue(errors.share, 'rate'),
+      note,
+      spark: errors.spark,
+    },
+    {
+      label: 'Сбои My ITMO',
+      hint: 'Доля неудачных запросов Бэкенда к My ITMO за 7 дней',
+      value: upstream.share === null ? '—' : formatValue(upstream.share, 'rate'),
+      note,
+      spark: upstream.spark,
+    },
+  ];
+}
+
 // ---------------------------------------------------------------- the tab
 
 export function OverviewTab({ onOpenTab }: { onOpenTab: (tab: TabId) => void }) {
@@ -387,6 +447,12 @@ export function OverviewTab({ onOpenTab }: { onOpenTab: (tab: TabId) => void }) 
   const sport = useSport();
   const sync = useReviewsSync();
   const summaries = useSummaries();
+  // Fixed windows, no period control: retention over the latest 26 registration weeks, the rest
+  // over Backend's default 30 days, the answer Главная reads too.
+  const audience = useAudienceStats(COHORT_DAYS);
+  const sportStats = useSportStats(DEFAULT_PERIOD.days);
+  const server = useServerStats(DEFAULT_PERIOD.days);
+  const features = useFeatureStats(DEFAULT_PERIOD.days);
 
   const items = attentionOf({
     dashboard: dashboard.data,
@@ -417,12 +483,21 @@ export function OverviewTab({ onOpenTab }: { onOpenTab: (tab: TabId) => void }) 
           {clientTiles}
         </Tiles>
       </TileGrid>
-      <OverviewExampleTiles />
+      <TileGrid count={4}>
+        <Tiles resource={audience} name="удержание">
+          {retentionTiles}
+        </Tiles>
+        <Tiles resource={sportStats} name="заявки на спорт">
+          {autoSignTiles}
+        </Tiles>
+        <Tiles resource={server} name="статистику сервера">
+          {serverTiles}
+        </Tiles>
+      </TileGrid>
       <div className="st-cols st-stretch" data-cols="2-1">
         <SourcePanel
           title={METRIC_LABEL.activeClients}
           hint={`За сутки, 7 и 30 дней. ${nightlyHint(lastDay, 'плитка выше')}`}
-
           resource={clients}
         >
           {(data) => {
@@ -466,7 +541,7 @@ export function OverviewTab({ onOpenTab }: { onOpenTab: (tab: TabId) => void }) 
           }
         </SourcePanel>
       </div>
-      <FeatureUsageExample isShort />
+      <FeatureUsagePanel resource={features} span={DEFAULT_PERIOD.span} isShort />
     </TabFrame>
   );
 }

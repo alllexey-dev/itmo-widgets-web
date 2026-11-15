@@ -1,11 +1,12 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { minutesAgo, sportStatusOf } from '../../test/admin';
 import { renderApp } from '../../test/render';
 import { mockSession, userOf } from '../../test/server';
-import { mockStats, sportRunOf } from '../../test/stats';
+import { mockStats, sportEntryStatsOf, sportRunOf, sportStatsOf } from '../../test/stats';
 import type * as Metrics from './metrics';
+import { daysBefore, moscowToday } from './period';
 
 // The examples of metrics without data are off here: these tests are about the real blocks, which
 // are the same with examples on (Examples.test.tsx).
@@ -120,9 +121,10 @@ describe('Statistics sport', () => {
     expect(success).toHaveTextContent('—');
     expect(success).toHaveTextContent('запусков за 7 дней не было');
     expect(await group('Среднее время обновления')).toHaveTextContent('успешных запусков не было');
-    expect(screen.getByText('Запусков ещё не было')).toBeInTheDocument();
+    const runs = screen.getByRole('region', { name: 'Последние обновления каталога' });
+    expect(within(runs).getByText('Запусков ещё не было')).toBeInTheDocument();
+    expect(within(runs).queryByRole('figure')).not.toBeInTheDocument();
     expect(screen.getByText('За 7 дней запусков не было')).toBeInTheDocument();
-    expect(screen.queryByRole('figure')).not.toBeInTheDocument();
   });
 
   it('offers a retry after a failure', async () => {
@@ -137,5 +139,112 @@ describe('Statistics sport', () => {
 
     expect(await group('Автозапись')).toHaveTextContent('11');
     expect(await within(runs).findByRole('figure')).toBeInTheDocument();
+  });
+
+  it('shows how fast auto sign-up and the queues get a place', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard?tab=sport');
+
+    const speed = await group('Скорость автозаписи');
+    expect(speed).toHaveTextContent('6 с');
+    expect(speed).toHaveTextContent('90 % быстрее 21 с');
+    const wait = await group('Ожидание в очереди');
+    expect(wait).toHaveTextContent('1 ч 35 мин');
+    expect(wait).toHaveTextContent('90 % быстрее 9 ч');
+  });
+
+  it('says so when no entry of the period got a place yet', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats({
+      sportStats: sportStatsOf({
+        autoSign: sportEntryStatsOf({ timed: 0, medianSeconds: null, p90Seconds: null }),
+      }),
+    });
+
+    renderApp('/admin/dashboard?tab=sport');
+
+    const speed = await group('Скорость автозаписи');
+    expect(speed).toHaveTextContent('—');
+    expect(speed).toHaveTextContent('записей за 30 дней не было');
+  });
+
+  it('draws the entries of the period and how they ended', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard?tab=sport');
+
+    const created = await screen.findByRole('region', { name: 'Новые заявки на автозапись' });
+    expect(
+      await within(created).findByRole('figure', {
+        name: 'Новые заявки на автозапись по дням, всего 90',
+      }),
+    ).toBeInTheDocument();
+    const queue = screen.getByRole('region', { name: 'Вступления в очереди' });
+    expect(
+      within(queue).getByRole('figure', { name: 'Вступления в очереди по дням, всего 60' }),
+    ).toBeInTheDocument();
+    const auto = screen.getByRole('region', { name: 'Чем заканчивается автозапись' });
+    expect(within(auto).getByText('Записаны').closest('li')).toHaveTextContent(/60.*66,7/);
+    expect(within(auto).getByText('Попытки исчерпаны').closest('li')).toHaveTextContent('4');
+    const queues = screen.getByRole('region', { name: 'Чем заканчиваются очереди' });
+    expect(within(queues).getByText('Занятие прошло').closest('li')).toHaveTextContent('20');
+    // An outcome that did not happen is not listed.
+    expect(within(queues).queryByText('Уведомлены, ждут записи')).not.toBeInTheDocument();
+    const subscriptions = screen.getByRole('region', { name: 'Подписки на секции' });
+    expect(within(subscriptions).getByText('Действуют').closest('li')).toHaveTextContent('86');
+    expect(
+      within(subscriptions).getByText('Занятия пропали из расписания').closest('li'),
+    ).toHaveTextContent('12');
+    expect(within(subscriptions).getByText('Не хватило лимита').closest('li')).toHaveTextContent(
+      '3',
+    );
+    expect(subscriptions).toHaveTextContent(/Новых подписок за 30 дней\s*14/);
+  });
+
+  it('lists the sections and the lesson times people want', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard?tab=sport');
+
+    const sections = await screen.findByRole('table', { name: 'Популярные секции' });
+    const rows = within(sections).getAllByRole('row');
+    expect(rows[1]).toHaveTextContent(/Плавание.*60.*40.*20.*50 %.*1 ч/);
+    expect(rows[2]).toHaveTextContent(/Волейбол.*20.*75 %.*—/);
+    const slots = screen.getByRole('table', { name: 'Когда хотят заниматься' });
+    const times = within(slots).getAllByRole('row');
+    // The busiest first: 60 of the 90 auto entries, half of them got a place.
+    expect(times[1]).toHaveTextContent(/Среда.*15:20.*67 %.*50 %/);
+    expect(times[3]).toHaveTextContent(/Суббота.*10:00/);
+  });
+
+  it('asks Backend for the chosen period', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requested = mockStats();
+
+    renderApp('/admin/dashboard?tab=sport&period=90');
+
+    await group('Скорость автозаписи');
+    await waitFor(() =>
+      expect(requested).toContain(`/api/admin/stats/sport?from=${daysBefore(moscowToday(), 89)}`),
+    );
+    expect(requested).not.toContain('/api/admin/stats/sport');
+  });
+
+  it('keeps the catalog when the statistics of the period fail', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats({ sportStats: null });
+
+    renderApp('/admin/dashboard?tab=sport');
+
+    expect(await screen.findByText('Не удалось загрузить заявки на спорт')).toBeInTheDocument();
+    expect(await group('Автозапись')).toHaveTextContent('11');
+    expect(
+      await screen.findByRole('region', { name: 'Итоги обновлений за 7 дней' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Скорость автозаписи' })).not.toBeInTheDocument();
   });
 });

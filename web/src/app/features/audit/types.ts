@@ -1,6 +1,8 @@
 import type { components } from '../../api/schema';
 
-export type AuditEntry = components['schemas']['AdminAuditEntry'];
+type Schemas = components['schemas'];
+
+export type AuditEntry = Schemas['AdminAuditEntry'];
 
 export interface AuditPage {
   items: AuditEntry[];
@@ -9,5 +11,7 @@ export interface AuditPage {
   total: number;
 }
 
-/** The part of a user's card (`GET /api/admin/users/{isu}`) the log reads: the name of a target. */
-export type TargetUser = Pick<components['schemas']['AdminUserDetail'], 'user'>;
+/** The administrators the filter of who acted offers (`GET /api/admin/users?role=ADMIN`). */
+export type StaffPage = Pick<Schemas['AdminPageAdminUserItem'], 'total'> & {
+  items: Pick<Schemas['AdminUserItem'], 'isu' | 'name'>[];
+};

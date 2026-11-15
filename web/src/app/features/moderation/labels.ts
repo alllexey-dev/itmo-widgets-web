@@ -27,6 +27,7 @@ import type {
   LinkCategory,
   LinkVisibility,
   ModerationAction,
+  ModerationCase,
   ReportReason,
   RestrictionCapability,
   ReviewVerification,
@@ -99,6 +100,16 @@ export const VERIFICATION: Record<
   },
 };
 
+/**
+ * `VERIFIED` because the teacher has a lesson in the sport catalog (`verifiedBasis = SPORT_TEACHER`):
+ * Backend counts it at once on save, without the ISU schedule, so the usual words would overstate it.
+ */
+export const SPORT_VERIFICATION = {
+  label: 'Ведёт физкультуру',
+  hint: 'Преподаватель ведёт занятия в каталоге физкультуры, поэтому отзыв засчитан без сверки с расписанием ИСУ.',
+  color: 'green',
+} as const satisfies { label: string; hint: string; color: TokenColor };
+
 export const CAPABILITIES: Record<RestrictionCapability, string> = {
   SUBMIT_RESOURCES: 'Публикация ссылок',
   VOTE: 'Голосование',
@@ -137,6 +148,62 @@ export function doneText(action: ModerationAction, targetType: TargetType): stri
   );
 }
 
+/** Why Backend refused to take a decision back, as far as the case read again tells it. */
+export type RevertRefusal = 'reverted' | 'newer' | 'expired' | 'deleted' | 'changed';
+
+const REVERT_REFUSALS: Record<TargetType, Record<RevertRefusal, string>> = {
+  SUBJECT_RESOURCE: {
+    reverted: 'Это решение уже отменено',
+    newer: 'После этого решения по заявке приняли другое, отменить можно только последнее',
+    expired: 'Время на отмену вышло: решение можно отменить в течение 10 минут',
+    deleted: 'Ссылку удалили, решение уже не отменить',
+    changed:
+      'Ссылка изменилась после решения: её отредактировал автор, задело другое решение или по ней открыта новая заявка. Отменить уже нельзя',
+  },
+  TEACHER_REVIEW: {
+    reverted: 'Это решение уже отменено',
+    newer: 'После этого решения по заявке приняли другое, отменить можно только последнее',
+    expired: 'Время на отмену вышло: решение можно отменить в течение 10 минут',
+    deleted: 'Отзыв удалили, решение уже не отменить',
+    changed:
+      'Отзыв изменился после решения: его отредактировал автор, задело другое решение или по нему открыта новая заявка. Отменить уже нельзя',
+  },
+};
+
+export function revertRefusalText(refusal: RevertRefusal, targetType: TargetType): string {
+  return REVERT_REFUSALS[targetType][refusal];
+}
+
+export const REVERT_FAILED = 'Не удалось отменить решение';
+export const REVERT_DENIED =
+  'Отменить решение может только модератор, который его принял, или администратор';
+
+/**
+ * The toast after a revert: a decision that closed the case opens it again; a `RESTORE`, which was
+ * appended to a resolved case, leaves it resolved with the target hidden again.
+ */
+export function revertedText(updated: ModerationCase): string {
+  if (updated.status === 'OPEN') return 'Решение отменено, заявка снова в очереди';
+  return updated.targetType === 'TEACHER_REVIEW'
+    ? 'Решение отменено, отзыв снова скрыт'
+    : 'Решение отменено, ссылка снова скрыта';
+}
+
+/** What undoing a decision brings back, the tooltip of `Отменить` in the log. */
+export function revertHint(action: ModerationAction, targetType: TargetType): string {
+  const link = targetType === 'SUBJECT_RESOURCE';
+  if (action === 'RESTORE') {
+    return link
+      ? 'Ссылка снова будет скрыта, заявка останется решённой.'
+      : 'Отзыв снова будет скрыт, заявка останется решённой.';
+  }
+  const target = link
+    ? 'Ссылка вернётся в то состояние, в каком была до решения'
+    : 'Отзыв вернётся в то состояние, в каком был до решения';
+  const reports = action === 'DISMISS' ? ', жалобы снова станут активными' : '';
+  return `${target}${reports}. Заявка снова откроется на своём месте в очереди.`;
+}
+
 /** Frequent reject reasons offered as chips; the author sees the chosen one. */
 export const LINK_REJECT_PRESETS = [
   'Не открывается',
@@ -169,6 +236,8 @@ export interface TargetTexts {
   history: { approved: string; rejected: string };
   /** Why a case is among the withdrawn ones, by the state its revision was left in. */
   withdrawn: Record<Exclude<RevisionStatus, 'PENDING'>, string>;
+  /** The same for a case withdrawn by hiding everything of the author, before a link to that case. */
+  withdrawnBy: string;
 }
 
 export const TARGET_TEXTS: Record<TargetType, TargetTexts> = {
@@ -192,6 +261,8 @@ export const TARGET_TEXTS: Record<TargetType, TargetTexts> = {
         'Заявка закрылась без решения: автор отозвал эту версию — изменил ссылку, сделал её личной или удалил.',
       APPROVED: 'Заявка закрылась без решения по ней.',
     },
+    withdrawnBy:
+      'Заявка закрылась без решения по ней: ссылку отклонили, когда модератор скрыл всё у автора',
   },
   TEACHER_REVIEW: {
     deleted: 'Отзыв удалён',
@@ -212,6 +283,8 @@ export const TARGET_TEXTS: Record<TargetType, TargetTexts> = {
         'Заявка закрылась без решения: автор отозвал эту версию — изменил отзыв или удалил его.',
       APPROVED: 'Заявка закрылась без решения по ней.',
     },
+    withdrawnBy:
+      'Заявка закрылась без решения по ней: отзыв отклонили, когда модератор скрыл всё у автора',
   },
 };
 

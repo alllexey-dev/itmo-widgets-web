@@ -13,7 +13,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Token } from '@astryxdesign/core/Token';
 import { Gavel, Search, SearchX, ShieldCheck } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApiMutation, useApiQuery } from '../../lib/data';
 import { formatDate } from '../../lib/format';
 import { Loadable } from '../../lib/Loadable';
@@ -30,7 +30,8 @@ import { CAPABILITIES } from './labels';
 import './moderation.css';
 import type { AdminPage, AdminRestriction } from './types';
 
-const ISU_PATTERN = /^\d{1,9}$/;
+/** Backend takes at most this many characters in `q`. */
+const QUERY_LIMIT = 100;
 const SEARCH_DELAY = 300;
 /**
  * Below this width the columns no longer fit beside the navigation, and the table gives way to rows
@@ -50,7 +51,12 @@ interface State {
 function stateOf(restriction: AdminRestriction): State {
   if (restriction.active) return { label: 'Действует', color: 'orange' };
   if (restriction.revokedAt) {
-    const by = restriction.revokedByIsu ? ` · модератор ИСУ ${restriction.revokedByIsu}` : '';
+    // The stored name; an account without one is named by its ISU.
+    const by = restriction.revokedByName
+      ? ` · ${restriction.revokedByName}`
+      : restriction.revokedByIsu
+        ? ` · модератор ИСУ ${restriction.revokedByIsu}`
+        : '';
     return { label: 'Снято', color: 'gray', detail: `${formatDate(restriction.revokedAt)}${by}` };
   }
   if (restriction.expiresAt) {
@@ -90,12 +96,6 @@ function revokeText(lifted: AdminRestriction, active: AdminRestriction[]): strin
     return `${text} У него останется запрет «${CAPABILITIES.ALL}» (${termOf(all)}), поэтому это действие останется закрытым.`;
   }
   return text;
-}
-
-/** What the search field puts into the address: a whole ISU number or nothing. */
-function isuOf(text: string): string {
-  const trimmed = text.trim();
-  return ISU_PATTERN.test(trimmed) ? trimmed : '';
 }
 
 function caseHref(restriction: AdminRestriction): string {
@@ -170,38 +170,38 @@ function RestrictionsList({
   );
 }
 
-/** The text of the search field, and the same text once typing has paused. */
-function useDebounced(value: string): string {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), SEARCH_DELAY);
-    return () => clearTimeout(timer);
-  }, [value]);
-  return debounced;
+/** The whole ISU number of a link from a user card (`?isu=`), which filters exactly. */
+function exactIsuOf(value: string): number | null {
+  return /^\d{1,9}$/.test(value) ? Number(value) : null;
 }
 
 /**
- * `/admin/restrictions`: who may not do what after moderation decisions, with a search by ISU and
- * revoking. `isu`, `all` and `page` live in the query string.
+ * `/admin/restrictions`: who may not do what after moderation decisions, with a search by name or
+ * the start of an ISU number, and revoking. `q`, `all` and `page` live in the query string; `isu`,
+ * which a user card links with, filters by one whole number until the search is changed.
  */
 export default function RestrictionsPage() {
-  const [query, setQuery] = useQueryState({ isu: '', all: '', page: 0 });
-  const [isuText, setIsuText] = useState(query.isu);
+  const [query, setQuery] = useQueryState({ q: '', isu: '', all: '', page: 0 });
+  const search = query.q.trim();
+  const exactIsu = search ? null : exactIsuOf(query.isu);
+  const addressText = search || (exactIsu !== null ? String(exactIsu) : '');
+  // The field shows what is typed; the address and the request follow once the typing pauses.
+  const [text, setText] = useState(addressText);
   // The address can change under the page (the navigation item, a link): the field follows it,
   // unless the address is what the field itself has just put there.
-  const [addressIsu, setAddressIsu] = useState(query.isu);
-  if (query.isu !== addressIsu) {
-    setAddressIsu(query.isu);
-    if (query.isu !== isuOf(isuText)) setIsuText(query.isu);
+  const [applied, setApplied] = useState(addressText);
+  if (addressText !== applied) {
+    setApplied(addressText);
+    if (addressText !== text.trim()) setText(addressText);
   }
-  // The search waits for a pause in typing before it asks Backend.
-  const isu = useDebounced(isuText.trim());
-  const valid = isu === '' || ISU_PATTERN.test(isu);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
   const active = query.all !== '1';
   const page = Number.isInteger(query.page) && query.page > 0 ? query.page : 0;
 
   const restrictions = useApiQuery<AdminPage<AdminRestriction>>(RESTRICTIONS_PATH, {
-    isu: valid && isu ? Number(isu) : null,
+    isu: exactIsu,
+    q: search || null,
     active,
     page,
     size: RESTRICTIONS_PAGE_SIZE,
@@ -223,10 +223,14 @@ export default function RestrictionsPage() {
     failed: 'Не удалось снять ограничение',
   });
 
-  function changeIsu(value: string) {
-    setIsuText(value);
-    // Only a whole number is a search; anything else stays in the field and out of the address.
-    setQuery({ isu: isuOf(value) || null, page: null });
+  function changeText(value: string) {
+    const next = value.slice(0, QUERY_LIMIT);
+    setText(next);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(
+      () => setQuery({ q: next.trim() || null, isu: null, page: null }),
+      SEARCH_DELAY,
+    );
   }
 
   const allColumns: TableColumn<Row>[] = [
@@ -318,23 +322,15 @@ export default function RestrictionsPage() {
         <div className="mod-toolbar">
           <TextInput
             type="search"
-            label="Номер ИСУ"
+            label="Поиск по имени или ИСУ"
             isLabelHidden
-            placeholder="Номер ИСУ целиком"
+            placeholder="Имя или ИСУ"
             startIcon={<Search size={16} />}
-            inputMode="numeric"
             autoComplete="off"
             width={240}
             hasClear
-            value={isuText}
-            onChange={changeIsu}
-            // A tooltip: an error line under the field would push the table down.
-            statusVariant="tooltip"
-            status={
-              valid
-                ? undefined
-                : { type: 'error', message: 'Поиск только по номеру ИСУ: до 9 цифр, без имени' }
-            }
+            value={text}
+            onChange={changeText}
           />
           <SegmentedControl
             label="Состояние"
@@ -353,23 +349,16 @@ export default function RestrictionsPage() {
             errorTitle="Не удалось загрузить ограничения"
           >
             {(data) =>
-              !valid ? (
-                // Not a search: showing every restriction under it would read as its result.
-                <EmptyState
-                  icon={<SearchX size={32} />}
-                  title="Это не номер ИСУ"
-                  description="Поиск идёт по номеру ИСУ целиком: имя или часть номера не подойдут."
-                  headingLevel={2}
-                />
-              ) : data.items.length === 0 ? (
-                isu ? (
+              data.items.length === 0 ? (
+                search || exactIsu !== null ? (
                   <EmptyState
                     icon={<SearchX size={32} />}
-                    title="Ограничений с таким номером ИСУ нет"
+                    title="Никого не нашли"
                     description={
-                      active
-                        ? 'Поиск идёт по номеру целиком, часть номера не подойдёт. Снятые и истёкшие ограничения — под «Все».'
-                        : 'Поиск идёт по номеру целиком, часть номера не подойдёт.'
+                      (exactIsu !== null
+                        ? `Ограничений у ИСУ ${exactIsu} нет.`
+                        : 'Ищем по части имени или по началу номера ИСУ.') +
+                      (active ? ' Снятые и истёкшие ограничения — под «Все».' : '')
                     }
                     headingLevel={2}
                   />

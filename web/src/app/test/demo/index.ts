@@ -72,7 +72,7 @@ export const handlers: RequestHandler[] = [
   ...admin,
   ...moderation,
   ...system,
-  // Only the dashboard: the other paths of Статистика belong to the areas above.
+  // Статистика: the dashboard, `/api/admin/stats/*` and `/api/admin/system/sheet-rules`; no area above answers them.
   ...stats,
   ...session,
   ...shellDefaults,

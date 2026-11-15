@@ -10,6 +10,7 @@ import { Token } from '@astryxdesign/core/Token';
 
 import type { Resource } from '../../lib/data';
 import { formatDateTime, formatRelative } from '../../lib/format';
+import type { ReactNode } from 'react';
 import { Loadable } from '../../lib/Loadable';
 import {
   CREDENTIAL_FIELD,
@@ -19,13 +20,51 @@ import {
   REVIEW_CHECK_NAME,
   SYNC_NAME,
 } from '../../lib/metricLabels';
-import { useCredentials, useReviewsSync, useSport, useSummaries, useVerification } from './api';
-import { SystemJobExamples, SystemLoadExamples } from './ExampleBlocks';
-import type { MetricId } from './metrics';
+import {
+  useCredentials,
+  useReviewsSync,
+  useServerStats,
+  useSheetRules,
+  useSport,
+  useSummaries,
+  useVerification,
+} from './api';
+import { Meter, SegmentBar, TimeChart } from './charts';
+import { formatDay, formatInt, formatPct } from './format';
+import { METRICS } from './metrics';
 import { sportHealth, summariesHealth, syncHealth, verificationHealth, type Health } from './model';
-import { isExample, NameCell, Num, Section, SourcePanel, StatusLine, TabFrame } from './parts';
+import { PeriodControl, usePeriod, type Period } from './period';
+import {
+  countedDays,
+  errorRateChart,
+  latencyChart,
+  pushSegments,
+  pushWithoutDevice,
+  requestsChart,
+  routeRows,
+  sheetErrorRows,
+  sheetSegments,
+  stepOf,
+  upstreamChart,
+  upstreamFailureSegments,
+  type RouteRow,
+  type Step,
+} from './periodModel';
+import {
+  BarCell,
+  Facts,
+  NameCell,
+  Nothing,
+  Num,
+  Section,
+  SourcePanel,
+  StatusLine,
+  SubHeading,
+  TabFrame,
+} from './parts';
 import { DataTable } from './tables';
-import type { Credential } from './types';
+import type { Chart } from './model';
+import type { Credential, ServerDay, ServerStats } from './types';
 
 /** One background job: its state by the latest run and a line of detail, from its own source. */
 function JobCard<T>({
@@ -72,15 +111,6 @@ function JobCard<T>({
     </Card>
   );
 }
-
-/** The metrics of the load section: it is shown while at least one of them is an example. */
-const LOAD_METRICS: readonly MetricId[] = [
-  'requests',
-  'latency',
-  'error_rate',
-  'upstream',
-  'routes',
-];
 
 interface CredentialRow extends Record<string, unknown> {
   id: string;
@@ -131,14 +161,138 @@ const CREDENTIAL_COLUMNS: TableColumn<CredentialRow>[] = [
   },
 ];
 
+function routeColumns(rows: RouteRow[]): TableColumn<RouteRow>[] {
+  const max = Math.max(...rows.map((row) => row.requests), 1);
+  return [
+    {
+      key: 'name',
+      header: 'Группа маршрутов',
+      width: proportional(2, { minWidth: 200 }),
+      renderCell: (row) => <NameCell name={row.name} note={row.path} />,
+    },
+    {
+      key: 'requests',
+      header: 'Запросов',
+      width: proportional(1.8, { minWidth: 170 }),
+      renderCell: (row) => (
+        <BarCell value={row.requests} max={max} text={formatInt(row.requests)} />
+      ),
+    },
+    {
+      key: 'share',
+      header: 'Доля',
+      width: pixel(80),
+      align: 'end',
+      renderCell: (row) => <Num isMuted>{formatPct(row.share, 0)}</Num>,
+    },
+    {
+      key: 'errors',
+      header: 'Ошибки 5xx',
+      width: pixel(112),
+      align: 'end',
+      renderCell: (row) => <Num>{row.errors}</Num>,
+    },
+    {
+      key: 'p95',
+      header: 'p95',
+      width: pixel(96),
+      align: 'end',
+      renderCell: (row) => <Num isMuted>{row.p95}</Num>,
+    },
+  ];
+}
+
+/**
+ * A chart of the server counters. Days before the counters started are not a quiet server: they
+ * are left out, and a period that has none of them says so instead of drawing a flat line.
+ */
+function CounterPanel({
+  title,
+  hint,
+  resource,
+  chartOf,
+  step,
+  children,
+}: {
+  title: string;
+  hint: string;
+  resource: Resource<ServerStats>;
+  chartOf: (days: ServerDay[], step: Step) => Chart;
+  step: Step;
+  children?: (stats: ServerStats) => ReactNode;
+}) {
+  return (
+    <SourcePanel title={title} hint={hint} resource={resource}>
+      {(stats) => {
+        const days = countedDays(stats);
+        if (!days.length) return <NotCounted stats={stats} />;
+        return (
+          <>
+            {stats.collectedSince && stats.collectedSince > stats.from ? (
+              <Text type="supporting" color="secondary">
+                Счётчики работают с {formatDay(stats.collectedSince)}
+              </Text>
+            ) : null}
+            <TimeChart chart={chartOf(days, step)} />
+            {children?.(stats)}
+          </>
+        );
+      }}
+    </SourcePanel>
+  );
+}
+
+function NotCounted({ stats }: { stats: ServerStats }) {
+  return stats.collectedSince === null ? (
+    <Nothing
+      title="Счётчики ещё не начали считать"
+      text="Бэкенд записывает их раз в минуту; первые появятся после первых запросов."
+    />
+  ) : (
+    <Nothing
+      title={`За этот период счётчиков нет: они работают с ${formatDay(stats.collectedSince)}`}
+    />
+  );
+}
+
+function PushPanel({ resource, period }: { resource: Resource<ServerStats>; period: Period }) {
+  return (
+    <SourcePanel
+      title={METRICS.push.name}
+      hint={`Чем закончилась отправка уведомлений ${period.span}, по устройствам. FCM не сообщает о доставке, поэтому здесь «отправлено», а не «доставлено».`}
+      resource={resource}
+    >
+      {(stats) => {
+        if (!countedDays(stats).length) return <NotCounted stats={stats} />;
+        const segments = pushSegments(stats);
+        if (!segments.some((segment) => segment.value > 0)) {
+          return <Nothing title={`Уведомлений ${period.span} не было`} />;
+        }
+        return (
+          <>
+            <SegmentBar segments={segments} label="Уведомления по итогу отправки" />
+            <Facts rows={[['Пользователей без устройства', formatInt(pushWithoutDevice(stats))]]} />
+          </>
+        );
+      }}
+    </SourcePanel>
+  );
+}
+
 export function SystemTab() {
+  const [period] = usePeriod();
+  const step = stepOf(period.days);
+  const by = step === 'day' ? 'по дням' : 'по месяцам';
   const sport = useSport();
   const sync = useReviewsSync();
   const summaries = useSummaries();
   const verification = useVerification();
   const credentials = useCredentials();
+  const server = useServerStats(period.days);
+  const sheets = useSheetRules();
   return (
     <TabFrame tab="system">
+      <PeriodControl />
       <Section
         title="Фоновые задачи"
         text="Что Бэкенд делает сам по расписанию: состояние по последнему запуску"
@@ -169,7 +323,61 @@ export function SystemTab() {
             healthOf={verificationHealth}
           />
         </div>
-        <SystemJobExamples />
+        <div className="st-cols st-stretch" data-cols="2">
+          <PushPanel resource={server} period={period} />
+          <SourcePanel
+            title={METRICS.sheet_rules.name}
+            hint="Таблицы с баллами по состоянию разбора, на сейчас"
+            resource={sheets}
+          >
+            {(rules) => {
+              const errors = sheetErrorRows(rules);
+              return (
+                <>
+                  <StatusLine
+                    health={
+                      !rules.enabled
+                        ? { tone: 'neutral', label: 'Разбор выключен' }
+                        : rules.running
+                          ? { tone: 'accent', label: 'Идёт разбор' }
+                          : { tone: 'success', label: 'Разбор включён' }
+                    }
+                  />
+                  <SegmentBar
+                    segments={sheetSegments(rules)}
+                    label="Таблицы с баллами по состоянию"
+                  />
+                  {errors.length ? (
+                    <VStack gap={2}>
+                      <SubHeading>Почему не разобраны</SubHeading>
+                      <Facts
+                        rows={errors.map((row) => [row.label, formatInt(row.sheets)] as const)}
+                      />
+                    </VStack>
+                  ) : null}
+                  <Facts
+                    rows={[
+                      [
+                        'Последний разбор',
+                        rules.lastAnalyzedAt ? formatRelative(rules.lastAnalyzedAt) : 'не было',
+                      ],
+                      ['Неудачных попыток с последнего итога', formatInt(rules.attempts)],
+                    ]}
+                  />
+                  <VStack gap={2}>
+                    <span className="st-kv">
+                      <Text type="body">Разборов сегодня</Text>
+                      <Text type="body" weight="semibold" hasTabularNumbers>
+                        {formatInt(rules.budgetUsed)} из {formatInt(rules.dailyBudget)}
+                      </Text>
+                    </span>
+                    <Meter value={rules.budgetUsed} max={rules.dailyBudget} color="purple" />
+                  </VStack>
+                </>
+              );
+            }}
+          </SourcePanel>
+        </div>
       </Section>
       <SourcePanel
         title="Ключи и токены"
@@ -192,14 +400,72 @@ export function SystemTab() {
           />
         )}
       </SourcePanel>
-      {LOAD_METRICS.some(isExample) ? (
-        <Section
-          title="Нагрузка и ошибки"
-          text="Сколько запросов обрабатывает Бэкенд, как быстро отвечает и где ошибается"
+      <Section
+        title="Нагрузка и ошибки"
+        text={`Сколько запросов обрабатывает Бэкенд, как быстро отвечает и где ошибается, ${period.span}`}
+      >
+        <div className="st-cols st-stretch" data-cols="2">
+          <CounterPanel
+            title={METRICS.requests.name}
+            hint={`Ответы Бэкенда на запросы к /api/, ${by}`}
+            resource={server}
+            chartOf={requestsChart}
+            step={step}
+          />
+          <CounterPanel
+            title={METRICS.latency.name}
+            hint={
+              step === 'day'
+                ? 'Медиана и 95-й перцентиль, по дням; точность — ширина корзины счётчика'
+                : 'Медиана и 95-й перцентиль; за месяц — среднее по дням, взвешенное по числу запросов'
+            }
+            resource={server}
+            chartOf={latencyChart}
+            step={step}
+          />
+        </div>
+        <div className="st-cols st-stretch" data-cols="2">
+          <CounterPanel
+            title={METRICS.error_rate.name}
+            hint={`Ответы 5xx среди всех ответов Бэкенда, ${by}`}
+            resource={server}
+            chartOf={errorRateChart}
+            step={step}
+          />
+          <CounterPanel
+            title={METRICS.upstream.name}
+            hint={`Запросы Бэкенда к My ITMO, которые закончились ошибкой, ${by}`}
+            resource={server}
+            chartOf={upstreamChart}
+            step={step}
+          >
+            {(stats) => {
+              const kinds = upstreamFailureSegments(stats);
+              return kinds.length ? (
+                <VStack gap={2}>
+                  <SubHeading>Сбои по виду</SubHeading>
+                  <SegmentBar segments={kinds} label="Сбои My ITMO по виду" />
+                </VStack>
+              ) : null;
+            }}
+          </CounterPanel>
+        </div>
+        <SourcePanel
+          title={METRICS.routes.name}
+          hint={`Что нагружает Бэкенд и где он ошибается, ${period.span}`}
+          resource={server}
         >
-          <SystemLoadExamples />
-        </Section>
-      ) : null}
+          {(stats) => {
+            const rows = routeRows(stats);
+            if (!countedDays(stats).length) return <NotCounted stats={stats} />;
+            return rows.length ? (
+              <DataTable rows={rows} columns={routeColumns(rows)} label="Запросы по разделам API" />
+            ) : (
+              <Nothing title={`Запросов ${period.span} не было`} />
+            );
+          }}
+        </SourcePanel>
+      </Section>
     </TabFrame>
   );
 }

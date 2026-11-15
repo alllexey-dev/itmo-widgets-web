@@ -252,6 +252,7 @@ export function installOf(overrides: Partial<Schemas['InstallInfo']> = {}): Sche
     pushEnabled: true,
     sid: null,
     current: false,
+    signedOutAt: null,
     ...overrides,
   };
 }
@@ -325,8 +326,16 @@ export function socialBackend(people: readonly Person[], options: { viewer?: num
       },
     };
   };
-  const listed = (relationship: Relationship) =>
-    [...byIsu.values()].filter((person) => person.profile.relationship === relationship).map(seen);
+  const withRelationship = (relationship: Relationship) =>
+    [...byIsu.values()].filter((person) => person.profile.relationship === relationship);
+  const listed = (relationship: Relationship) => withRelationship(relationship).map(seen);
+  const lessonsOf = (person: Person, from: string, to: string): Lesson[] => {
+    const lessons =
+      typeof person.lessons === 'function' ? person.lessons(from, to) : (person.lessons ?? []);
+    return lessons
+      .filter((lesson) => lesson.date >= from && lesson.date <= to)
+      .sort((a, b) => `${a.date} ${a.start}`.localeCompare(`${b.date} ${b.start}`));
+  };
   const noted = (request: Request) => {
     const url = new URL(request.url);
     reads.push(url.pathname + url.search);
@@ -413,13 +422,22 @@ export function socialBackend(people: readonly Person[], options: { viewer?: num
       read('canViewSchedule', (person, url) => {
         const from = url.searchParams.get('from') ?? '';
         const to = url.searchParams.get('to') ?? '9999-12-31';
-        const lessons =
-          typeof person.lessons === 'function' ? person.lessons(from, to) : (person.lessons ?? []);
-        return lessons
-          .filter((lesson) => lesson.date >= from && lesson.date <= to)
-          .sort((a, b) => `${a.date} ${a.start}`.localeCompare(`${b.date} ${b.start}`));
+        return lessonsOf(person, from, to);
       }),
     ),
+    // The friends with a lesson on one Moscow day (today without `date`), in the order of the
+    // friends list; one who hides the schedule or has a free day is left out, never marked.
+    http.get('*/api/schedule/friends', ({ request }) => {
+      const date = noted(request).searchParams.get('date') ?? moscowDay();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return fail(400, 'invalid_request');
+      const days: Schemas['FriendDay'][] = withRelationship('FRIENDS').flatMap((person) => {
+        const { user } = seen(person);
+        if (user.capabilities?.canViewSchedule !== true) return [];
+        const lessons = lessonsOf(person, date, date);
+        return lessons.length > 0 ? [{ user, lessons }] : [];
+      });
+      return ok(days);
+    }),
     http.get(
       '*/api/sport/users/:isu/bookings',
       read('canViewSport', (person) => person.bookings ?? { entries: [], lessonIds: [] }),

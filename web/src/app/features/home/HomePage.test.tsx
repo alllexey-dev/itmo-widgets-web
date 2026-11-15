@@ -14,10 +14,9 @@ import {
   sportStatusOf,
   type StaffSources,
 } from '../../test/admin';
+import type { components } from '../../api/schema';
 import { renderApp } from '../../test/render';
-import type { Role } from '../../lib/session';
 import { connectionOf, fail, mockSession, ok, server, userOf } from '../../test/server';
-import type * as Examples from './examples';
 import {
   autoEntryOf,
   freeEntryOf,
@@ -27,23 +26,114 @@ import {
   mockHomeSources,
   profileOf,
   sectionOf,
+  socialBackend,
   sportLessonOf,
   userDevicesOf,
+  type Person,
 } from '../../test/student';
 
-// The switch of the invented values is on in the app; a test turns it on for itself.
-const examples = vi.hoisted(() => ({ isOn: false }));
-vi.mock('./examples', async (importOriginal) => ({
-  ...(await importOriginal<typeof Examples>()),
-  get SHOW_EXAMPLES() {
-    return examples.isOn;
-  },
-}));
+type Schemas = components['schemas'];
 
 afterEach(() => {
   vi.useRealTimers();
-  examples.isOn = false;
 });
+
+/** 30 days of the statistics period, oldest first; the last one is today. */
+function statDates(): string[] {
+  return Array.from({ length: 30 }, (_, index) => `2026-09-${String(index + 1).padStart(2, '0')}`);
+}
+
+/** Sport statistics with [signUps] a day; only the daily series is read by Главная. */
+function sportStatsOf(signUps: (index: number) => number): Schemas['AdminSportStats'] {
+  const entries = {
+    created: 0,
+    outcomes: {},
+    timed: 0,
+    medianSeconds: null,
+    p90Seconds: null,
+  };
+  const dates = statDates();
+  return {
+    from: dates[0] ?? '',
+    to: dates.at(-1) ?? '',
+    days: dates.map((date, index) => ({
+      date,
+      autoSign: { created: 0, satisfied: 0 },
+      freeSign: { created: 0, satisfied: 0 },
+      signUps: signUps(index),
+    })),
+    autoSign: entries,
+    freeSign: entries,
+    subscriptions: { active: 0, created: 0, occurrences: {}, stopped: {} },
+    sections: [],
+    slots: [],
+  };
+}
+
+/** Server statistics with [requests] and [errors] a day, counted since [collectedSince]. */
+function serverStatsOf(
+  day: (index: number) => { requests: number; errors: number },
+  collectedSince: string | null = '2026-09-01',
+): Schemas['AdminServerStats'] {
+  const dates = statDates();
+  return {
+    from: dates[0] ?? '',
+    to: dates.at(-1) ?? '',
+    collectedSince,
+    days: dates.map((date, index) => ({
+      date,
+      requests: day(index).requests,
+      errors5xx: day(index).errors,
+      p50Millis: null,
+      p95Millis: null,
+      myItmoCalls: 0,
+      myItmoFailures: 0,
+      pushSent: 0,
+      pushFailed: 0,
+      pushTokenGone: 0,
+    })),
+    routes: [],
+    myItmo: [],
+    push: [],
+  };
+}
+
+/** Answers the two statistics routes of "За 7 дней"; `null` fails one. Returns the paths asked. */
+function mockWeekStats(
+  sources: {
+    sport?: Schemas['AdminSportStats'] | null;
+    server?: Schemas['AdminServerStats'] | null;
+  } = {},
+): string[] {
+  const requested: string[] = [];
+  const answer = (path: string, value: object | null) =>
+    http.get(`*${path}`, ({ request }) => {
+      const url = new URL(request.url);
+      requested.push(url.pathname + url.search);
+      return value === null ? fail(503, 'service_unavailable') : ok(value);
+    });
+  server.use(
+    answer(
+      '/api/admin/stats/sport',
+      sources.sport === undefined ? sportStatsOf(() => 10) : sources.sport,
+    ),
+    answer(
+      '/api/admin/stats/server',
+      sources.server === undefined
+        ? serverStatsOf(() => ({ requests: 1000, errors: 2 }))
+        : sources.server,
+    ),
+  );
+  return requested;
+}
+
+/** Friends who are all at a lesson that started 20 minutes ago, Moscow time. */
+function friendsAtLesson(count: number, date: string, start: string): Person[] {
+  return Array.from({ length: count }, (_, index) => ({
+    profile: profileOf(320000 + index, `Друг ${String(index + 1).padStart(2, '0')}`),
+    lessons: [lessonOf(index + 1, 'Физика', date, start)],
+  }));
+}
 
 /** Only the clock is replaced: timers stay real, so requests and waits work as usual. */
 function setNow(instant: string) {
@@ -278,12 +368,56 @@ describe('HomePage for a student', () => {
     expect(linkOf(rows[0])).toHaveAttribute('href', '/app/u/311111');
   });
 
-  it('says when no friend opens the schedule', async () => {
+  it('asks for the friends of the Moscow day in one request, however many there are', async () => {
+    // 01:30 of 7 October in Moscow, still 6 October in UTC.
+    setNow('2026-10-06T22:30:00Z');
+    mockSession(userOf([]));
+    mockHomeSources();
+    const social = socialBackend(friendsAtLesson(25, '2026-10-07', '01:10'));
+    server.use(...social.handlers);
+
+    renderApp('/');
+
+    const rows = await rowsOf('Друзья сейчас');
+    expect(rows).toHaveLength(5);
+    expect(
+      within(await panel('Друзья сейчас')).getByText('И ещё 20 на занятиях сегодня'),
+    ).toBeInTheDocument();
+    expect(social.reads.filter((path) => path.startsWith('/api/schedule/'))).toEqual([
+      '/api/schedule/friends?date=2026-10-07',
+    ]);
+    // The friend list is read only to explain an empty answer.
+    expect(social.reads).not.toContain('/api/friends');
+  });
+
+  it('says that the friends have no lessons today without telling why', async () => {
     mockSession(userOf([]));
     mockHomeSources({
       people: [
         {
           profile: profileOf(311114, 'Олег Сидоров', { capabilities: { canViewSchedule: false } }),
+          lessons: [lessonOf(5, 'Алгоритмы', '2026-10-07', '10:00')],
+        },
+        { profile: profileOf(311115, 'Дарья Волкова') },
+      ],
+    });
+
+    renderApp('/');
+
+    const friends = await panel('Друзья сейчас');
+    expect(await within(friends).findByText('Сегодня у друзей нет занятий')).toBeInTheDocument();
+    expect(within(friends).queryByText('Олег Сидоров')).not.toBeInTheDocument();
+  });
+
+  it('says that nobody is at a lesson once the day of the friends is over', async () => {
+    // 20:00 in Moscow.
+    setNow('2026-10-07T17:00:00Z');
+    mockSession(userOf([]));
+    mockHomeSources({
+      people: [
+        {
+          profile: profileOf(311111, 'Иван Петров'),
+          lessons: [lessonOf(1, 'Базы данных', '2026-10-07', '10:00')],
         },
       ],
     });
@@ -291,8 +425,29 @@ describe('HomePage for a student', () => {
     renderApp('/');
 
     expect(
-      await within(await panel('Друзья сейчас')).findByText('Расписание друзей скрыто'),
+      await within(await panel('Друзья сейчас')).findByText('Сейчас никто не на занятиях'),
     ).toBeInTheDocument();
+  });
+
+  it('offers a retry when the friends of the day do not load', async () => {
+    mockSession(userOf([]));
+    mockHomeSources();
+    let isDown = true;
+    server.use(
+      http.get('*/api/schedule/friends', () =>
+        isDown ? fail(503, 'service_unavailable') : ok([]),
+      ),
+    );
+    renderApp('/');
+    const friends = await panel('Друзья сейчас');
+    expect(
+      await within(friends).findByText('Не удалось загрузить расписание друзей'),
+    ).toBeInTheDocument();
+    isDown = false;
+
+    await userEvent.click(within(friends).getByRole('button', { name: 'Повторить' }));
+
+    expect(await within(friends).findByText('Друзей пока нет')).toBeInTheDocument();
   });
 
   it('lists this browser first, then the phones and the other connections', async () => {
@@ -371,6 +526,7 @@ describe('HomePage for a moderator', () => {
   it('checks only the queue and links the open cases to it', async () => {
     mockSession(userOf(['MODERATOR']));
     const requested = mockStaffSources({ cases: 3 });
+    const stats = mockWeekStats();
 
     renderApp('/');
 
@@ -380,6 +536,7 @@ describe('HomePage for a moderator', () => {
     expect(linkOf(rows[0])).toHaveAttribute('href', '/app/admin/moderation');
     expect(new Set(requested)).toEqual(new Set(['/api/admin/moderation/cases']));
     expect(screen.queryByRole('heading', { name: 'За 7 дней' })).not.toBeInTheDocument();
+    expect(stats).toEqual([]);
   });
 
   it('says how long the oldest case has waited', async () => {
@@ -434,7 +591,16 @@ describe('HomePage for a moderator', () => {
 });
 
 describe('HomePage for the admin', () => {
-  beforeEach(() => void mockHomeSources());
+  let stats: string[] = [];
+  beforeEach(() => {
+    mockHomeSources();
+    stats = mockWeekStats();
+  });
+
+  /** A figure of "За 7 дней" by its name. */
+  async function metric(name: string) {
+    return within(await panel('За 7 дней')).findByRole('group', { name });
+  }
 
   it('says that nothing needs attention when every source is healthy', async () => {
     mockSession(userOf(['ADMIN']));
@@ -456,6 +622,7 @@ describe('HomePage for the admin', () => {
         '/api/admin/dashboard',
       ]),
     );
+    expect(new Set(stats)).toEqual(new Set(['/api/admin/stats/sport', '/api/admin/stats/server']));
   });
 
   it.each<[string, StaffSources, string, string]>([
@@ -613,17 +780,91 @@ describe('HomePage for the admin', () => {
 
     renderApp('/');
 
+    expect(await metric('Новые пользователи')).toHaveTextContent(/^Новые пользователи42\+100\s%$/);
+    expect(await metric('Активные устройства')).toHaveTextContent(/^Активные устройства610$/);
+    expect(await metric('Входы на сайт')).toHaveTextContent(/^Входы на сайт7$/);
+    expect(await metric('Новые ссылки')).toHaveTextContent(/^Новые ссылки74\+100\s%$/);
     const week = await panel('За 7 дней');
-    expect(await within(week).findByText('42')).toBeInTheDocument();
-    expect(within(week).getByText('610')).toBeInTheDocument();
-    expect(within(week).getByText('7')).toBeInTheDocument();
-    expect(within(week).getAllByText(/^\+100\s%$/)).toHaveLength(2);
-    expect(within(week).getAllByRole('group')).toHaveLength(4);
-    expect(within(week).queryByText('пример')).not.toBeInTheDocument();
+    expect(within(week).getAllByRole('group')).toHaveLength(6);
     expect(within(week).getByRole('link', { name: 'Вся статистика' })).toHaveAttribute(
       'href',
       '/app/admin/dashboard',
     );
+  });
+
+  it('counts the sport sign-ups of 7 days against the 7 full days before', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStaffSources();
+    // 12 a day in the last full week, 16 in the one before; today has 5 so far.
+    mockWeekStats({
+      sport: sportStatsOf((index) => (index === 29 ? 5 : index >= 22 ? 12 : 16)),
+    });
+
+    renderApp('/');
+
+    expect(await metric('Записи на спорт')).toHaveTextContent(/^Записи на спорт77\u221225\s%$/);
+  });
+
+  it('shows the share of server errors and its change in percentage points', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStaffSources();
+    // 0.5 % of the answers failed in the last full week, 0.8 % in the one before.
+    mockWeekStats({
+      server: serverStatsOf((index) =>
+        index >= 22 ? { requests: 1000, errors: 5 } : { requests: 1000, errors: 8 },
+      ),
+    });
+
+    renderApp('/');
+
+    expect(await metric('Ошибки сервера')).toHaveTextContent(
+      /^Ошибки сервера0,5\s%\u22120,3\sп\.\sп\.$/,
+    );
+  });
+
+  it('does not compare server errors with days before the counters started', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStaffSources();
+    mockWeekStats({
+      server: serverStatsOf(
+        (index) => (index >= 20 ? { requests: 400, errors: 1 } : { requests: 0, errors: 0 }),
+        '2026-09-21',
+      ),
+    });
+
+    renderApp('/');
+
+    expect(await metric('Ошибки сервера')).toHaveTextContent(/^Ошибки сервера0,25\s%$/);
+  });
+
+  it('shows a dash for server errors before the counters started', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStaffSources();
+    mockWeekStats({ server: serverStatsOf(() => ({ requests: 0, errors: 0 }), null) });
+
+    renderApp('/');
+
+    expect(await metric('Ошибки сервера')).toHaveTextContent(/^Ошибки сервера\u2014$/);
+  });
+
+  it('keeps the other figures when a statistics route fails and retries it alone', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStaffSources();
+    mockWeekStats({ sport: null });
+
+    renderApp('/');
+
+    const sport = await metric('Записи на спорт');
+    expect(await within(sport).findByText('Не загрузилось')).toBeInTheDocument();
+    expect(await metric('Ошибки сервера')).toHaveTextContent(/0,2\s%/);
+    expect(await metric('Новые пользователи')).toHaveTextContent(/42/);
+    mockWeekStats();
+
+    await userEvent.click(within(sport).getByRole('button', { name: 'Повторить' }));
+
+    // The loaded figure is a new tile; the same count every day is no change.
+    expect(await within(await panel('За 7 дней')).findByText('70')).toBeInTheDocument();
+    expect(await metric('Записи на спорт')).toHaveTextContent(/^Записи на спорт700\s%$/);
   });
 
   it('offers a retry when the week does not load', async () => {
@@ -635,67 +876,5 @@ describe('HomePage for the admin', () => {
     const week = await panel('За 7 дней');
     expect(await within(week).findByText('Не удалось загрузить сводку')).toBeInTheDocument();
     expect(within(week).getByRole('button', { name: 'Повторить' })).toBeInTheDocument();
-  });
-});
-
-describe('HomePage with examples', () => {
-  beforeEach(() => {
-    examples.isOn = true;
-  });
-
-  /** A number of "За 7 дней" by its label. */
-  async function metric(name: string) {
-    return within(await panel('За 7 дней')).findByRole('group', { name });
-  }
-
-  it('adds the metrics Backend does not count, each with the mark', async () => {
-    mockSession(userOf(['ADMIN']));
-    mockHomeSources();
-    mockStaffSources();
-
-    renderApp('/');
-
-    expect(await metric('Записи на спорт')).toHaveTextContent(
-      /^Записи на спортпример86\u22123\s%$/,
-    );
-    expect(await metric('Ошибки сервера')).toHaveTextContent(
-      /^Ошибки серверапример0,4\s%\u22120,2\sп\.\sп\.$/,
-    );
-  });
-
-  it('leaves the tiles of real figures free of anything invented', async () => {
-    mockSession(userOf(['ADMIN']));
-    mockHomeSources();
-    // Twice as many new users in the last 7 full days as in the 7 before.
-    mockStaffSources({ dashboard: dashboardOf(daysOf((index) => (index >= 22 ? 4 : 2))) });
-
-    renderApp('/');
-
-    expect(await metric('Активные устройства')).toHaveTextContent(/^Активные устройства610$/);
-    expect(await metric('Входы на сайт')).toHaveTextContent(/^Входы на сайт7$/);
-    expect(await metric('Новые пользователи')).toHaveTextContent(/^Новые пользователи42\+100\s%$/);
-    const week = await panel('За 7 дней');
-    expect(within(week).getAllByRole('group')).toHaveLength(6);
-    expect(within(week).getAllByText('пример')).toHaveLength(2);
-    expect(screen.getAllByText('пример')).toHaveLength(2);
-  });
-
-  it.each<[string, Role[]]>([
-    ['a student', []],
-    ['a moderator', ['MODERATOR']],
-  ])('shows no example to %s', async (_, roles) => {
-    mockSession(userOf(roles));
-    mockHomeSources();
-    mockStaffSources();
-
-    renderApp('/');
-
-    expect(
-      await within(await panel('Спорт')).findByText('Вы не стоите в очередях'),
-    ).toBeInTheDocument();
-    await rowsOf('Устройства');
-    await within(await panel('Друзья сейчас')).findByText('Друзей пока нет');
-    await within(await panel('Требует внимания')).findByText('Всё в порядке');
-    expect(screen.queryByText('пример')).not.toBeInTheDocument();
   });
 });

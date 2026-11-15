@@ -13,6 +13,8 @@ export type AiSummaries = Schemas['AdminAiSummaries'];
 export type ReviewsSync = Schemas['AdminReviewsSync'];
 export type Dashboard = Schemas['AdminDashboard'];
 export type DashboardDay = Schemas['AdminDashboardDay'];
+export type SportStats = Schemas['AdminSportStats'];
+export type ServerStats = Schemas['AdminServerStats'];
 
 export type UserData = Schemas['UserData'];
 /** Capabilities can be missing from an older answer; a missing one is a denied one. */
@@ -22,6 +24,8 @@ export type UserProfile = Omit<Schemas['UserProfile'], 'user'> & {
   };
 };
 export type Lesson = Schemas['LessonDto'];
+/** A friend with a lesson on the asked day and the lessons of that day, ordered by start. */
+export type FriendDay = Schemas['FriendDay'];
 
 export type SportLesson = Schemas['SportLessonDto'];
 export type QueueEntry = Schemas['SportAutoSignEntry'] | Schemas['SportFreeSignEntry'];

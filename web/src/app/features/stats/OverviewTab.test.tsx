@@ -12,7 +12,7 @@ import {
 } from '../../test/admin';
 import { renderApp } from '../../test/render';
 import { mockSession, userOf } from '../../test/server';
-import { clientsOf, mockStats, sportRunOf } from '../../test/stats';
+import { audienceStatsOf, clientsOf, mockStats, serverStatsOf, sportRunOf } from '../../test/stats';
 import type * as Metrics from './metrics';
 
 // The examples of metrics without data are off here: these tests are about the real blocks, which
@@ -304,5 +304,70 @@ describe('Statistics overview', () => {
     const active = await screen.findByRole('region', { name: 'Активные клиенты' });
     expect(await within(active).findByText('Истории пока нет')).toBeInTheDocument();
     expect(await screen.findByRole('group', { name: 'Активные клиенты' })).toHaveTextContent('620');
+  });
+
+  it('shows retention, auto sign-up and the errors of the server and of My ITMO', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard');
+
+    // Two registration weeks have lived four weeks: 28 of 40 and 12 of 20 are still seen.
+    const retention = await screen.findByRole('group', { name: 'Остаются через 4 недели' });
+    expect(retention).toHaveTextContent('67 %');
+    expect(retention).toHaveTextContent('по 2 неделям регистрации');
+    // 60 of the 82 finished entries got a place; the waiting ones are not finished.
+    const auto = await screen.findByRole('group', { name: 'Автозапись сработала' });
+    expect(auto).toHaveTextContent('73,2 %');
+    const errors = await screen.findByRole('group', { name: 'Ошибки сервера' });
+    expect(errors).toHaveTextContent('0,4 %');
+    expect(errors).toHaveTextContent('за 7 дней');
+    expect(await screen.findByRole('group', { name: 'Сбои My ITMO' })).toHaveTextContent('1 %');
+  });
+
+  it('says so when no registration week has lived four weeks and the counters have not started', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats({
+      audience: audienceStatsOf({
+        retention: [{ weekStart: '2026-09-21', size: 5, retained: [] }],
+      }),
+      server: serverStatsOf({ collectedSince: null }),
+    });
+
+    renderApp('/admin/dashboard');
+
+    const retention = await screen.findByRole('group', { name: 'Остаются через 4 недели' });
+    expect(retention).toHaveTextContent('—');
+    expect(retention).toHaveTextContent('ни одна неделя регистрации ещё не прожила 4 недели');
+    const errors = await screen.findByRole('group', { name: 'Ошибки сервера' });
+    expect(errors).toHaveTextContent('—');
+    expect(errors).toHaveTextContent('счётчики ещё не начали считать');
+  });
+
+  it('lists the most used features of 30 days', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard');
+
+    const used = await screen.findByRole('region', { name: 'Чем пользуются' });
+    const table = await within(used).findByRole('table', { name: 'Использование функций' });
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(6);
+    expect(rows[1]).toHaveTextContent(/Расписание для друзей.*480.*38,4/);
+    expect(rows[2]).toHaveTextContent(/Друзья.*60 заявок в друзья.*90/);
+    expect(within(table).queryByText('TELEPORT')).not.toBeInTheDocument();
+  });
+
+  it('keeps the other tiles when the server statistics fail', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats({ server: null });
+
+    renderApp('/admin/dashboard');
+
+    expect(await screen.findByText('Не удалось загрузить статистику сервера')).toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Автозапись сработала' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Остаются через 4 недели' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Ошибки сервера' })).not.toBeInTheDocument();
   });
 });

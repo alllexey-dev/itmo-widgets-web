@@ -5,13 +5,13 @@ import { friendsNow } from './friendsNow';
 const DATE = '2026-10-07';
 /** An instant of that Moscow day. */
 const at = (time: string) => new Date(`${DATE}T${time}:00+03:00`);
-const ivan = profileOf(311111, 'Иван Петров');
+const ivan = profileOf(311111, 'Иван Петров').user;
 
 function textAt(time: string, starts: string[]): string | undefined {
   const lessons = starts.map((start, index) =>
     lessonOf(index + 1, `Предмет ${index + 1}`, DATE, start),
   );
-  return friendsNow([{ friend: ivan, lessons }], at(time))[0]?.text;
+  return friendsNow([{ user: ivan, lessons }], at(time))[0]?.text;
 }
 
 describe('friendsNow', () => {
@@ -30,14 +30,14 @@ describe('friendsNow', () => {
   it('names the format of a lesson without a room', () => {
     const lessons = [lessonOf(1, 'Физика', DATE, '10:00', { room: null, format: 'Дистанционный' })];
 
-    expect(friendsNow([{ friend: ivan, lessons }], at('10:30'))[0]?.text).toBe(
+    expect(friendsNow([{ user: ivan, lessons }], at('10:30'))[0]?.text).toBe(
       'Физика · дистанционный',
     );
   });
 
   it('puts lessons first, the one that ends soonest on top, then pauses by their end', () => {
     const day = (isu: number, name: string, starts: string[]) => ({
-      friend: profileOf(isu, name),
+      user: profileOf(isu, name).user,
       lessons: starts.map((start, index) => lessonOf(isu * 10 + index, 'Предмет', DATE, start)),
     });
 

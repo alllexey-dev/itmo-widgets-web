@@ -2,7 +2,15 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { adminUserOf, auditEntryOf, minutesAgo, mockAudit, pageOf } from '../../test/admin';
+import {
+  adminUserOf,
+  auditBackend,
+  auditEntryOf,
+  minutesAgo,
+  mockAudit,
+  pageOf,
+  usersBackend,
+} from '../../test/admin';
 import { renderApp } from '../../test/render';
 import { mockScreenWidth } from '../../test/screen';
 import { fail, mockSession, ok, server, userOf } from '../../test/server';
@@ -37,9 +45,9 @@ describe('AuditPage', () => {
     );
   });
 
-  it('links a user Backend no longer has by the ISU alone', async () => {
+  it('links a user Backend no longer has or knows no name of by the ISU alone', async () => {
     mockSession(userOf(['ADMIN']));
-    mockAudit([auditEntryOf()]);
+    mockAudit([auditEntryOf({ targetName: null })]);
 
     renderApp('/admin/audit');
 
@@ -50,34 +58,54 @@ describe('AuditPage', () => {
     );
   });
 
-  it('asks for the name of a user once however many entries are about them', async () => {
+  it('names the users from the entries without asking for their cards', async () => {
     mockSession(userOf(['ADMIN']));
-    mockAudit(
-      Array.from({ length: 3 }, (_, index) => auditEntryOf({ id: `entry-${index}` })),
-      [oleg],
-    );
-    let lookups = 0;
+    mockAudit(Array.from({ length: 3 }, (_, index) => auditEntryOf({ id: `entry-${index}` })));
+    const cards: string[] = [];
     server.events.on('request:start', ({ request }) => {
-      if (new URL(request.url).pathname === '/api/admin/users/322222') lookups += 1;
+      const path = new URL(request.url).pathname;
+      if (path.startsWith('/api/admin/users/')) cards.push(path);
     });
 
     renderApp('/admin/audit');
 
     expect(await screen.findAllByRole('link', { name: 'Олег Сидоров' })).toHaveLength(3);
-    expect(lookups).toBe(1);
+    expect(cards).toEqual([]);
     server.events.removeAllListeners();
   });
 
-  it('gives a user without a name something to click', async () => {
+  it('gives an administrator without a name something to click', async () => {
     mockSession(userOf(['ADMIN']));
-    mockAudit([auditEntryOf({ actorName: '' })], [{ ...oleg, name: '' }]);
+    mockAudit([auditEntryOf({ actorName: '' })]);
 
     renderApp('/admin/audit');
 
     const row = await rowOf(/Выдана роль/);
-    await waitFor(() =>
-      expect(within(row).getAllByRole('link', { name: 'Без имени' })).toHaveLength(2),
+    expect(within(row).getByRole('link', { name: 'Без имени' })).toHaveAttribute(
+      'href',
+      '/app/admin/users/400001',
     );
+  });
+
+  it('names the teacher of a summary, with the ISU under the name', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockAudit([
+      auditEntryOf({
+        action: 'AI_SUMMARY_HIDDEN',
+        target: 'teacher:123456',
+        targetName: 'Кузнецов Сергей Андреевич',
+        details: null,
+      }),
+    ]);
+
+    renderApp('/admin/audit');
+
+    const row = await rowOf(/Сводка скрыта/);
+    expect(within(row).getByRole('link', { name: 'Кузнецов Сергей Андреевич' })).toHaveAttribute(
+      'href',
+      '/app/admin/reviews',
+    );
+    expect(row).toHaveTextContent('Преподаватель · ИСУ 123456');
   });
 
   it.each([
@@ -404,5 +432,175 @@ describe('AuditPage', () => {
       '/app/admin/users/400001',
     );
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+});
+
+/** Two administrators and what they did on the first days of March. */
+const gleb = adminUserOf({ isu: 400002, name: 'Глеб Орлов', roles: ['ADMIN'] });
+const anna = adminUserOf({ isu: 400001, name: 'Анна Смирнова', roles: ['ADMIN'] });
+const log = [
+  auditEntryOf({ id: 'e-1', createdAt: '2026-03-03T09:00:00Z' }),
+  auditEntryOf({
+    id: 'e-2',
+    action: 'SERVICE_CREDENTIAL_REPLACED',
+    target: 'credential:GEMINI_API_KEY',
+    details: null,
+    createdAt: '2026-03-02T22:30:00Z',
+    actorIsu: gleb.isu,
+    actorName: gleb.name,
+  }),
+  auditEntryOf({
+    id: 'e-3',
+    action: 'AGENT_ACCESS_GRANTED',
+    target: 'user:311111',
+    targetName: 'Иван Петров',
+    details: null,
+    createdAt: '2026-03-01T10:00:00Z',
+  }),
+];
+
+/** The log over [entries] and the administrators of the filter; returns every query of the log. */
+function mockLog(entries = log): URLSearchParams[] {
+  const backend = auditBackend(entries);
+  server.use(...usersBackend([anna, gleb, oleg]).handlers, ...backend.handlers);
+  return backend.requests;
+}
+
+async function choose(filter: string, option: string) {
+  await userEvent.click(await screen.findByRole('combobox', { name: filter }));
+  await userEvent.click(await screen.findByRole('option', { name: option }));
+}
+
+describe('AuditPage filters', () => {
+  it('narrows the log to one administrator from a list of them', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requests = mockLog();
+    renderApp('/admin/audit?page=1');
+    await screen.findByText('3 записи');
+
+    await choose('Кто', 'Глеб Орлов');
+
+    expect(await screen.findByText('1 запись')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Кто' })).toHaveTextContent('Кто: Глеб Орлов');
+    expect(location.search).toBe('?actorIsu=400002');
+    expect(requests.at(-1)?.get('actorIsu')).toBe('400002');
+    expect(requests.at(-1)?.get('page')).toBe('0');
+  });
+
+  it('offers only the administrators', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockLog();
+    renderApp('/admin/audit');
+
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Кто' }));
+
+    const options = await screen.findAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual(['Анна Смирнова', 'Глеб Орлов']);
+  });
+
+  it('names an administrator of the address who is one no longer by the log', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockLog([auditEntryOf({ actorIsu: 400077, actorName: 'Пётр Бывший' })]);
+
+    renderApp('/admin/audit?actorIsu=400077');
+
+    await screen.findByText('1 запись');
+    expect(screen.getByRole('combobox', { name: 'Кто' })).toHaveTextContent('Кто: Пётр Бывший');
+  });
+
+  it('narrows the log to one action', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requests = mockLog();
+    renderApp('/admin/audit');
+    await screen.findByText('3 записи');
+
+    await choose('Действие', 'Заменён ключ');
+
+    expect(await screen.findByText('1 запись')).toBeInTheDocument();
+    expect(location.search).toBe('?action=SERVICE_CREDENTIAL_REPLACED');
+    expect(requests.at(-1)?.get('action')).toBe('SERVICE_CREDENTIAL_REPLACED');
+  });
+
+  it('narrows the log to a kind of object', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requests = mockLog();
+    renderApp('/admin/audit');
+    await screen.findByText('3 записи');
+
+    await choose('Объект', 'Пользователи');
+
+    expect(await screen.findByText('2 записи')).toBeInTheDocument();
+    expect(location.search).toBe('?targetType=user');
+    expect(requests.at(-1)?.get('targetType')).toBe('user');
+  });
+
+  it('shows everything about one user from a link and lets the user drop it', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requests = mockLog();
+    renderApp('/admin/audit?target=user:311111');
+
+    expect(await screen.findByText('Объект: Иван Петров')).toBeInTheDocument();
+    expect(screen.getByText('1 запись')).toBeInTheDocument();
+    expect(requests[0]?.get('target')).toBe('user:311111');
+    expect(screen.queryByRole('combobox', { name: 'Объект' })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Удалить Объект: Иван Петров' }));
+
+    expect(await screen.findByText('3 записи')).toBeInTheDocument();
+    expect(location.search).toBe('');
+    expect(screen.getByRole('combobox', { name: 'Объект' })).toBeInTheDocument();
+  });
+
+  it('narrows the log to Moscow days from the address, both ends included', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requests = mockLog();
+
+    // 22:30 UTC on March 2 is already March 3 in Moscow.
+    renderApp('/admin/audit?from=2026-03-03&to=2026-03-03');
+
+    expect(await screen.findByText('2 записи')).toBeInTheDocument();
+    expect(requests[0]?.get('from')).toBe('2026-03-03');
+    expect(requests[0]?.get('to')).toBe('2026-03-03');
+  });
+
+  it('swaps the days of an address given in the wrong order and drops what Backend refuses', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requests = mockLog();
+
+    renderApp(
+      '/admin/audit?from=2026-03-02&to=2026-03-01&action=SOMETHING&targetType=thing&actorIsu=anna',
+    );
+
+    expect(await screen.findByText('1 запись')).toBeInTheDocument();
+    const [params] = requests;
+    expect(params?.get('from')).toBe('2026-03-01');
+    expect(params?.get('to')).toBe('2026-03-02');
+    for (const name of ['action', 'targetType', 'actorIsu']) expect(params?.has(name)).toBe(false);
+  });
+
+  it('says when no entry passes the filters and clears them', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockLog();
+    renderApp('/admin/audit?actorIsu=400002&action=ROLE_GRANTED');
+    expect(await screen.findByText('Ничего не нашлось')).toBeInTheDocument();
+    expect(screen.queryByText('Записей пока нет')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Сбросить фильтры' }));
+
+    expect(await screen.findByText('3 записи')).toBeInTheDocument();
+    expect(location.search).toBe('');
+  });
+
+  it('clears every filter at once from the bar', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockLog();
+    renderApp('/admin/audit?actorIsu=400001&from=2026-03-01');
+    expect(await screen.findByText('2 записи')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Сбросить' }));
+
+    expect(await screen.findByText('3 записи')).toBeInTheDocument();
+    expect(location.search).toBe('');
+    expect(screen.queryByRole('button', { name: 'Сбросить' })).not.toBeInTheDocument();
   });
 });

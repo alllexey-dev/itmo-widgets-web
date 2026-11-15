@@ -1,9 +1,11 @@
 import { Avatar } from '@astryxdesign/core/Avatar';
+import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { useMediaQuery } from '@astryxdesign/core/hooks';
 import { Link } from '@astryxdesign/core/Link';
 import { List, ListItem } from '@astryxdesign/core/List';
+import { Selector, type SelectorOptionType } from '@astryxdesign/core/Selector';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import {
   pixel,
@@ -25,11 +27,57 @@ import { Pagination } from '../../lib/Pagination';
 import { useQueryState } from '../../lib/router';
 import { PAGE_SIZE, QUERY_LIMIT, USERS_PATH } from './api';
 import { nameOf } from './labels';
-import { RoleTokens } from './RoleTokens';
 import type { AdminUserItem, UsersPage as UsersPageData } from './types';
+import { UserMarks } from './UserMarks';
 import './users.css';
 
 const DEBOUNCE_MS = 300;
+
+/** The roles `GET /api/admin/users?role=` takes, as the filter offers them. */
+const ROLE_OPTIONS: SelectorOptionType[] = [
+  { value: 'ADMIN', label: 'Администраторы' },
+  { value: 'MODERATOR', label: 'Модераторы' },
+];
+
+/** `restricted=true` is a restriction in force now, `false` none; absent is everybody. */
+const RESTRICTED_OPTIONS: SelectorOptionType[] = [
+  { value: 'true', label: 'Есть' },
+  { value: 'false', label: 'Нет' },
+];
+
+interface FilterProps {
+  /** The name of the filter: the closed trigger shows it unset and "Роль: Модераторы" once set. */
+  label: string;
+  value: string;
+  options: SelectorOptionType[];
+  onChange: (value: string | null) => void;
+}
+
+/** One filter next to the search: a closed trigger that reads as the whole clause once set. */
+function Filter({ label, value, options, onChange }: FilterProps) {
+  return (
+    <Selector
+      label={label}
+      isLabelHidden
+      placeholder={label}
+      hasClear
+      value={value || null}
+      options={options}
+      controlClassName={value ? 'users-filter-set' : undefined}
+      renderValue={(option) => `${label}: ${option.label ?? option.value}`}
+      onChange={onChange}
+    />
+  );
+}
+
+/** Only what Backend takes: another value would be a 400, so the page ignores it. */
+function roleOf(value: string): string {
+  return value === 'ADMIN' || value === 'MODERATOR' ? value : '';
+}
+
+function restrictedOf(value: string): string {
+  return value === 'true' || value === 'false' ? value : '';
+}
 
 /** Below this width the table gives way to two-line rows. */
 const PHONE = '(max-width: 640px)';
@@ -62,11 +110,15 @@ const COLUMNS: TableColumn<AdminUserItem>[] = [
     renderCell: (user) => user.groups[0]?.name ?? <Text color="secondary">—</Text>,
   },
   {
-    key: 'roles',
-    header: 'Роли',
-    width: proportional(1.8, { minWidth: 150 }),
+    key: 'marks',
+    header: 'Роли и ограничения',
+    width: proportional(1.8, { minWidth: 170 }),
     renderCell: (user) =>
-      user.roles.length > 0 ? <RoleTokens roles={user.roles} /> : <Text color="secondary">—</Text>,
+      user.roles.length > 0 || user.activeRestrictions > 0 ? (
+        <UserMarks roles={user.roles} activeRestrictions={user.activeRestrictions} />
+      ) : (
+        <Text color="secondary">—</Text>
+      ),
   },
   {
     key: 'createdAt',
@@ -151,7 +203,7 @@ function UsersList({ users }: { users: AdminUserItem[] }) {
                   .filter(Boolean)
                   .join(' · ')}
               </Text>
-              <RoleTokens roles={user.roles} />
+              <UserMarks roles={user.roles} activeRestrictions={user.activeRestrictions} />
             </VStack>
           }
           endContent={<ChevronRight size={18} className="users-chevron" />}
@@ -161,10 +213,16 @@ function UsersList({ users }: { users: AdminUserItem[] }) {
   );
 }
 
-/** `/admin/users`: everybody who signed in, searched by ISU prefix, name or group. */
+/**
+ * `/admin/users`: everybody who signed in, searched by ISU prefix, name or group and narrowed by
+ * role and by restrictions in force.
+ */
 export default function UsersPage() {
-  const [query, setQuery] = useQueryState({ q: '', page: 0 });
+  const [query, setQuery] = useQueryState({ q: '', page: 0, role: '', restricted: '' });
   const search = query.q.trim();
+  const role = roleOf(query.role);
+  const restricted = restrictedOf(query.restricted);
+  const isFiltered = role !== '' || restricted !== '';
   const page = Math.max(0, Math.trunc(query.page));
   const isPhone = useMediaQuery(PHONE);
 
@@ -186,7 +244,14 @@ export default function UsersPage() {
     timer.current = setTimeout(() => setQuery({ q: next.trim(), page: null }), DEBOUNCE_MS);
   }
 
-  const users = useApiQuery<UsersPageData>(USERS_PATH, { query: search, page, size: PAGE_SIZE });
+  const users = useApiQuery<UsersPageData>(USERS_PATH, {
+    query: search,
+    role,
+    restricted,
+    page,
+    size: PAGE_SIZE,
+  });
+  const clearFilters = () => setQuery({ role: null, restricted: null, page: null });
 
   return (
     <VStack gap={6}>
@@ -207,6 +272,20 @@ export default function UsersPage() {
               onChange={type}
             />
           </div>
+          <HStack gap={2} vAlign="center" wrap="wrap">
+            <Filter
+              label="Роль"
+              value={role}
+              options={ROLE_OPTIONS}
+              onChange={(next) => setQuery({ role: next, page: null })}
+            />
+            <Filter
+              label="Ограничения"
+              value={restricted}
+              options={RESTRICTED_OPTIONS}
+              onChange={(next) => setQuery({ restricted: next, page: null })}
+            />
+          </HStack>
           {users.data ? (
             <Text color="secondary" aria-live="polite">
               {counted(users.data.total, ['пользователь', 'пользователя', 'пользователей'])}
@@ -224,9 +303,22 @@ export default function UsersPage() {
                 {list.items.length === 0 ? (
                   <EmptyState
                     icon={<UserSearch size={32} />}
-                    title={search ? 'Никого не нашли' : 'Пользователей пока нет'}
+                    title={search || isFiltered ? 'Никого не нашли' : 'Пользователей пока нет'}
                     description={
-                      search ? 'Проверьте запрос: ИСУ, часть имени или группы' : undefined
+                      isFiltered
+                        ? 'Под выбранные условия никто не подходит'
+                        : search
+                          ? 'Проверьте запрос: ИСУ, часть имени или группы'
+                          : undefined
+                    }
+                    actions={
+                      isFiltered ? (
+                        <Button
+                          label="Сбросить фильтры"
+                          variant="secondary"
+                          onClick={clearFilters}
+                        />
+                      ) : undefined
                     }
                   />
                 ) : isPhone ? (

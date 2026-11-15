@@ -1,9 +1,18 @@
-import { CircleCheck } from 'lucide-react';
-import { formatDateTime, formatRelative } from '../../lib/format';
+import { Button } from '@astryxdesign/core/Button';
+import { Token } from '@astryxdesign/core/Token';
+import { CircleCheck, Undo2 } from 'lucide-react';
+import { formatDateTime, formatRelative, TIME_ZONE } from '../../lib/format';
 import { IconTile } from '../../lib/IconTile';
-import { ACTIONS, CAPABILITIES, REPORT_REASONS } from './labels';
+import { ACTIONS, CAPABILITIES, REPORT_REASONS, revertHint } from './labels';
+import { canRevert, useNowPast } from './revert';
 import { Section } from './Section';
-import type { ModerationDecision, ModerationReport } from './types';
+import type { ModerationDecision, ModerationReport, TargetType } from './types';
+
+const clockFormat = new Intl.DateTimeFormat('ru-RU', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: TIME_ZONE,
+});
 
 interface Props {
   /** Reports against the target; null when the target is gone. */
@@ -16,6 +25,10 @@ interface Props {
    * reports had brought it here, so there was nothing to dismiss.
    */
   isPlainClose: boolean;
+  targetType: TargetType;
+  /** The decision being taken back, while it is. */
+  revertingId: string | null;
+  onUndo: (decision: ModerationDecision) => void;
 }
 
 /** How the log names a decision; `DISMISS` is named by what it meant for this case. */
@@ -34,7 +47,17 @@ function restrictionText(decision: ModerationDecision): string | null {
 }
 
 /** Reports against the target and every decision of the case, oldest first. */
-export function CaseHistory({ reports, decisions, isClosed, isPlainClose }: Props) {
+export function CaseHistory({
+  reports,
+  decisions,
+  isClosed,
+  isPlainClose,
+  targetType,
+  revertingId,
+  onUndo,
+}: Props) {
+  // Backend marks at most one decision as revertible; its offer goes away when the window ends.
+  const now = useNowPast(decisions.map((decision) => decision.revertibleUntil));
   return (
     <>
       {reports ? (
@@ -67,17 +90,45 @@ export function CaseHistory({ reports, decisions, isClosed, isPlainClose }: Prop
             {decisions.map((decision) => {
               const action = nameOf(decision, isPlainClose);
               const restriction = restrictionText(decision);
+              const until = canRevert(decision, now) ? decision.revertibleUntil : null;
               return (
-                <li key={decision.id}>
+                <li key={decision.id} data-reverted={decision.revertedAt ? true : undefined}>
                   <IconTile icon={action.icon} size="sm" />
                   <div className="mod-event">
-                    <span className="mod-strong">{action.label}</span>
+                    <span className="mod-event-head">
+                      <span className="mod-strong mod-event-label">{action.label}</span>
+                      {decision.revertedAt ? (
+                        <Token label="Отменено" color="gray" size="sm" />
+                      ) : null}
+                    </span>
                     <span className="mod-muted">
                       {decision.actor === 'POLICY' ? 'Автоматически' : 'Модератор'} ·{' '}
                       {formatDateTime(decision.createdAt)}
                     </span>
+                    {decision.revertedAt ? (
+                      <span className="mod-muted">
+                        Отменено {formatDateTime(decision.revertedAt)}
+                      </span>
+                    ) : null}
                     {restriction ? <span>{restriction}</span> : null}
                     {decision.note ? <p className="mod-decision-note">{decision.note}</p> : null}
+                    {until ? (
+                      <span className="mod-undo">
+                        <Button
+                          label="Отменить"
+                          aria-label={`Отменить решение «${action.label}»`}
+                          icon={<Undo2 size={16} />}
+                          variant="secondary"
+                          size="sm"
+                          tooltip={revertHint(decision.action, targetType)}
+                          isLoading={revertingId === decision.id}
+                          onClick={() => onUndo(decision)}
+                        />
+                        <span className="mod-muted">
+                          можно до {clockFormat.format(new Date(until))}
+                        </span>
+                      </span>
+                    ) : null}
                   </div>
                 </li>
               );

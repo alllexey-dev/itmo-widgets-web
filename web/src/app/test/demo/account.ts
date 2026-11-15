@@ -147,6 +147,7 @@ function demoDevices(): UserDevices {
     installs: [
       // The web is not an install, so none of them is the calling one.
       { ...android, version: '2.3.0', lastSeenAt: ago(12 * MINUTE), current: false },
+      // Registered with alerts off on the phone itself: the web can still drop the registration.
       {
         ...ios,
         instanceId: '00000000-0000-4000-8000-000000000703',
@@ -154,8 +155,24 @@ function demoDevices(): UserDevices {
         os: '18.1',
         version: '2.3.0',
         lastSeenAt: ago(2 * DAY),
+        signedOutAt: null,
       },
-      { ...ios, version: '2.2.1', lastSeenAt: ago(25 * DAY) },
+      // A lost phone whose notifications were turned off from here.
+      { ...ios, version: '2.2.1', lastSeenAt: ago(25 * DAY), signedOutAt: ago(24 * DAY) },
+      // An old phone that never turned notifications on.
+      {
+        ...android,
+        instanceId: '00000000-0000-4000-8000-000000000704',
+        deviceName: null,
+        os: '33',
+        version: '2.1.0',
+        firstSeenAt: ago(120 * DAY),
+        lastSeenAt: ago(70 * DAY),
+        pushEnabled: false,
+        signedOutAt: null,
+        sid: null,
+        current: false,
+      },
     ],
   };
 }

@@ -20,28 +20,36 @@ queue. `ModerationPage` shows the queue and the open case.
 - **Order**: Backend lists open cases from the one that waits longest and closed ones from the most
   recently closed; the filters end with that rule in words (`Сначала те, что ждут дольше`).
 - **Queue row**: an icon (the link's category, or a review), a title (the link's title or
-  `Без названия`; for a review `Отзыв · ИСУ <teacher>`, because the queue knows the teacher only by
-  ISU), a second line (the subject and the host, or the subject and the start of the review's
-  text), the author, when the case was opened, the number of reports and `скрыта` / `скрыт`. An
-  open case that is here for reports or a low rating carries a mark (`Жалобы`, `Рейтинг`); a plain
-  new submission does not. A closed case shows when it was closed and always a mark of how it ended: `Скрыта`, or
-  for a link `Одобрена`, `Отклонена`, `Отозвана` (the status of its revision), or, where the row has
-  no state to show (a review's row carries no decision, see [Backend gaps](#backend-gaps)), `Решена`
-  under `Решённые` and `Без решения` under `Отозванные`. The mark shares the title's line, so the two
-  lines under it have the full width of the row. A deleted target reads `Ссылка удалена`
-  / `Отзыв удалён`.
+  `Без названия`; for a review `Отзыв · <teacher>`, the name from `review.teacherName`, or
+  `Отзыв · ИСУ <teacher>` while Backend has no name: it looks up at most 10 unknown names per page, so
+  a row further down may get its name on a later load), a second line (the subject and the host, or
+  the subject and the start of the review's text), the author, when the case was opened, the number
+  of reports and `скрыта` / `скрыт`. An open case that is here for reports or a low rating carries a
+  mark (`Жалобы`, `Рейтинг`); a plain new submission does not. A closed case shows when it was
+  closed and always a mark of how it ended, in the words of the case header: `Скрыта` / `Скрыт`, or
+  the status of the revision (`revision.status` of a link, `review.revisionStatus` of a review):
+  `Одобрена`, `Отклонена`, `Отозвана` (`Одобрен`, `Отклонён`, `Отозван` for a review). Only a
+  deleted target leaves the row without a state: `Решена` under `Решённые` and `Без решения` under
+  `Отозванные`. A resolved case also names who decided it (`outcome`: the moderator's stored name,
+  their ISU for an account without one, or `автоматически` for a policy), after a gavel, with the
+  decision for screen readers and the decision, its time and note in the tooltip. The mark shares
+  the title's line, so the two lines under it have the full width of the row. A deleted target reads
+  `Ссылка удалена` / `Отзыв удалён`.
 - **Case**: the reason; what the target is now, in the words of the queue row (`Отклонена`,
   `Отозвана`, `Скрыта`; for a closed case also `Одобрена`, and `Решена` / `Отозвана` when the
-  target says nothing) and when the case was closed; the title (the link's subject, or
-  `ИСУ <teacher> · <name from My ITMO>`, ISU first as in the row, with `имя не найдено` when My
-  ITMO does not know the name) over what it is (`Ссылка · 2026/27, осень`,
-  `Отзыв о преподавателе · <subject>`); the decisions; the preview; the changes; the author; the reports; the history of
-  decisions.
+  target says nothing) and when the case was closed (the latest decision that was not reverted);
+  the title (the link's subject, or the teacher's name as in the row, `ИСУ <teacher>` when nobody
+  knows it) over what it is (`Ссылка · 2026/27, осень`,
+  `Отзыв о преподавателе · ИСУ <teacher> · <subject>`, with `имя не найдено` in place of the ISU
+  when the title is the ISU); the decisions; the preview; the changes; the author; the reports; the
+  history of decisions.
   - Link preview (`LinkPreview`): category, title, the address with the host standing out,
     `Открыть` (a new tab), who sees it, the revision number and time, the rating, `Скрыта`.
   - Review preview (`ReviewPreview`): `Анонимно` / `С именем`, the ISU check (`Преподавал у автора`,
     `Занятий у автора не найдено`, `Сверка с ИСУ идёт`, each explained in a tooltip: the check
-    never decides the case), `Скрыт`, the text, the subject, the revision, the rating. Moderators
+    never decides the case; a review verified because the teacher has a lesson in the sport catalog,
+    `verifiedBasis = SPORT_TEACHER`, says `Ведёт физкультуру` instead, since it was not checked
+    against the author's schedule), `Скрыт`, the text, the subject, the revision, the rating. Moderators
     see the author even of an anonymous review.
   - Changes (`CaseChanges`): the revision against the approved version. A link compares category,
     title, address and audience in a table whose changed rows say `изменено`; a review compares the
@@ -58,7 +66,13 @@ queue. `ModerationPage` shows the queue and the open case.
     (`Модератор` or `Автоматически`), the restriction and the note. A `DISMISS` is named by what it
     meant for the case: `Заявка закрыта` when it only closed a case whose revision was already
     rejected or withdrawn and that reports had not opened, `Жалобы отклонены` otherwise. Without
-    decisions an open case says `Решений пока нет`, a closed one `Решений нет`.
+    decisions an open case says `Решений пока нет`, a closed one `Решений нет`. A reverted decision
+    stays in the log struck through, with `Отменено` and when; the decision that can be taken back
+    has `Отменить` and `можно до <time>` (see [Taking a decision back](#taking-a-decision-back)).
+  - A withdrawn case says why it was withdrawn. When everything of the author was hidden from
+    another case (`withdrawnByCaseId` of its row), the note ends with a link `по другой заявке` to
+    that case. Only the row knows it, so a withdrawn case outside the page of the queue on screen
+    tells the reason by its revision only.
 
 ### Decisions
 
@@ -124,8 +138,41 @@ request: `Ссылка оставлена как есть` for `Оставить
   `Не удалось сохранить решение`), reloads the section and keeps the case open on screen in its
   current state.
 - When the last case of a later page is decided, the queue goes back a page.
-- A decision cannot be taken back: Backend has nothing to reopen a case with (see
-  [Backend gaps](#backend-gaps)). Only hiding has an opposite, `Вернуть` on the closed case.
+
+### Taking a decision back
+
+`POST /api/admin/moderation/cases/{id}/decisions/{decisionId}/revert`, for 10 minutes after the
+decision. Backend marks the one decision the moderator may revert now with `revertibleUntil`, and
+the page offers `Отменить` exactly then: the latest decision of the case, an `APPROVE`, `REJECT`,
+`HIDE`, `RESTORE` or `DISMISS` of a moderator (their own, or anyone's for an administrator). Not a
+restriction (it is lifted on [Ограничения](#restrictions---adminrestrictions)), not hiding
+everything of an author, not a policy decision.
+
+- **Where**: the toast of a decision carries `Отменить` while Backend offers it (10 s, then it hides
+  itself); the log of the case keeps `Отменить` with `можно до <time>` for the whole window and
+  drops it when the window ends, without a reload.
+- **What it does**: the target, the reports a dismissal closed and the case go back to what they
+  were. A case the decision resolved is open again in its old place in the queue (Backend keeps its
+  `openedAt`); a `RESTORE`, which was appended to a resolved case, leaves it resolved with the
+  target hidden again. The toast says which (`Решение отменено, заявка снова в очереди` /
+  `Решение отменено, ссылка снова скрыта`). The revert forgets what a decision forgets, so the
+  queue, the case, the badge of `Очередь` and the audit reload.
+- **Where the moderator lands**: an undo from the toast opens the case again, unless the moderator
+  has moved to another case or decided one since the click; then they stay where they are. An undo
+  from the log keeps the case on screen, open again, while the list under `Решённые` lets it go.
+- **No key**: there is no shortcut for an undo, and its button is reached only by the pointer or by
+  Tab. `A`, `R` and `H` decide with one press; a key that took a decision back would sit one stray
+  press from them, and after the case reopened under it the next `A` would decide it again. With
+  the selection rule above, a key always acts on the case on screen.
+- **Refusals**: Backend refuses every revert with one `business_rule_violation` and changes nothing.
+  The page reads the case again and says what it can tell apart: `Это решение уже отменено`
+  (another tab or person was quicker), `После этого решения по заявке приняли другое, отменить
+можно только последнее`, `Время на отмену вышло: ...` (the window has passed, by the browser
+  clock with 30 s of slack for its distance from Backend's), `Ссылку удалили, решение уже не
+отменить`, and otherwise `Ссылка изменилась после решения: её отредактировал автор, задело другое
+решение или по ней открыта новая заявка. Отменить уже нельзя` (Backend does not say which of
+  those). `permission_denied` reads `Отменить решение может только модератор, который его принял,
+или администратор`. Every refusal reloads the section.
 
 ### Keyboard
 
@@ -189,15 +236,16 @@ request: `Ссылка оставлена как есть` for `Оставить
 - `GET /api/admin/moderation/restrictions?isu=&active=&page=&size=20`, newest first. The table
   shows the user (avatar, name, ISU), what is forbidden, the reason and the term as it was set
   (`13 нояб. — 18 нояб.`, or `с 12 нояб., бессрочно`). Under `Все` there is also the state:
-  `Действует`, `Истекло` with the day, `Снято` with the day and the moderator's ISU
-  (`revokedByIsu`; the API has no name). Under `Действующие` every row is active, so the column is
+  `Действует`, `Истекло` with the day, `Снято` with the day and who lifted it (`revokedByName`, or
+  `модератор ИСУ <n>` for an account without a stored name). Under `Действующие` every row is active, so the column is
   left out. Up to 1279 px wide, where the table no longer fits beside the navigation, the same
   restrictions are rows of a list with the fields stacked and the actions under them.
-- The search is by a whole ISU number, because that is the only filter Backend has (see
-  [Backend gaps](#backend-gaps)): the field is named `Номер ИСУ` and waits 300 ms after the last
-  key. Anything but 1 to 9 digits stays in the field, is marked invalid with a tooltip (no line
-  under the field, so nothing moves), is not sent and not written to the address, and the list
-  gives way to `Это не номер ИСУ`. `Действующие` / `Все` switches `active`.
+- The search (`Имя или ИСУ`, accessible name `Поиск по имени или ИСУ`) sends `q`: Backend matches
+  the start of an ISU number or a part of the name in any case. The field waits 300 ms after the
+  last key, then the query goes into the address and the request; it is cut to the 100 characters
+  Backend takes. `Действующие` / `Все` switches `active`.
+- A user card links here with `?isu=<number>&all=1`: that filters by the whole number (`isu`), and
+  the field shows it until the search is changed, which replaces it by `q`.
 - Each row links to its case (`/admin/moderation?case=<id>`); the accessible names of its two
   controls carry the kind and the term, so two restrictions of one kind are told apart. An active restriction has `Снять`:
   after a confirmation that names the restriction by its kind and term and says when another one of
@@ -206,30 +254,24 @@ request: `Ссылка оставлена как есть` for `Оставить
   `Ограничение снято`; it forgets `/api/admin/moderation`, `/api/admin/users` (user cards list
   restrictions too) and `/api/admin/audit`. A failure shows `Не удалось снять ограничение` and keeps
   the confirmation open.
-- Empty: `Действующих ограничений нет`, `Ограничений ещё не было`, or for a search
-  `Ограничений с таким номером ИСУ нет` with a reminder that the number must be whole.
+- Empty: `Действующих ограничений нет`, `Ограничений ещё не было`, or for a search `Никого не нашли`
+  with what the search matches (or `Ограничений у ИСУ <n> нет` from a user card), and under
+  `Действующие` that ended ones are under `Все`.
 
-Address: `isu`, `all` (`1` includes ended restrictions) and `page`. The search field follows the
-address when it changes under the page.
+Address: `q`, `isu` (from a user card), `all` (`1` includes ended restrictions) and `page`. The
+search field follows the address when it changes under the page.
 
 ## Backend gaps
 
 What the pages cannot do because the API has nothing for it; none of it is faked.
 
-- **Taking a decision back.** No request reopens a case or reverses a decision; `RESTORE` after
-  `HIDE` is the only opposite, and it leaves the case closed. An "undo" in the toast would need a
-  decision such as `REOPEN` (or a reversal accepted for a short time after the decision).
-- **Search of restrictions by name.** `GET /api/admin/moderation/restrictions` filters by `isu`
-  only, and a moderator has no people search: `/api/admin/users` is for administrators and
-  `POST /api/users/lookup` takes ISU numbers. It would need a `q` on the restrictions list.
-- **The outcome and the teacher in a queue row.** `AdminCaseItem` has no decision and
-  `AdminReviewSummary` no revision status and no teacher name, so the row of a closed review says
-  only whether it is hidden, and a review is named by the teacher's ISU.
-- **Why a case was withdrawn.** A withdrawn case has no decision of its own, so the reason is read
-  from its revision: rejected means everything of the author was hidden from another case,
-  withdrawn means the author took the version back. Which case and which moderator is not in the
-  data.
-- **Who revoked.** `revokedByIsu` is a number, without the name.
+- **Why a revert was refused.** Every refusal is the same `business_rule_violation`; the page tells
+  apart what the case read again shows, and says the rest (an edit by the author, another open case,
+  another decision that touched the target) in one sentence.
+- **Which case withdrew one opened from elsewhere.** `withdrawnByCaseId` is on the queue row only,
+  not on `ModerationCase`, so a withdrawn case opened by its address outside the page of the queue
+  on screen has no link to the case that withdrew it. Cases withdrawn before Backend recorded it
+  have none either and are explained by their revision.
 
 ## Labels
 
@@ -256,25 +298,39 @@ report reasons `Оскорбления` and `Не тот преподавате�
   focus of the dialogs; one author across cases (a restriction shown on the other case, the warning
   about a second one, the other waiting cases withdrawn by hiding everything); the badge in the
   navigation; the case left open after hiding everything (shown as rejected or hidden, closed without an
-  approval); `H` that never un-hides; withdrawn cases and why they were withdrawn; closed cases (the
-  outcome in the row and in the header, no decisions); a case
+  approval); `H` that never un-hides; withdrawn cases, why they were withdrawn and the link to the
+  case that withdrew them; closed cases (the outcome in the row and in the header, who decided, a
+  review's state and teacher, no decisions); taking a decision back from the toast and from the log
+  (the case back in its place, the counter, the window ending, a `RESTORE` taken back, no key for an
+  undo, none for a restriction) and every refusal in words (the window, a newer decision, already
+  reverted, the target changed or deleted, another moderator's decision); a sport teacher's review; a case
   closed elsewhere, a decision that failed, a queue and a case that did not load; a missing case; a
   case outside the queue; empty queues; the page that ran out.
 - `RestrictionsPage.test.tsx`: the table and the link to the case, the stacked list of a narrow
-  screen and revoking from it; the navigation between the two pages; the search (debounce, text
-  that is not a number, a number that stops being one, nothing found), the state filter with the
-  state column and who lifted a restriction, and paging in the address; revoking (which one, and what stays in force), cancelling
+  screen and revoking from it; the navigation between the two pages; the search (part of a name,
+  the start of an ISU, debounce, the address, a whole ISU from a user card, the length limit,
+  nothing found), the state filter with the state column and who lifted a restriction (by name, or
+  by ISU without one), and paging in the address; revoking (which one, and what stays in force), cancelling
   and a failed revocation; a failed load.
 - `wordDiff.test.ts`: the word diff.
 - `src/app/test/moderation.ts`: synthetic cases and restrictions, and `moderationBackend` /
   `restrictionsBackend`, handlers that order, filter, page, decide and revoke like Backend: one
   history and one set of restrictions per author on every case of theirs and in the restrictions
-  list, and `HIDE_ALL_BY_USER` sweeping the author's other cases.
+  list, and `HIDE_ALL_BY_USER` sweeping the author's other cases (with `withdrawnByCaseId`); the
+  queue rows with `outcome` (moderators by `MODERATORS`), the teacher's name and the revision status;
+  reverts as the contract has them (10 minutes from the decision by the clock of the request, only
+  the latest revertible decision this backend recorded, refused with 409 when the window passed, a
+  newer decision came, it is reverted, the target changed or was deleted, or another case about it
+  is open), with `revertibleUntil` computed on every answer; and `q` of the restrictions (ISU prefix
+  or part of the name in any case, 400 over 100 characters) with `revokedByName`.
   `mockModeration` and `mockRestrictions` install them in a test. `mockScreenWidth(1440)`
   (`src/app/test/screen.ts`) turns on the split view; toasts are found with `findToast`
   (`src/app/test/render.tsx`).
 - `src/app/test/demo/moderation.ts`: the same handlers over a demo queue (new and edited links and
-  reviews, reports, low rating, hidden and deleted targets, resolved cases) and demo restrictions.
+  reviews, reports, low rating, hidden and deleted targets, resolved cases decided by two
+  moderators, a case where everything of an author was hidden and the case it withdrew) and demo
+  restrictions. Seeded decisions are older than the window; the visitor's own decisions can be
+  taken back for 10 minutes.
   Authors and restricted users are people of the demo population (`demo/people.ts`), so their links
   open a card in Пользователи, and that card shows the same restrictions.
   Decisions and revocations change that state until the dev server reloads the module.

@@ -4,7 +4,14 @@ import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { BadgeCheck, ExternalLink, EyeOff, UserRound } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { formatDateTime, formatRelative } from '../../lib/format';
-import { CATEGORIES, hostOf, scoreText, VERIFICATION, visibilityLabel } from './labels';
+import {
+  CATEGORIES,
+  hostOf,
+  scoreText,
+  SPORT_VERIFICATION,
+  VERIFICATION,
+  visibilityLabel,
+} from './labels';
 import type { SubjectLinkTarget, TeacherReviewTarget } from './types';
 
 /** A short label over its value; a row of them wraps into as many columns as fit. */
@@ -91,7 +98,10 @@ export function LinkPreview({ target, hasKeys }: { target: SubjectLinkTarget; ha
 /** Moderators see anonymity and the ISU check as facts; the author is shown even when anonymous. */
 export function ReviewPreview({ target }: { target: TeacherReviewTarget }) {
   const { revision, review } = target;
-  const verification = VERIFICATION[review.verification];
+  const verification =
+    review.verification === 'VERIFIED' && review.verifiedBasis === 'SPORT_TEACHER'
+      ? SPORT_VERIFICATION
+      : VERIFICATION[review.verification];
   return (
     <section className="mod-preview" aria-label="Отзыв">
       <div className="mod-tokens">
