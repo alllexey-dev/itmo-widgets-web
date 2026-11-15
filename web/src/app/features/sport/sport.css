@@ -1,0 +1,57 @@
+/* The queues and the sections beside the limit and the recent queues; one column on a phone. */
+.sport-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: var(--spacing-6);
+  align-items: start;
+}
+
+/* The lists measure themselves: a row adapts to the width of its panel, not of the window. */
+.sport-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  container-type: inline-size;
+}
+
+.sport-entry {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+}
+
+.sport-entry-body {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+.sport-entry-text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* In a narrow panel the status goes under the text instead of squeezing the section's name. */
+@container (max-width: 460px) {
+  .sport-entry-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-1);
+  }
+
+  /* Only inside the stacked body: a text that is a row's own child still shrinks and wraps. */
+  .sport-entry-body > .sport-entry-text {
+    flex: none;
+    max-width: 100%;
+  }
+}
+
+/* The next dates of a section, one per line under its slot. */
+.sport-dates {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

@@ -1,0 +1,177 @@
+.login {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background-body);
+}
+
+.login-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4) var(--spacing-6);
+}
+
+.login-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-inner);
+  background: var(--color-background-surface);
+}
+
+.login-download[data-size='narrow'] {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .login-top {
+    padding-inline: var(--spacing-4);
+  }
+
+  .login-download[data-size='wide'] {
+    display: none;
+  }
+
+  .login-download[data-size='narrow'] {
+    display: inline;
+  }
+}
+
+.login-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-5);
+  padding: var(--spacing-4) var(--spacing-4) var(--spacing-10);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 920px;
+  overflow: hidden;
+}
+
+.login-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+}
+
+.login-panel {
+  background: var(--color-background-muted);
+  border-inline-start: 1px solid var(--color-border);
+  justify-content: center;
+  /* The panel keeps its height while the code loads or is replaced. */
+  min-height: 460px;
+}
+
+.login-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.login-step-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.login-step-mark[data-state='current'] {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.login-step-mark[data-state='done'] {
+  color: var(--color-text-success);
+  border-color: var(--color-border-success);
+}
+
+.login-qr {
+  position: relative;
+  width: min(232px, 100%);
+  aspect-ratio: 1;
+  border-radius: var(--radius-container);
+  overflow: hidden;
+  background: white;
+  box-shadow: var(--shadow-low);
+}
+
+/* Fixed dark on light in every theme (scanners), so no theme colours here. */
+.qr {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: black;
+}
+
+.login-qr-symbol {
+  width: 100%;
+  height: 100%;
+}
+
+.login-qr[data-stage='loading'] {
+  background: var(--color-background-surface);
+}
+
+.login-qr[data-stage='expired'] .qr,
+.login-qr[data-stage='approved'] .qr {
+  opacity: 0.12;
+}
+
+.login-qr[data-stage='scanned'] .qr {
+  opacity: 0.45;
+}
+
+.login-qr-cover {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.login-done {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  color: var(--color-on-success);
+  background: var(--color-success);
+}
+
+.login-code {
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 760px) {
+  .login-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* On a phone the code comes first: the steps are a reference, not the action. */
+  .login-panel {
+    order: -1;
+    border-inline-start: 0;
+    border-block-end: 1px solid var(--color-border);
+    min-height: 0;
+  }
+
+  /* A phone cannot scan its own screen: there the link is the way in, so it comes before the QR. */
+  .login-copy {
+    order: -1;
+  }
+}

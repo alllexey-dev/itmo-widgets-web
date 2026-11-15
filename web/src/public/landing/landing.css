@@ -1,0 +1,393 @@
+/*
+ * The landing. Bespoke layout and art only: colours, spacing, radii, shadows and type come
+ * from Astryx tokens, so both colour schemes work. Raw px is used only for art sizes, grid
+ * tracks and breakpoints. The frame (header, footer, `.site-wrap`) is in `../site/site.css`.
+ */
+
+/* Hero */
+
+.la-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: var(--spacing-10);
+  padding-block: calc(var(--spacing-10) * 1.5) var(--spacing-10);
+}
+
+.la .la-hero-title {
+  font-size: clamp(var(--font-size-4xl), 4.6vw, calc(var(--font-size-5xl) * 1.4));
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.la .la-hero-pitch {
+  max-width: 34rem;
+}
+
+.la-hero-note {
+  color: var(--color-icon-secondary);
+}
+
+.la-stage {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 640 / 520;
+  margin-inline: auto;
+}
+
+.la-shapes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.la-shape-fill {
+  fill: var(--la-shape);
+}
+
+.la-shape-stroke {
+  fill: none;
+  stroke: var(--la-shape);
+  stroke-width: 56;
+  stroke-linecap: round;
+}
+
+.la-shape--pink {
+  --la-shape: var(--color-border-pink);
+}
+
+.la-shape--yellow {
+  --la-shape: var(--color-border-yellow);
+}
+
+.la-shape--purple {
+  --la-shape: var(--color-border-purple);
+}
+
+.la-shape--green {
+  --la-shape: var(--color-border-green);
+}
+
+.la-shape--blue {
+  --la-shape: var(--color-border-blue);
+}
+
+.la-phone {
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 1.2%;
+  border: 1px solid var(--color-border-emphasized);
+  border-radius: 9% / 5.2%;
+  background: var(--color-background-surface);
+  box-shadow: var(--shadow-high);
+}
+
+/* The <picture> only chooses the file; the image is laid out as a child of the frame. */
+.la picture {
+  display: contents;
+}
+
+.la-phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8% / 4.5%;
+}
+
+.la-phone--center {
+  left: 29%;
+  top: 2%;
+  width: 42%;
+}
+
+.la-phone--left {
+  left: 3%;
+  top: 13%;
+  width: 34%;
+  transform: rotate(-7deg);
+}
+
+.la-phone--right {
+  right: 3%;
+  top: 13%;
+  width: 34%;
+  transform: rotate(7deg);
+}
+
+/* Sections */
+
+.la-section {
+  padding-block: calc(var(--spacing-10) * 1.4);
+  scroll-margin-top: var(--spacing-10);
+}
+
+.la-section-head {
+  max-width: 44rem;
+  margin-bottom: var(--spacing-6);
+}
+
+.la-section-links {
+  margin-top: var(--spacing-5);
+}
+
+/* Bento */
+
+.la-bento {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: 400px 400px 330px;
+  grid-auto-rows: 400px;
+  gap: var(--spacing-4);
+}
+
+.la .la-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.la .la-tile--wide,
+.la .la-tile--split {
+  grid-column: span 2;
+}
+
+.la .la-tile--split {
+  flex-direction: row;
+}
+
+.la-tile-copy {
+  box-sizing: border-box;
+  padding: var(--spacing-5) var(--spacing-5) var(--spacing-4);
+}
+
+.la-tile--split .la-tile-copy {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline-end: var(--spacing-2);
+}
+
+.la-tile-visual {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  justify-content: center;
+  gap: var(--spacing-4);
+  padding-inline: var(--spacing-5);
+}
+
+.la-tile--split .la-tile-visual {
+  flex: 1.15 1 0;
+  padding-block-start: var(--spacing-5);
+}
+
+.la .la-tile-title {
+  font-size: var(--font-size-xl);
+  line-height: 1.3;
+}
+
+.la-shot {
+  box-sizing: border-box;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 250px;
+  margin: 0;
+  padding: 5px 5px 0;
+  border: 1px solid var(--color-border-emphasized);
+  border-bottom: 0;
+  border-radius: 26px 26px 0 0;
+  background: var(--color-background-surface);
+  box-shadow: var(--shadow-med);
+  overflow: hidden;
+}
+
+.la-shot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 21px 21px 0 0;
+  object-fit: cover;
+  object-position: 50% 0%;
+}
+
+/* Vertical focus of the crop, see `ShotFocus`. */
+
+.la-shot--y4 img {
+  object-position: 50% 4%;
+}
+
+.la-shot--y8 img {
+  object-position: 50% 8%;
+}
+
+.la-shot--y12 img {
+  object-position: 50% 12%;
+}
+
+.la-shot--y55 img {
+  object-position: 50% 55%;
+}
+
+.la-shot--y100 img {
+  object-position: 50% 100%;
+}
+
+.la .la-devices {
+  align-self: center;
+  width: 100%;
+  padding-block-end: var(--spacing-5);
+}
+
+/* Icon chips */
+
+.la-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-element);
+  background: var(--la-chip-bg);
+  color: var(--la-chip-fg);
+}
+
+.la-chip--blue {
+  --la-chip-bg: var(--color-background-blue);
+  --la-chip-fg: var(--color-icon-blue);
+}
+
+.la-chip--pink {
+  --la-chip-bg: var(--color-background-pink);
+  --la-chip-fg: var(--color-icon-pink);
+}
+
+.la-chip--yellow {
+  --la-chip-bg: var(--color-background-yellow);
+  --la-chip-fg: var(--color-icon-yellow);
+}
+
+.la-chip--purple {
+  --la-chip-bg: var(--color-background-purple);
+  --la-chip-fg: var(--color-icon-purple);
+}
+
+.la-chip--green {
+  --la-chip-bg: var(--color-background-green);
+  --la-chip-fg: var(--color-icon-green);
+}
+
+/* Data and download */
+
+.la-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-4);
+}
+
+.la-fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.la-platforms {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-4);
+}
+
+.la .la-platform {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+}
+
+.la .la-platform-body {
+  flex: 1 1 auto;
+}
+
+/* Tablet */
+
+@media (max-width: 1000px) {
+  .la-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-8);
+    padding-block-start: var(--spacing-10);
+  }
+
+  .la-bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+    grid-auto-flow: dense;
+  }
+
+  .la-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .la-platforms {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Phone */
+
+@media (max-width: 620px) {
+  .la-section {
+    padding-block: var(--spacing-10);
+  }
+
+  .la-bento {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: auto;
+  }
+
+  .la .la-tile--wide,
+  .la .la-tile--split {
+    grid-column: auto;
+  }
+
+  .la .la-tile--split {
+    flex-direction: column;
+  }
+
+  .la-tile--split .la-tile-copy {
+    flex: none;
+    padding-inline-end: var(--spacing-5);
+  }
+
+  .la-tile-visual,
+  .la-tile--split .la-tile-visual {
+    flex: none;
+    padding-block-start: 0;
+  }
+
+  .la-shot {
+    height: 250px;
+  }
+
+  .la-tile--wide .la-shot {
+    height: 215px;
+  }
+
+  .la-facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-3);
+  }
+
+  .la-fact {
+    flex-direction: row;
+    gap: var(--spacing-4);
+  }
+}
+
+/* A link and the punctuation after it stay on one line. */
+.la-nowrap {
+  white-space: nowrap;
+}

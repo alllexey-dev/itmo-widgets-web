@@ -1,0 +1,670 @@
+/* Moderation queue and restrictions. Layout only; every colour, space, radius and type size is a token. */
+
+/* ---------------------------------------------------------------- page */
+
+.mod-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1) var(--spacing-4);
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-supporting-size);
+  line-height: var(--text-supporting-leading);
+}
+
+.mod-hints > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.mod-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-3) var(--spacing-5);
+}
+
+/* How the queue is ordered, at the end of the filters. */
+.mod-order {
+  margin-inline-start: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--text-supporting-size);
+  line-height: var(--text-supporting-leading);
+}
+
+.mod-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  min-width: 0;
+}
+
+.mod-layout {
+  display: grid;
+  gap: var(--spacing-4);
+  align-items: start;
+  min-width: 0;
+}
+
+.mod-queue,
+.mod-pane {
+  min-width: 0;
+}
+
+/* On a phone the open case takes the place of the queue and its filters. */
+.mod-queue[hidden],
+.mod-toolbar[hidden],
+.mod-tab-hint[hidden] {
+  display: none;
+}
+
+/* What a tab holds, under the filters, where its name alone does not say. */
+.mod-tab-hint {
+  margin: 0;
+}
+
+/*
+ * A wide screen works like a mail client: the page fills the window and does not scroll; the queue
+ * and the case scroll on their own, so moving through the queue never moves the page. The shell's
+ * page column pads the window by --spacing-6 on each side.
+ */
+.mod-page[data-wide='true'] {
+  height: calc(100dvh - 2 * var(--spacing-6));
+  min-height: 520px;
+}
+
+.mod-page[data-wide='true'] .mod-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.mod-page[data-wide='true'] .mod-layout {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.mod-page[data-wide='true'] .mod-queue,
+.mod-page[data-wide='true'] .mod-pane {
+  min-height: 0;
+}
+
+.mod-page[data-wide='true'] .mod-scroll {
+  box-sizing: border-box;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ---------------------------------------------------------------- queue rows */
+
+.mod-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-0-5);
+  margin: 0;
+  padding: var(--spacing-2);
+  list-style: none;
+}
+
+/* J and K keep a row of context beyond the selected one. */
+.mod-list > li {
+  scroll-margin-block: var(--spacing-10);
+}
+
+/* The title gives way to the mark beside it. */
+.mod-row-head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+.mod-row-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mod-row-head > :not(.mod-row-title) {
+  flex: none;
+  margin-inline-start: auto;
+}
+
+.mod-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-0-5);
+  min-width: 0;
+}
+
+.mod-row-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mod-row-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.mod-row-meta > * {
+  flex: none;
+}
+
+.mod-row-meta > .mod-row-author {
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mod-row-reports {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-0-5);
+  color: var(--color-text-warning);
+  font-variant-numeric: tabular-nums;
+}
+
+.mod-row-hidden {
+  color: var(--color-text-error);
+}
+
+/* ---------------------------------------------------------------- case */
+
+.mod-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  min-width: 0;
+}
+
+/* Where a newly opened case scrolls to: its top, with the padding of the card above it. */
+.mod-top {
+  scroll-margin-top: var(--spacing-10);
+}
+
+.mod-detail > .mod-top + * {
+  margin-block-start: calc(-1 * var(--spacing-3));
+}
+
+.mod-case {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+  min-width: 0;
+}
+
+.mod-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+}
+
+.mod-head-text {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-1);
+  min-width: 0;
+}
+
+.mod-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/*
+ * The decisions stay within reach however long the case is: pinned to the top of the case pane on a
+ * wide screen, to the bottom of the screen on a narrow one. The bar spans the card's padding
+ * (--spacing-5), so the content scrolls under a solid strip.
+ */
+.mod-actions {
+  position: sticky;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-inline: calc(-1 * var(--spacing-5));
+  padding: var(--spacing-3) var(--spacing-5);
+  background: var(--color-background-card);
+}
+
+.mod-page[data-wide='true'] .mod-actions {
+  top: calc(-1 * var(--spacing-5));
+  margin-block: calc(-1 * var(--spacing-3));
+  border-block-end: 1px solid var(--color-border);
+}
+
+.mod-page[data-wide='false'] .mod-actions {
+  order: 1;
+  bottom: 0;
+  margin-block-end: calc(-1 * var(--spacing-5));
+  border-block-start: 1px solid var(--color-border);
+  border-end-start-radius: var(--radius-container);
+  border-end-end-radius: var(--radius-container);
+}
+
+/*
+ * The key of a button, after its label. It takes the colour of the label, so it reads on a filled
+ * button as well as on a quiet one.
+ */
+.mod-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: var(--spacing-1);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-inner);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  opacity: 0.7;
+}
+
+/* What each decision does, for a screen without hover. */
+.mod-help {
+  display: grid;
+  gap: var(--spacing-3);
+  margin: 0;
+}
+
+.mod-help dt {
+  font-weight: var(--font-weight-semibold);
+}
+
+.mod-help dd {
+  margin: var(--spacing-0-5) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-supporting-size);
+  line-height: var(--text-supporting-leading);
+}
+
+.mod-muted {
+  color: var(--color-text-secondary);
+  font-size: var(--text-supporting-size);
+  line-height: var(--text-supporting-leading);
+}
+
+.mod-strong {
+  font-weight: var(--font-weight-medium);
+}
+
+.mod-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.mod-wrap {
+  overflow-wrap: anywhere;
+}
+
+.mod-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-3);
+  min-width: 0;
+}
+
+.mod-count {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
+}
+
+.mod-empty {
+  margin: 0;
+}
+
+.mod-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--spacing-3) var(--spacing-4);
+  margin: 0;
+}
+
+.mod-facts dt {
+  color: var(--color-text-secondary);
+  font-size: var(--text-supporting-size);
+  line-height: var(--text-supporting-leading);
+}
+
+.mod-facts dd {
+  margin: var(--spacing-0-5) 0 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.mod-note {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* ---------------------------------------------------------------- previews */
+
+.mod-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-4);
+  min-width: 0;
+  padding: var(--spacing-4);
+  /* The border keeps the box a box in the dark theme, where the fill barely differs from the card. */
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-container);
+  background: var(--color-background-muted);
+}
+
+.mod-preview-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+}
+
+.mod-preview-text {
+  flex: 1 1 240px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-1);
+  min-width: 0;
+}
+
+.mod-category {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1-5);
+  color: var(--color-text-secondary);
+  font-size: var(--text-supporting-size);
+  line-height: var(--text-supporting-leading);
+}
+
+.mod-preview-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.mod-url {
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-sm);
+}
+
+.mod-url-rest {
+  color: var(--color-text-secondary);
+}
+
+.mod-url-host {
+  font-weight: var(--font-weight-semibold);
+}
+
+.mod-review-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- changes */
+
+/*
+ * A table in a card reaches the card's edges, and takes the card's bottom padding (--spacing-5) as
+ * its own too; inside the case that padding belongs to what follows the table.
+ */
+.mod-diff {
+  padding-block-end: var(--spacing-5);
+}
+
+.mod-diff-field {
+  display: grid;
+  justify-items: start;
+  gap: var(--spacing-1);
+  color: var(--color-text-secondary);
+}
+
+.mod-diff-value {
+  overflow-wrap: anywhere;
+}
+
+.mod-diff-value[data-side='before'] {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.mod-diff-value[data-side='after'] {
+  font-weight: var(--font-weight-medium);
+}
+
+.mod-textdiff-head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.mod-textdiff-title {
+  font-weight: var(--font-weight-semibold);
+}
+
+.mod-textdiff {
+  margin: 0;
+  padding: var(--spacing-4);
+  border-radius: var(--radius-container);
+  background: var(--color-background-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mod-textdiff del,
+.mod-textdiff ins {
+  padding-inline: var(--spacing-0-5);
+  border-radius: var(--radius-inner);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.mod-textdiff del {
+  color: var(--color-text-red);
+  background: var(--color-background-red);
+  text-decoration: line-through;
+}
+
+.mod-textdiff ins {
+  color: var(--color-text-green);
+  background: var(--color-background-green);
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------------- author, reports, decisions */
+
+.mod-author {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2) var(--spacing-3);
+}
+
+.mod-author-text {
+  flex: 1 1 200px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.mod-author-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.mod-author-name {
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.mod-restrictions,
+.mod-reports,
+.mod-timeline {
+  display: grid;
+  gap: var(--spacing-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mod-restrictions li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-element);
+  color: var(--color-on-warning-muted);
+  background: var(--color-warning-muted);
+}
+
+.mod-restrictions svg {
+  flex: none;
+  margin-block-start: var(--spacing-0-5);
+}
+
+.mod-restrictions .mod-muted {
+  color: inherit;
+}
+
+.mod-reports li {
+  display: grid;
+  gap: var(--spacing-0-5);
+  padding-inline-start: var(--spacing-3);
+  border-inline-start: 2px solid var(--color-border-emphasized);
+}
+
+.mod-timeline li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+}
+
+.mod-event {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-0-5);
+  min-width: 0;
+}
+
+.mod-decision-note {
+  margin: var(--spacing-1) 0 0;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-element);
+  background: var(--color-background-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- dialogs */
+
+/* A row of chips (reasons of the queue, preset reasons of a rejection) wraps instead of running off. */
+.mod-presets {
+  flex-wrap: wrap;
+}
+
+/* The key that submits, at the start of the footer; the buttons stay at its end. */
+.mod-submit-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1-5);
+  margin-inline-end: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--text-supporting-size);
+  line-height: var(--text-supporting-leading);
+}
+
+.mod-dialog-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-4);
+}
+
+/* ---------------------------------------------------------------- restrictions */
+
+.mod-user {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  min-width: 0;
+}
+
+.mod-user-text {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.mod-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-1);
+}
+
+/* The column of row actions needs a name for screen readers only. */
+.mod-actions-head {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A term reads as one thing: it wraps only after the comma of an open-ended one. */
+.mod-term {
+  text-wrap: balance;
+}
+
+.mod-state {
+  display: grid;
+  justify-items: start;
+  gap: var(--spacing-0-5);
+}
+
+/* ---------------------------------------------------------------- phone */
+
+/* Fingers need about 44 px: the decisions, the way back, the filters and the row actions. */
+@media (max-width: 640px) {
+  .mod-actions button,
+  .mod-head button,
+  .mod-toolbar button,
+  .mod-author-actions button,
+  .mod-author-actions a,
+  .mod-preview-head a,
+  .mod-list-actions button,
+  .mod-list-actions a {
+    min-height: 44px;
+  }
+
+  .mod-head button {
+    min-width: 44px;
+  }
+
+  .mod-toolbar [role='radiogroup'] {
+    height: auto;
+  }
+
+  /* The four reasons, under their short names, fit one row of a 360 px phone with this padding. */
+  .mod-toolbar .mod-presets button {
+    padding-inline: var(--spacing-2);
+  }
+}

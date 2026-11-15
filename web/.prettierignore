@@ -1,7 +1,11 @@
 dist
-coverage
 node_modules
+coverage
+src/app/api/schema.ts
+src/app/api/openapi.json
+src/themes
+themes
+astryx-themes.js
 package-lock.json
-# Generated: openapi-typescript output and the Backend snapshot stay byte-exact.
-src/api/openapi.json
-src/api/schema.ts
+/public
+AGENTS.md

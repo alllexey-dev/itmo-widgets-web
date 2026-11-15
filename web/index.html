@@ -2,20 +2,38 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <!-- The package's default surfaces; the app repaints them from the chosen theme. -->
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9f9fe" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0e12" />
-    <meta name="robots" content="noindex" />
-    <!-- Profile photos come from ITMO hosts: they must not learn which page shows them. -->
-    <meta name="referrer" content="same-origin" />
-    <title>ITMO.Widgets</title>
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <script src="/theme-init.js"></script>
+    <!-- The page background of the theme (--color-background-body) in each scheme. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f1f1f1" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1b1b1b" />
+    <link rel="icon" href="/img/favicon.png" />
+    <link rel="canonical" href="https://widgets.alllexey.dev/" />
+    <title>ITMO.Widgets — расписание, зачётка, спорт и QR-пропуск ИТМО на Android и iPhone</title>
+    <meta
+      name="description"
+      content="Неофициальное приложение для студентов ИТМО на Android и iPhone: расписание и виджеты, зачётка с БАРС, запись и очереди на спорт, карта кампуса, отзывы о преподавателях, друзья и QR-пропуск."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ITMO.Widgets" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:url" content="https://widgets.alllexey.dev/" />
+    <meta property="og:title" content="ITMO.Widgets" />
+    <meta
+      property="og:description"
+      content="Расписание, зачётка, спорт и QR-пропуск ИТМО в одном приложении для Android и iPhone."
+    />
+    <meta property="og:image" content="https://widgets.alllexey.dev/img/icon.webp" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="ITMO.Widgets" />
+    <meta
+      name="twitter:description"
+      content="Расписание, зачётка, спорт и QR-пропуск ИТМО в одном приложении для Android и iPhone."
+    />
+    <meta name="twitter:image" content="https://widgets.alllexey.dev/img/icon.webp" />
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <div id="root" data-page="landing"><!--page--></div>
+    <script type="module" src="/src/public/entry.tsx"></script>
   </body>
 </html>

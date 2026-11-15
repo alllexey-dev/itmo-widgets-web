@@ -1,4 +1,5 @@
-node_modules/
-dist/
-coverage/
-*.local
+node_modules
+dist
+coverage
+# A preview the Astryx theme editor writes when it shows a theme.
+themes/*/preview.html

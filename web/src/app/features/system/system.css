@@ -1,0 +1,60 @@
+/* Система. Layout only; every colour, space, radius and type size is a token. */
+
+.system-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  min-width: 0;
+}
+
+.system-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: var(--spacing-4);
+  align-items: start;
+}
+
+.system-columns > * {
+  min-width: 0;
+}
+
+.system-tab-alert {
+  display: inline-flex;
+  margin-inline-start: var(--spacing-1);
+}
+
+.system-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* ---------------------------------------------------------------- forms */
+
+.system-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: var(--spacing-4);
+  align-items: start;
+}
+
+.system-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+/* ---------------------------------------------------------------- keys */
+
+/* The table keeps its columns readable; a narrow screen gets the stacked list instead. */
+.system-keys {
+  min-width: 700px;
+}
+
+.system-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-0-5);
+  min-width: 0;
+}

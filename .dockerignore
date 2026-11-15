@@ -1,7 +1,10 @@
 .git
+.github
+.claude
 **/.DS_Store
 web/node_modules
 web/dist
 web/coverage
 compose*.yml
 design/
+_old/

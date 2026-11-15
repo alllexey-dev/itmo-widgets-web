@@ -1,0 +1,30 @@
+/* The tabs and the search share a row and stack when there is no room for both. */
+.friends-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3) var(--spacing-4);
+}
+
+.friends-search {
+  flex: 1 1 240px;
+  max-width: 340px;
+}
+
+.friends-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.friends-chevron {
+  color: var(--color-text-secondary);
+}
+
+/* On a phone the three tabs fit the screen instead of scrolling the last one out of it. */
+@media (max-width: 420px) {
+  .friends-tabs [role='tab'] {
+    padding-inline: var(--spacing-2);
+  }
+}

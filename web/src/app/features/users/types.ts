@@ -1,0 +1,34 @@
+import type { components } from '../../api/schema';
+import type { Role } from '../../lib/session';
+
+type Schemas = components['schemas'];
+
+export type GroupData = Schemas['GroupData'];
+export type AdminRestriction = Schemas['AdminRestriction'];
+export type AdminClient = Schemas['AdminClient'];
+export type AdminAgentAccess = Schemas['AdminAgentAccess'];
+
+export type AdminUserItem = Omit<Schemas['AdminUserItem'], 'roles'> & { roles: Role[] };
+
+export interface UsersPage {
+  items: AdminUserItem[];
+  page: number;
+  size: number;
+  total: number;
+}
+
+type AppField = 'appVersion' | 'appBuild' | 'appPlatform' | 'appDistribution' | 'appVersionSeenAt';
+
+/**
+ * The `app*` fields (Backend 1.8.0) are the build the device last reported and when; all null for a
+ * device that never reported one (Android 2.2 and older). A Backend before 1.8.0 sends none of them.
+ */
+export type AdminDevice = Omit<Schemas['AdminDevice'], AppField> &
+  Partial<Pick<Schemas['AdminDevice'], AppField>>;
+
+/** `clients` comes from a Backend with client statistics (ADR 0034); an older Backend sends none. */
+export type AdminUserDetail = Omit<Schemas['AdminUserDetail'], 'roles' | 'devices' | 'clients'> & {
+  roles: Role[];
+  devices: AdminDevice[];
+  clients?: AdminClient[];
+};

@@ -1,0 +1,13 @@
+{
+  "name": "widgets",
+  "like": "neutral",
+  "mode": "both",
+  "settings": [
+    {
+      "thing": "font",
+      "value": "system",
+      "source": "dial"
+    }
+  ],
+  "lifted": []
+}

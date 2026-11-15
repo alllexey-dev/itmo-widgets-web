@@ -1,0 +1,104 @@
+.home-chevron {
+  color: var(--color-text-secondary);
+}
+
+/* The figures of the week. The column count follows the width of the card and always divides the
+   number of figures (four, or six with the examples), so no figure is left alone on a row. */
+.home-week-box {
+  container-type: inline-size;
+}
+
+.home-week {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-5);
+}
+
+@container (min-width: 340px) {
+  .home-week {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 560px) {
+  .home-week[data-count='6'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 760px) {
+  .home-week[data-count='4'] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 1100px) {
+  .home-week[data-count='6'] {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+.home-delta {
+  padding-block-end: 4px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-error);
+}
+
+.home-delta[data-good='true'] {
+  color: var(--color-text-success);
+}
+
+.home-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: var(--spacing-6);
+  align-items: start;
+}
+
+/* Rows that are being checked again stay readable under a soft overlay. */
+.home-busy {
+  transition: opacity 0.2s ease;
+}
+
+.home-busy[data-busy='true'] {
+  opacity: 0.55;
+  transition-delay: 0.15s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-busy {
+    transition: none;
+  }
+}
+
+.home-note {
+  margin: 0;
+  padding: var(--spacing-2) var(--spacing-3);
+}
+
+.home-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A phone: the token of a sport row is as wide as "Очередь на место", so it goes under the text,
+   in line with it (past the 36 px tile and the gap). The row is Astryx `Item`: the tile, the text,
+   then the end content in a span. */
+.home-rows[data-wide-end='true'] {
+  container-type: inline-size;
+}
+
+@container (max-width: 420px) {
+  .home-rows[data-wide-end='true'] > li {
+    flex-wrap: wrap;
+    row-gap: var(--spacing-1);
+  }
+
+  .home-rows[data-wide-end='true'] > li > span:last-child {
+    flex-basis: 100%;
+    margin-inline-start: calc(36px + var(--spacing-2));
+  }
+}

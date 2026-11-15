@@ -80,7 +80,7 @@ const sorted = (values) =>
 const fixture = { appSha: sha, strings: sorted(strings), icons: sorted(icons) };
 const output = resolve(
   dirname(fileURLToPath(import.meta.url)),
-  "../web/src/test/fixtures/app-labels.json",
+  "../web/src/app/test/fixtures/app-labels.json",
 );
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(fixture, null, 2)}\n`);
