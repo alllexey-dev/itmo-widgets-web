@@ -1,0 +1,91 @@
+/* The person: the avatar, the name with the groups, and the relationship at the end of the row. */
+.person-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-4) var(--spacing-5);
+}
+
+.person-relation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-inline-start: auto;
+}
+
+/* The schedule is the long card; sport and friends share the narrower column. */
+.person-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--spacing-6);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .person-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .person-relation {
+    flex-basis: 100%;
+    margin-inline-start: 0;
+  }
+}
+
+.person-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.person-day + .person-day {
+  margin-block-start: var(--spacing-3);
+}
+
+.person-day-title {
+  padding: var(--spacing-2) var(--spacing-3) var(--spacing-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.person-time {
+  display: grid;
+  min-width: 44px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-medium);
+}
+
+.person-time-end {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-secondary);
+}
+
+.person-chevron {
+  color: var(--color-text-secondary);
+}
+
+.person-note {
+  margin: 0;
+  padding: var(--spacing-2) var(--spacing-3);
+}
+
+/* A narrow card: the token of a sport row is as wide as "Очередь на место", so it goes under the
+   text, in line with it (past the 36 px tile and the gap). The row is Astryx `Item`: the tile, the
+   text, then the end content in a span. */
+.person-rows[data-wide-end] {
+  container-type: inline-size;
+}
+
+@container (max-width: 420px) {
+  .person-rows[data-wide-end] > li {
+    flex-wrap: wrap;
+    row-gap: var(--spacing-1);
+  }
+
+  .person-rows[data-wide-end] > li > span:last-child {
+    flex-basis: 100%;
+    margin-inline-start: calc(36px + var(--spacing-2));
+  }
+}

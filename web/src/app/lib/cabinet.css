@@ -1,0 +1,178 @@
+.cabinet-logo {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-inner);
+  background: var(--color-background-surface);
+}
+
+/* The page column: centered, one width for every section. */
+.cabinet-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1240px;
+  margin-inline: auto;
+  padding: var(--spacing-6);
+}
+
+@media (max-width: 640px) {
+  .cabinet-page {
+    padding-inline: var(--spacing-4);
+  }
+}
+
+/* A long title breaks inside a word rather than widening the page on a phone. */
+.page-header h1 {
+  overflow-wrap: anywhere;
+}
+
+/* The back link lines up with the title: the ghost button's own padding is pulled out. */
+.page-back {
+  margin-inline-start: calc(-1 * var(--spacing-2));
+}
+
+/* The whole viewport while the session is not known yet: there is no shell to show. */
+.cabinet-waiting {
+  min-height: 100dvh;
+  background: var(--color-background-body);
+}
+
+/* Data that is being replaced stays readable under a soft overlay. */
+.loadable {
+  transition: opacity 0.2s ease;
+}
+
+.loadable[data-loading='true'] {
+  opacity: 0.55;
+  transition-delay: 0.15s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadable {
+    transition: none;
+  }
+}
+
+/* A failed source as one row: what failed and why, then the retry; it wraps in a narrow card. */
+.load-error-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2) var(--spacing-3);
+  min-width: 0;
+  color: var(--color-text-error);
+}
+
+.load-error-inline[data-forbidden='true'] {
+  color: var(--color-text-secondary);
+}
+
+.load-error-inline > svg {
+  flex: none;
+}
+
+.load-error-inline-text {
+  display: flex;
+  flex: 1 1 200px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--spacing-2);
+  min-width: 0;
+}
+
+/* A panel in a grid or a row shrinks with its column instead of widening it. */
+.panel {
+  min-width: 0;
+}
+
+/* A long hint wraps under the title instead of pushing the action of the panel to the next line. */
+.panel-title {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/* The rounded square with an icon that starts a row. */
+.icon-tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-element);
+  color: var(--color-text-secondary);
+  background: var(--color-background-muted);
+}
+
+.icon-tile[data-size='sm'] {
+  width: 28px;
+  height: 28px;
+}
+
+.icon-tile[data-tone='accent'] {
+  color: var(--color-text-accent);
+  background: var(--color-accent-muted);
+}
+
+.icon-tile[data-tone='warning'] {
+  color: var(--color-on-warning-muted);
+  background: var(--color-warning-muted);
+}
+
+.icon-tile[data-tone='error'] {
+  color: var(--color-on-error-muted);
+  background: var(--color-error-muted);
+}
+
+/* A row of figures: as many columns as fit, each a term with its value. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: var(--spacing-4);
+  margin: 0;
+}
+
+/* The figures measure their own row, so six of them stand two, three or six in a row, never five
+   and one. */
+.stats-wide {
+  container-type: inline-size;
+}
+
+.stats-wide > .stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@container (min-width: 520px) {
+  .stats-wide > .stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 1000px) {
+  .stats-wide > .stats {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-0-5);
+  min-width: 0;
+}
+
+.stat dt,
+.stat dd {
+  margin: 0;
+}
+
+/* A technical string of Backend breaks anywhere rather than widening its row. */
+.mono {
+  font-family: var(--font-family-code);
+  font-size: var(--text-supporting-size);
+  line-height: var(--text-supporting-leading);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.mono[data-tone='error'] {
+  color: var(--color-text-error);
+}

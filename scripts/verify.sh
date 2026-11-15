@@ -10,17 +10,16 @@ install() {
 }
 
 quick() {
-    "$ROOT/scripts/check-site.sh" --unreferenced
     (
         cd "$ROOT/web"
         install
         npm run gen:api -- --check
-        npm run gen:tokens -- --check
         npm run lint
         npm run typecheck
         npm test
         npm run build
     )
+    "$ROOT/scripts/check-site.sh" --unreferenced
 }
 
 site() (

@@ -1,0 +1,113 @@
+/* Отзывы. Layout only; every colour, space, radius and type size is a token. */
+
+.reviews-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: var(--spacing-4);
+  align-items: stretch;
+}
+
+.reviews-columns > * {
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------- states */
+
+.reviews-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-1) var(--spacing-4);
+}
+
+.reviews-health {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* ---------------------------------------------------------------- teachers table */
+
+/* The table keeps its columns readable; a narrow screen gets the stacked list instead. */
+.reviews-teachers {
+  min-width: 900px;
+}
+
+.reviews-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-0-5);
+  min-width: 0;
+}
+
+.reviews-tabs {
+  padding-inline: var(--spacing-3);
+}
+
+/* ---------------------------------------------------------------- one summary */
+
+.reviews-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.reviews-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-1) var(--spacing-3);
+}
+
+/* Texts of the model keep their line breaks and never overflow the dialog. */
+.reviews-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.reviews-points {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.reviews-points ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  margin: 0;
+  padding-inline-start: var(--spacing-5);
+  list-style: disc;
+}
+
+.reviews-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reviews-scales {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: var(--spacing-3) var(--spacing-5);
+  margin: 0;
+}
+
+.reviews-scales dt {
+  font-size: var(--text-supporting-size);
+  line-height: var(--text-supporting-leading);
+  color: var(--color-text-secondary);
+}
+
+.reviews-scales dd {
+  margin: 0;
+}
+
+.reviews-muted {
+  color: var(--color-text-secondary);
+}

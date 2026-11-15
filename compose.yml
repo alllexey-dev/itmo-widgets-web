@@ -1,7 +1,10 @@
-# Local combined image only. Server stacks are owned by srvscripts.
+# Local image only. Server stacks are owned by srvscripts.
 services:
   itmowidgets-web:
-    build: .
+    build:
+      context: .
+      args:
+        REVISION: ${REVISION:-local}
     image: itmowidgets-web:local
     ports:
       - "127.0.0.1:8080:80"

@@ -1,0 +1,74 @@
+/*
+ * Text pages: the policy and account deletion. Astryx components set the type; this file adds
+ * the column, the lists and the table, with tokens only.
+ */
+
+.doc {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding: var(--spacing-10) var(--spacing-6) var(--spacing-8);
+}
+
+/* The longest word of the title must fit a phone screen. */
+.doc .doc-title {
+  font-size: clamp(var(--font-size-2xl), 7.4vw, var(--text-display-2-size));
+}
+
+.doc .doc-heading {
+  margin-top: var(--spacing-2);
+  font-size: var(--font-size-2xl);
+  line-height: 1.25;
+}
+
+.doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin: 0;
+  padding-inline-start: var(--spacing-6);
+  list-style: disc;
+}
+
+.doc-list--numbered {
+  list-style: decimal;
+}
+
+.doc-list li::marker {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-lg);
+}
+
+.doc .doc-table-card {
+  overflow: hidden;
+}
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.doc-table th,
+.doc-table td {
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+  text-align: start;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.doc-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (max-width: 620px) {
+  .doc {
+    padding: var(--spacing-8) var(--spacing-4) var(--spacing-6);
+  }
+
+  .doc-table th,
+  .doc-table td {
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+}

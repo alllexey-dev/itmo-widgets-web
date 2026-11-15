@@ -1,0 +1,39 @@
+/* The app-link pages: one centred card. Tokens only; px is used for the column and the icon. */
+
+.lk {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--spacing-10) var(--spacing-6) var(--spacing-8);
+}
+
+.lk .lk-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 560px;
+}
+
+.lk-icon {
+  display: block;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-element);
+}
+
+.lk .lk-actions {
+  padding-block: var(--spacing-2);
+}
+
+/* `link.js` hides the "open in the app" button where there is no app to open. */
+.lk [hidden] {
+  display: none;
+}
+
+@media (max-width: 620px) {
+  .lk {
+    padding: var(--spacing-8) var(--spacing-4) var(--spacing-6);
+  }
+
+  .lk .lk-card {
+    padding: var(--spacing-6) var(--spacing-5);
+  }
+}

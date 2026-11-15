@@ -1,5 +1,5 @@
-# Landing (site/) and the web app (web/) in one nginx image:
-# the landing at /, the single-page app at /app/.
+# One nginx image for widgets.alllexey.dev: the build of web/ (public pages and the cabinet
+# under /app/) served by deploy/site.nginx.conf.
 FROM node:22.23.3-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS web
 WORKDIR /web
 COPY web/package.json web/package-lock.json web/.npmrc ./
@@ -14,5 +14,6 @@ ARG REVISION=local
 LABEL org.opencontainers.image.source="https://github.com/alllexey-dev/itmo-widgets-web" \
       org.opencontainers.image.revision="$REVISION"
 COPY deploy/site.nginx.conf /etc/nginx/conf.d/default.conf
-COPY site/ /usr/share/nginx/html/
-COPY --from=web /web/dist/ /usr/share/nginx/html/app/
+# Only the build: the image's own index.html and 50x.html go away.
+RUN rm -rf /usr/share/nginx/html/*
+COPY --from=web /web/dist/ /usr/share/nginx/html/

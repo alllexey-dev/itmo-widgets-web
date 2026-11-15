@@ -1,0 +1,80 @@
+/* Connections beside the app installs; one column on a phone. */
+.devices-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: var(--spacing-6);
+  align-items: start;
+}
+
+/* The lists measure themselves: a row adapts to the width of its panel, not of the window. */
+.devices-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  container-type: inline-size;
+}
+
+/* The access of an agent or an MCP server sits under its row, in line with the row's text. */
+.devices-scopes {
+  padding-block: var(--spacing-1) var(--spacing-3);
+  padding-inline: calc(36px + var(--spacing-2) * 2) var(--spacing-2);
+}
+
+/* One scope: whether it is granted, what it is, and the button that takes it away. */
+.devices-scope {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.devices-scope-mark {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.devices-scope-text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* What a state of a connection means: under its row, in line with the row's text. */
+.devices-note {
+  padding-block-end: var(--spacing-2);
+  padding-inline: calc(36px + var(--spacing-2) * 2) var(--spacing-2);
+}
+
+/* A phone: its row, then the button at the end of the row. */
+.devices-phone {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.devices-phone-main {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.devices-phone-action {
+  flex: none;
+  padding-inline-end: var(--spacing-2);
+}
+
+/* In a narrow panel what sits under a row takes the whole width, and the button of a phone goes
+   under its text, so its label stays whole. */
+@container (max-width: 460px) {
+  .devices-scopes,
+  .devices-note {
+    padding-inline-start: var(--spacing-2);
+  }
+
+  .devices-phone {
+    display: block;
+  }
+
+  .devices-phone-action {
+    display: block;
+    padding-block-end: var(--spacing-2);
+    padding-inline: calc(36px + var(--spacing-2) * 2) var(--spacing-2);
+  }
+}

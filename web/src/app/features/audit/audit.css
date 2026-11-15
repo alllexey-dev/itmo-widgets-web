@@ -1,0 +1,4 @@
+/* A change in words: it breaks inside a long value rather than widening the row. */
+.audit-detail {
+  overflow-wrap: anywhere;
+}

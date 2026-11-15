@@ -1,0 +1,969 @@
+/* Statistics page. Layout and chart chrome only; every colour, space, radius and type size is a token. */
+
+.st-root {
+  container-type: inline-size;
+  min-width: 0;
+
+  /* Series colours are Astryx's data visualisation tokens as they are: a categorical accent per
+     series, the neutral for what is not a series of its own, and steps of the blue ramp for an
+     ordered scale (versions from the newest down, the cells of the cohort table). States use the
+     accents of the same set: green, orange and red. */
+  --st-c-blue: var(--color-data-categorical-blue);
+  --st-c-orange: var(--color-data-categorical-orange);
+  --st-c-purple: var(--color-data-categorical-purple);
+  --st-c-green: var(--color-data-categorical-green);
+  --st-c-pink: var(--color-data-categorical-pink);
+  --st-c-teal: var(--color-data-categorical-teal);
+  --st-c-neutral: var(--color-data-neutral);
+  --st-c-success: var(--color-data-categorical-green);
+  --st-c-warning: var(--color-data-categorical-orange);
+  --st-c-error: var(--color-data-categorical-red);
+  --st-c-seq4: var(--color-data-blue-4);
+  --st-c-seq3: var(--color-data-blue-3);
+  --st-c-seq2: var(--color-data-blue-2);
+}
+
+/* A mark names its colour; swatches take it as a background, SVG shapes as a fill. */
+.st-root [data-series='blue'] {
+  --st-color: var(--st-c-blue);
+}
+
+.st-root [data-series='orange'] {
+  --st-color: var(--st-c-orange);
+}
+
+.st-root [data-series='purple'] {
+  --st-color: var(--st-c-purple);
+}
+
+.st-root [data-series='green'] {
+  --st-color: var(--st-c-green);
+}
+
+.st-root [data-series='pink'] {
+  --st-color: var(--st-c-pink);
+}
+
+.st-root [data-series='neutral'] {
+  --st-color: var(--st-c-neutral);
+}
+
+.st-root [data-series='success'] {
+  --st-color: var(--st-c-success);
+}
+
+.st-root [data-series='warning'] {
+  --st-color: var(--st-c-warning);
+}
+
+.st-root [data-series='error'] {
+  --st-color: var(--st-c-error);
+}
+
+.st-root [data-series='teal'] {
+  --st-color: var(--st-c-teal);
+}
+
+.st-root [data-series='seq4'] {
+  --st-color: var(--st-c-seq4);
+}
+
+.st-root [data-series='seq3'] {
+  --st-color: var(--st-c-seq3);
+}
+
+.st-root [data-series='seq2'] {
+  --st-color: var(--st-c-seq2);
+}
+
+.st-root rect[data-series] {
+  fill: var(--st-color);
+}
+
+/* ---------------------------------------------------------------- page */
+
+/* The tab strip stays in view while a long tab scrolls under it. */
+.st-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-width: 0;
+  /* The surface of the page column, so the content scrolls out of sight under the strip. */
+  background: var(--color-background-surface);
+}
+
+/* Links to the sections of a long tab. */
+.st-jumps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1);
+}
+
+/* A section reached by a link stops below the tab strip, not under it. */
+.st-section {
+  scroll-margin-top: var(--spacing-12);
+}
+
+.st-tab-body,
+.st-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  min-width: 0;
+}
+
+.st-tab-body > .st-section + .st-section {
+  margin-top: var(--spacing-4);
+}
+
+/* The filters of a section: a control wider than a narrow screen scrolls instead of cutting its labels. */
+.st-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-3);
+  min-width: 0;
+}
+
+.st-filter {
+  max-width: 100%;
+  /* Room for the focus ring of a segment inside the scroll box. */
+  margin: calc(var(--spacing-0-5) * -1);
+  padding: var(--spacing-0-5);
+  overflow: auto hidden;
+  scrollbar-width: none;
+}
+
+.st-filter > * {
+  width: max-content;
+  max-width: none;
+}
+
+/* The segments keep their labels whole: the row scrolls instead. */
+.st-filter [role='radio'] {
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------- grids */
+
+.st-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-3);
+}
+
+/* A source that has not answered takes the whole row, whatever the number of its tiles. */
+.st-tiles-wait {
+  grid-column: 1 / -1;
+}
+
+.st-cols,
+.st-jobs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-4);
+  align-items: start;
+}
+
+.st-cols > * {
+  min-width: 0;
+}
+
+.st-stretch,
+.st-jobs {
+  align-items: stretch;
+}
+
+@container (min-width: 640px) {
+  .st-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .st-tiles[data-count='4'] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .st-jobs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 880px) {
+  .st-cols[data-cols='2'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .st-cols[data-cols='2-1'] {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+
+  .st-cols[data-cols='1-2'] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+
+  .st-cols[data-cols='3'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 1080px) {
+  .st-cols[data-cols='wide-2-1'] {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+
+  .st-tiles[data-count='6'] {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  /* Six tiles are narrow enough for a label to wrap: every label keeps two lines, so the values line up. */
+  .st-tiles[data-count='6'] .st-tile-label {
+    min-height: 2lh;
+  }
+
+  .st-jobs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* ---------------------------------------------------------------- tiles */
+
+.st-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  min-width: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* The numbers of a tile stay readable while its source loads again. */
+.st-tile[data-loading='true'] {
+  opacity: 0.55;
+  transition-delay: 0.15s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-tile {
+    transition: none;
+  }
+}
+
+.st-tile-label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-1);
+  min-width: 0;
+}
+
+.st-tile-value {
+  color: var(--color-text-primary);
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+@container (max-width: 520px) {
+  .st-tile-value {
+    font-size: var(--font-size-xl);
+  }
+}
+
+.st-tile-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-1) var(--spacing-2);
+  min-height: var(--spacing-6);
+}
+
+.st-delta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-0-5) var(--spacing-1);
+  color: var(--color-text-secondary);
+  font-size: var(--text-supporting-size);
+  line-height: var(--text-supporting-leading);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.st-delta[data-direction='up'] {
+  color: var(--color-text-success);
+}
+
+.st-delta[data-direction='down'] {
+  color: var(--color-text-error);
+}
+
+.st-delta-against {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
+}
+
+.st-spark {
+  display: block;
+  width: 100%;
+  height: var(--spacing-8);
+  /* Tiles of a row share a height: the trend sits at the bottom, the numbers line up at the top. */
+  margin-top: auto;
+  padding-top: var(--spacing-2);
+}
+
+.st-spark-area {
+  fill: var(--st-c-blue);
+  opacity: 0.1;
+}
+
+.st-spark-line {
+  fill: none;
+  stroke: var(--st-c-blue);
+  stroke-width: 1.5;
+}
+
+/* ---------------------------------------------------------------- charts */
+
+.st-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  min-width: 0;
+  margin: 0;
+  border-radius: var(--radius-inner);
+}
+
+.st-chart:focus-visible {
+  outline: 2px solid var(--color-border-emphasized);
+  outline-offset: var(--spacing-2);
+}
+
+/* Read by a screen reader, not drawn. */
+.st-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.st-plot {
+  position: relative;
+  min-width: 0;
+}
+
+/* A finger moving sideways steps through the points; moving up or down, it scrolls the page. */
+.st-plot-svg {
+  display: block;
+  overflow: visible;
+  touch-action: pan-y;
+}
+
+.st-grid line {
+  stroke: var(--color-border);
+  shape-rendering: crispEdges;
+}
+
+.st-axis-label {
+  fill: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.st-series,
+.st-bar,
+.st-col {
+  transition: opacity 0.14s ease-out;
+}
+
+.st-line {
+  fill: none;
+  stroke: var(--st-color);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.st-dot,
+.st-hover-dot {
+  fill: var(--st-color);
+  stroke: var(--color-background-card);
+  stroke-width: 2;
+}
+
+.st-bar {
+  fill: var(--st-color);
+}
+
+/* Parts of one column are told apart by a line of the surface between them. */
+.st-bars[data-stacked='true'] .st-bar {
+  stroke: var(--color-background-card);
+  stroke-width: 1;
+}
+
+/* A series the legend points away from steps back; one switched off is gone. */
+.st-series[data-dim='true'],
+.st-bar[data-dim='true'] {
+  opacity: 0.25;
+}
+
+.st-series[data-hidden='true'],
+.st-bar[data-hidden='true'] {
+  opacity: 0;
+}
+
+/* The other columns step back from the one under the pointer. */
+.st-bars[data-hovering='true'] .st-col {
+  opacity: 0.45;
+}
+
+.st-bars[data-hovering='true'] .st-col[data-active='true'] {
+  opacity: 1;
+}
+
+/* What marks the active point: it fades in, and its dots grow from nothing. */
+.st-hover {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease-out;
+}
+
+.st-hover[data-on='true'] {
+  opacity: 1;
+}
+
+.st-cross {
+  stroke: var(--color-border-emphasized);
+}
+
+.st-band {
+  fill: var(--color-text-primary);
+  fill-opacity: 0.06;
+}
+
+.st-hover-dot {
+  r: 0;
+  transition: r 0.14s ease-out;
+}
+
+.st-hover[data-on='true'] .st-hover-dot {
+  r: 4px;
+}
+
+.st-hover [data-off='true'] {
+  visibility: hidden;
+}
+
+.st-hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.st-legend,
+.st-seg-list,
+.st-later-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.st-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1) var(--spacing-2);
+}
+
+/* A legend entry is a switch for its series. */
+.st-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-0-5) var(--spacing-2);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-supporting-size);
+  line-height: var(--text-supporting-leading);
+  cursor: pointer;
+  transition:
+    opacity 0.14s ease-out,
+    background-color 0.14s ease-out;
+}
+
+.st-legend-item:hover {
+  background: var(--color-background-muted);
+}
+
+.st-legend-item:focus-visible {
+  outline: 2px solid var(--color-border-emphasized);
+  outline-offset: 1px;
+}
+
+.st-legend-item[aria-pressed='false'] {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.st-key-line,
+.st-key-box {
+  display: inline-block;
+  flex: none;
+  background: var(--st-color);
+}
+
+.st-key-line {
+  width: var(--spacing-3);
+  height: var(--spacing-0-5);
+  border-radius: var(--radius-full);
+}
+
+.st-key-box {
+  width: var(--spacing-2);
+  height: var(--spacing-2);
+  border-radius: var(--spacing-0-5);
+}
+
+/* The readout of the active point: placed and moved by the chart, never under the pointer. */
+.st-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  min-width: calc(var(--spacing-10) * 4);
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-element);
+  background: var(--color-background-popover);
+  box-shadow: var(--shadow-med);
+  color: var(--color-text-primary);
+  font-size: var(--text-supporting-size);
+  line-height: var(--text-supporting-leading);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease-out;
+}
+
+.st-tip[data-on='true'] {
+  opacity: 1;
+}
+
+.st-tip-title {
+  color: var(--color-text-secondary);
+}
+
+.st-tip-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.st-tip-label {
+  flex: 1;
+  color: var(--color-text-secondary);
+}
+
+.st-tip-value {
+  min-width: var(--spacing-10);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.st-tip-total {
+  margin-top: var(--spacing-1);
+  padding-top: var(--spacing-1);
+  border-top: 1px solid var(--color-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-series,
+  .st-bar,
+  .st-col,
+  .st-hover,
+  .st-hover-dot,
+  .st-legend-item,
+  .st-tip {
+    transition: none;
+  }
+}
+
+/* The table view of a chart: a quiet line under it. */
+.st-chart-data {
+  min-width: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ---------------------------------------------------------------- segmented bar */
+
+.st-seg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.st-seg-bar {
+  display: block;
+  width: 100%;
+  height: var(--spacing-3);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+}
+
+.st-seg-track,
+.st-meter-track {
+  fill: var(--color-track);
+}
+
+/* Neighbouring parts are separated by the surface, not by a border. */
+.st-seg-gap {
+  fill: var(--color-background-card);
+}
+
+.st-seg-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1-5);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-leading);
+}
+
+.st-seg-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(calc(var(--spacing-10) * 1.4), auto);
+  align-items: baseline;
+  gap: var(--spacing-2);
+}
+
+.st-seg-list .st-key-box {
+  align-self: center;
+}
+
+.st-seg-share {
+  color: var(--color-text-secondary);
+}
+
+.st-seg-value,
+.st-seg-share {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.st-seg-value {
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ---------------------------------------------------------------- tables */
+
+/* The Table's scroll region reaches out by the padding of the card around it, on every side. The
+   wrapper gives the vertical part back, so the table keeps its distance from what is above it: a
+   hint, the toggle of a folded table. */
+.st-table {
+  position: relative;
+  min-width: 0;
+  padding-block: var(--spacing-5);
+}
+
+/* More columns to the right: a mark on the edge of the card, over the middle of the table. */
+.st-table-more {
+  position: absolute;
+  top: 50%;
+  right: calc(var(--spacing-5) * -1 + var(--spacing-1));
+  display: inline-flex;
+  padding: var(--spacing-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-background-popover);
+  box-shadow: var(--shadow-med);
+  color: var(--color-text-secondary);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+/* The number comes first: when a table is wider than its card, the bar is cut, never the figure. */
+.st-barcell {
+  display: grid;
+  grid-template-columns: minmax(calc(var(--spacing-10) * 1.4), auto) minmax(var(--spacing-8), 1fr);
+  align-items: center;
+  gap: var(--spacing-3);
+  width: 100%;
+}
+
+.st-barcell > :first-child {
+  text-align: end;
+}
+
+.st-meter {
+  display: block;
+  width: 100%;
+  height: var(--spacing-1-5);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+}
+
+/* A cell of the cohort table: the fill grows with the share, the number stays readable. */
+.st-cohort {
+  display: block;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-inner);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* The steps of Astryx's blue ramp, lightest to darkest, each with the text that reads on it. */
+.st-cohort[data-heat='1'] {
+  background: var(--color-data-blue-1);
+  color: var(--color-data-blue-5);
+}
+
+.st-cohort[data-heat='2'] {
+  background: var(--color-data-blue-2);
+  color: var(--color-data-blue-5);
+}
+
+.st-cohort[data-heat='3'] {
+  background: var(--color-data-blue-3);
+  color: var(--color-data-blue-5);
+}
+
+.st-cohort[data-heat='4'] {
+  background: var(--color-data-blue-4);
+  color: var(--color-data-blue-1);
+}
+
+.st-cohort[data-heat='5'] {
+  background: var(--color-data-blue-5);
+  color: var(--color-data-blue-1);
+}
+
+.st-cohort-empty {
+  display: block;
+  color: var(--color-text-disabled);
+  text-align: center;
+}
+
+.st-spark-cell {
+  display: block;
+  width: 100%;
+  max-width: calc(var(--spacing-10) * 3);
+}
+
+.st-spark-cell .st-spark {
+  height: var(--spacing-6);
+  padding-top: 0;
+}
+
+/* ---------------------------------------------------------------- rows */
+
+.st-rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.st-rows > li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  padding-block: var(--spacing-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.st-rows > li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.st-rows > li:last-child {
+  padding-bottom: 0;
+}
+
+/* A row drawn from its own source: the loaded content fills the row. */
+.st-rows > li > .loadable {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.st-row-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-0-5);
+  min-width: 0;
+}
+
+.st-row-end {
+  flex: none;
+  align-self: center;
+}
+
+.st-row-icon {
+  display: inline-flex;
+  flex: none;
+  margin-top: var(--spacing-0-5);
+}
+
+.st-row-icon[data-tone='error'] {
+  color: var(--color-icon-error);
+}
+
+.st-row-icon[data-tone='warning'] {
+  color: var(--color-icon-warning);
+}
+
+.st-row-icon[data-tone='accent'] {
+  color: var(--color-icon-info);
+}
+
+.st-row-icon[data-tone='success'] {
+  color: var(--color-icon-success);
+}
+
+.st-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.st-kv {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-1) var(--spacing-3);
+}
+
+.st-facts {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-leading);
+}
+
+.st-facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-1) var(--spacing-3);
+  padding-block: var(--spacing-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.st-facts > div:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.st-facts > div:last-child {
+  padding-bottom: 0;
+}
+
+.st-facts dt {
+  color: var(--color-text-secondary);
+}
+
+.st-facts dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.st-note {
+  padding: var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-container);
+  background: var(--color-background-muted);
+}
+
+.st-funnel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.st-funnel li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.st-funnel .st-meter {
+  height: var(--spacing-2);
+}
+
+/* ---------------------------------------------------------------- examples */
+
+/* A block on invented values: a dashed outline and no card surface tell it from a real one at a
+   glance, before the mark is read. */
+.st-example {
+  border: 1px dashed var(--color-border-emphasized);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* The mark sits at the end of the title row of its block and never shrinks. */
+.st-example-mark {
+  display: inline-flex;
+  flex: none;
+  margin-inline-start: auto;
+}
+
+/* In a narrow tile the mark moves under the label instead of being cut. */
+.st-example .st-tile-label {
+  flex-wrap: wrap;
+}
+
+/* A row whose examples are all off takes no room. */
+.st-cols:empty {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- what comes later */
+
+/* Planned metrics are names only, behind a dashed outline: never mistaken for data. */
+.st-later {
+  padding: var(--spacing-1) var(--spacing-4);
+  border: 1px dashed var(--color-border-emphasized);
+  border-radius: var(--radius-container);
+}
+
+.st-later-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(var(--spacing-10) * 7)), 1fr));
+  gap: var(--spacing-1) var(--spacing-6);
+  padding-bottom: var(--spacing-3);
+  color: var(--color-text-secondary);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-leading);
+}
+
+/* On a narrow screen the action of a row with a leading icon moves under its text. */
+@container (max-width: 520px) {
+  .st-rows-lead > li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .st-rows-lead .st-row-end {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

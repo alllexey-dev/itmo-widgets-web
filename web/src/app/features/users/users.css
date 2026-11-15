@@ -1,0 +1,64 @@
+/* The search takes the row on a phone and stops growing on a wide screen. */
+.users-search {
+  flex: 1 1 280px;
+  max-width: 440px;
+}
+
+/* A click anywhere in a row opens the user (UsersPage.tsx). */
+.users-table tbody tr {
+  cursor: pointer;
+}
+
+.users-chevron {
+  color: var(--color-text-secondary);
+}
+
+.users-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: var(--spacing-5);
+  margin: 0;
+}
+
+.users-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  min-width: 0;
+}
+
+.users-stat dt,
+.users-stat-note {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.users-stat dd {
+  margin: 0;
+}
+
+.users-stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+/* A phone keeps the figures two in a row instead of a tall column. */
+@media (max-width: 640px) {
+  .users-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-4);
+  }
+
+  .users-stat-value {
+    font-size: var(--font-size-xl);
+  }
+}
+
+.users-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: var(--spacing-6);
+  align-items: start;
+}
