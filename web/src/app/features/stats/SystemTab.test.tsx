@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -10,8 +10,9 @@ import {
 } from '../../test/admin';
 import { renderApp } from '../../test/render';
 import { mockSession, userOf } from '../../test/server';
-import { mockStats, sportRunOf, verificationOf } from '../../test/stats';
+import { mockStats, serverStatsOf, sportRunOf, verificationOf } from '../../test/stats';
 import type * as Metrics from './metrics';
+import { daysBefore, moscowToday } from './period';
 
 // The examples of metrics without data are off here: these tests are about the real blocks, which
 // are the same with examples on (Examples.test.tsx).
@@ -127,5 +128,123 @@ describe('Statistics system', () => {
     await userEvent.click(within(sync).getByRole('button', { name: 'Повторить' }));
 
     expect(await within(sync).findByText('Без изменений')).toBeInTheDocument();
+  });
+
+  it('shows what became of the pushes: sent, not delivered', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard?tab=system');
+
+    const push = await screen.findByRole('region', { name: 'Доставка уведомлений' });
+    expect(await within(push).findByText('Отправлено')).toBeInTheDocument();
+    expect(within(push).getByText('Отправлено').closest('li')).toHaveTextContent(/1\s500/);
+    expect(within(push).getByText('Ошибка отправки').closest('li')).toHaveTextContent('30');
+    expect(within(push).getByText('Устройство удалено из FCM').closest('li')).toHaveTextContent(
+      '30',
+    );
+    expect(push).toHaveTextContent(/Пользователей без устройства\s*8/);
+    expect(push).toHaveTextContent('FCM не сообщает о доставке');
+    expect(within(push).queryByText('Доставлено')).not.toBeInTheDocument();
+  });
+
+  it('shows the score sheets by state, why they failed and the budget of the day', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard?tab=system');
+
+    const sheets = await screen.findByRole('region', { name: 'Разбор таблиц с баллами' });
+    expect(await within(sheets).findByText('Разбор включён')).toBeInTheDocument();
+    expect(within(sheets).getByText('Разобраны').closest('li')).toHaveTextContent('184');
+    expect(within(sheets).getByText('Не удалось разобрать').closest('li')).toHaveTextContent('9');
+    expect(sheets).toHaveTextContent(/Таблица закрыта\s*6/);
+    // A reason code the page does not know is shown as sent.
+    expect(sheets).toHaveTextContent(/quota\s*3/);
+    expect(sheets).toHaveTextContent(/Разборов сегодня\s*5 из 40/);
+  });
+
+  it('draws the load, the errors and the routes of the period', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard?tab=system');
+
+    const requests = await screen.findByRole('region', { name: 'Нагрузка: запросы к Бэкенду' });
+    expect(
+      await within(requests).findByRole('figure', {
+        name: /^Запросы к Бэкенду по дням, всего 30\s000$/,
+      }),
+    ).toBeInTheDocument();
+    const errors = screen.getByRole('region', { name: 'Доля ошибок сервера' });
+    const chart = within(errors).getByRole('figure', { name: 'Доля ошибок сервера по дням' });
+    chart.focus();
+    await userEvent.keyboard('{End}');
+    expect(within(chart).getByRole('status')).toHaveTextContent('0,4 %');
+    const upstream = screen.getByRole('region', { name: 'Сбои My ITMO' });
+    expect(within(upstream).getByText('Авторизация').closest('li')).toHaveTextContent('40');
+    expect(
+      within(screen.getByRole('region', { name: 'Время ответа' })).getByRole('figure', {
+        name: 'Время ответа по дням',
+      }),
+    ).toBeInTheDocument();
+    const routes = screen.getByRole('table', { name: 'Запросы по разделам API' });
+    const rows = within(routes).getAllByRole('row');
+    expect(rows[1]).toHaveTextContent(/Спорт.*\/api\/sport.*18\s000.*60 %.*0,5 %.*400 мс/);
+    // A group the page does not know is shown as sent.
+    expect(rows[3]).toHaveTextContent(/beacons.*\/api\/beacons.*—/);
+  });
+
+  it('leaves out the days before the counters started', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats({ server: serverStatsOf({ collectedSince: '2026-09-21' }) });
+
+    renderApp('/admin/dashboard?tab=system');
+
+    const requests = await screen.findByRole('region', { name: 'Нагрузка: запросы к Бэкенду' });
+    expect(
+      await within(requests).findByRole('figure', {
+        name: /^Запросы к Бэкенду по дням, всего 10\s000$/,
+      }),
+    ).toBeInTheDocument();
+    expect(requests).toHaveTextContent('Счётчики работают с 21 сент.');
+  });
+
+  it('says so instead of a flat line before any counter was written', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats({ server: serverStatsOf({ collectedSince: null }) });
+
+    renderApp('/admin/dashboard?tab=system');
+
+    const load = await screen.findByRole('region', { name: 'Нагрузка и ошибки' });
+    expect(await within(load).findAllByText('Счётчики ещё не начали считать')).toHaveLength(5);
+    expect(within(load).queryByRole('figure')).not.toBeInTheDocument();
+    const push = screen.getByRole('region', { name: 'Доставка уведомлений' });
+    expect(within(push).getByText('Счётчики ещё не начали считать')).toBeInTheDocument();
+  });
+
+  it('asks Backend for the chosen period', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requested = mockStats();
+
+    renderApp('/admin/dashboard?tab=system&period=7');
+
+    await job('Каталог спорта');
+    await waitFor(() =>
+      expect(requested).toContain(`/api/admin/stats/server?from=${daysBefore(moscowToday(), 6)}`),
+    );
+  });
+
+  it('keeps the pushes and the jobs when the sheet rules fail', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats({ sheetRules: null });
+
+    renderApp('/admin/dashboard?tab=system');
+
+    const sheets = await screen.findByRole('region', { name: 'Разбор таблиц с баллами' });
+    expect(await within(sheets).findByText('Не удалось загрузить')).toBeInTheDocument();
+    const push = screen.getByRole('region', { name: 'Доставка уведомлений' });
+    expect(await within(push).findByText('Отправлено')).toBeInTheDocument();
+    expect(await job('Каталог спорта')).toHaveTextContent('Работает');
   });
 });

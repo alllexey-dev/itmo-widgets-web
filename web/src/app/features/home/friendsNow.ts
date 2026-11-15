@@ -1,6 +1,5 @@
-import type { FriendDay } from './api';
 import { clock, moscowClock, nameOf } from './labels';
-import type { Lesson } from './types';
+import type { FriendDay, Lesson } from './types';
 
 export interface FriendNow {
   isu: number;
@@ -32,12 +31,8 @@ function place(lesson: Lesson): string {
 export function friendsNow(days: readonly FriendDay[], now: Date): FriendNow[] {
   const time = moscowClock(now);
   return days
-    .flatMap(({ friend, lessons }): FriendNow[] => {
-      const base = {
-        isu: friend.user.isu,
-        name: nameOf(friend.user),
-        pictureUrl: friend.user.pictureUrl,
-      };
+    .flatMap(({ user, lessons }): FriendNow[] => {
+      const base = { isu: user.isu, name: nameOf(user), pictureUrl: user.pictureUrl };
       const sorted = [...lessons].sort((a, b) => a.start.localeCompare(b.start));
       const current = sorted.find((item) => clock(item.start) <= time && time < clock(item.end));
       if (current) {

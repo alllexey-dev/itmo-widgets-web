@@ -17,6 +17,7 @@ import { CaseDetail } from './CaseDetail';
 import { CaseList } from './CaseList';
 import { REASONS } from './labels';
 import './moderation.css';
+import { useRevert, type RevertRequest } from './revert';
 import { releasePointerFocus, useShortcuts } from './shortcuts';
 import type { AdminCaseItem, AdminPage, CaseReason, CaseStatus, ModerationCase } from './types';
 import { useWide } from './useWide';
@@ -167,6 +168,28 @@ function Queue({ status, reason, page, requestedId, wide, onSelect, onPage }: Qu
     if (now.current.selectedId === id) select(id);
   }
 
+  // An undo from a toast lands after the case has gone; this queue may be gone by then too.
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+  const revert = useRevert();
+
+  /**
+   * Takes a decision back and opens its case again, back in its place. Only if the moderator has
+   * not moved on since the click: a key meant for the case on screen must not land on another one.
+   */
+  function undo(request: RevertRequest) {
+    if (revert.pendingId) return;
+    const from = now.current.selectedId;
+    void revert.run(request).then((updated) => {
+      if (updated && alive.current && now.current.selectedId === from) select(updated.id);
+    });
+  }
+
   const empty = cases.data !== undefined && items.length === 0;
   // The last case of a later page was decided: the queue continues on the page before it.
   const pageRanOut = empty && page > 0 && cases.data?.page === page && !cases.loading;
@@ -241,6 +264,9 @@ function Queue({ status, reason, page, requestedId, wide, onSelect, onPage }: Qu
                 onDecided={decided}
                 onRefused={() => refused(selectedId)}
                 hasKeys={wide}
+                row={items.find((item) => item.id === selectedId)}
+                onUndo={undo}
+                revertingId={revert.pendingId}
               />
             ) : (
               <EmptyState icon={<Gavel size={32} />} title="Выберите заявку" headingLevel={2} />

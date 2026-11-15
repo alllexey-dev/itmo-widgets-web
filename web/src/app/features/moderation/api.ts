@@ -16,11 +16,18 @@ export function decide(caseId: string, request: DecisionRequest): Promise<Modera
   return api.post<ModerationCase>(`${casePath(caseId)}/decisions`, request);
 }
 
+/** Takes a decision back within its window (`ModerationDecision.revertibleUntil`). */
+export function revertDecision(caseId: string, decisionId: string): Promise<ModerationCase> {
+  return api.post<ModerationCase>(
+    `${casePath(caseId)}/decisions/${encodeURIComponent(decisionId)}/revert`,
+  );
+}
+
 export function revokeRestriction(id: string): Promise<null> {
   return api.post<null>(`${RESTRICTIONS_PATH}/${encodeURIComponent(id)}/revoke`);
 }
 
-/** A decision changes the queue, the case, the restrictions and the audit log. */
+/** A decision and its revert change the queue, the case, the restrictions and the audit log. */
 export const DECISION_FORGETS = [MODERATION, '/api/admin/audit'] as const;
 
 /** Revoking also changes user cards, which list restrictions too. */

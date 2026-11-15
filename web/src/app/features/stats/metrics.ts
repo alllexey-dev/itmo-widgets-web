@@ -1,9 +1,9 @@
 // The registry of every metric of the statistics page: its name, its tab and where its data comes
-// from. A metric with `source: 'api'` is drawn from an admin endpoint that exists today. The others
-// have no data yet: `needs` says what Backend has to provide (`docs/features/stats.md`, Waiting for
-// Backend), and the page either draws them as marked examples or only lists their names
-// (`SHOW_EXAMPLES`). When Backend starts to answer a metric, its `source` becomes `api` here: the
-// example leaves the page by itself, and the real block takes its place in the tab.
+// from. A metric with `source: 'api'` is drawn from an admin endpoint that exists today; today every
+// metric is. A metric added before Backend can answer it gets another source and `needs` saying what
+// Backend has to provide, and the page either draws it as a marked example or only lists its name
+// (`SHOW_EXAMPLES`). When Backend starts to answer it, its `source` becomes `api` here: the example
+// leaves the page by itself, and the real block takes its place in the tab.
 import type { TabId } from './types';
 
 /**
@@ -30,8 +30,6 @@ export interface MetricDef {
   needs: string;
   /** The overview shows the metric too. */
   overview?: boolean;
-  /** Needs personal data Backend does not keep today: a decision for the owner, not a task. */
-  personal?: boolean;
 }
 
 export const METRICS = {
@@ -97,40 +95,37 @@ export const METRICS = {
       'GET /api/admin/dashboard: totals.activeDevices7d, activeDevices30d, devicesByPlatform, days[].activeDevices; GET /api/admin/system/client-versions: last30d.unknownDevices',
   },
   users_growth: {
-    name: 'Рост числа пользователей за всё время',
+    name: 'Рост числа пользователей',
     tab: 'audience',
-    source: 'endpoint',
+    source: 'api',
     needs:
-      'users.created_at: registrations per day beyond the 30 days of the dashboard, with the running total',
+      'GET /api/admin/stats/audience: usersBefore, days[].newUsers (folded into months over 90 days)',
   },
   active_people: {
-    name: 'Активные пользователи (люди, а не установки)',
+    name: 'Активные люди',
     tab: 'audience',
-    source: 'endpoint',
-    needs:
-      'client_instances: distinct user_id seen in 1, 7 and 30 days; for a history, one more count per day in client_daily (a total, no ids)',
+    source: 'api',
+    needs: 'GET /api/admin/stats/audience: activePeople, peopleHistory (90 nightly counts)',
   },
   retention: {
     name: 'Удержание: кто остался через N недель',
     tab: 'audience',
-    source: 'endpoint',
-    needs:
-      'users.created_at and the latest client_instances.last_seen_at per user: the share of a registration week still seen N weeks later or after',
+    source: 'api',
+    needs: 'GET /api/admin/stats/audience over the latest 26 registration weeks: retention[]',
     overview: true,
   },
   retention_classic: {
     name: 'Удержание по каждой неделе',
     tab: 'audience',
-    source: 'collect',
+    source: 'api',
     needs:
-      'per-user activity by day or week: only last_seen_at is kept today, so who came in a given past week cannot be rebuilt',
-    personal: true,
+      'GET /api/admin/stats/audience over the latest 26 registration weeks: retentionClassic[] (user_active_weeks)',
   },
   faculties: {
     name: 'Пользователи по факультетам и курсам',
     tab: 'audience',
-    source: 'endpoint',
-    needs: 'user_groups with faculties and courses: users per faculty and per course',
+    source: 'api',
+    needs: 'GET /api/admin/stats/audience: faculties[], courses[]',
   },
 
   // Features
@@ -169,48 +164,45 @@ export const METRICS = {
   feature_usage: {
     name: 'Использование функций',
     tab: 'features',
-    source: 'endpoint',
-    needs:
-      'created_at of friendships, teacher_reviews, subject_links, sport entries: events and distinct users per feature and period',
+    source: 'api',
+    needs: 'GET /api/admin/stats/features: features[] (events and distinct users), users',
     overview: true,
   },
   social_users: {
     name: 'Пользователи социальных функций',
     tab: 'features',
-    source: 'endpoint',
-    needs:
-      'distinct user_id over friendships, teacher_reviews, subject_links and sport entries for a period',
+    source: 'api',
+    needs: 'GET /api/admin/stats/features: socialUsers',
   },
   friends_flow: {
     name: 'Заявки в друзья и принятые',
     tab: 'features',
-    source: 'endpoint',
-    needs: 'friendships.created_at, responded_at, status: requests and accepts per day',
+    source: 'api',
+    needs: 'GET /api/admin/stats/features: days[].friendRequests, friendAccepts',
   },
   friends_reach: {
     name: 'Доля пользователей с друзьями',
     tab: 'features',
-    source: 'endpoint',
-    needs: 'friendships (ACCEPTED): users with at least one friend',
+    source: 'api',
+    needs: 'GET /api/admin/stats/features: usersWithFriends / users',
   },
   connections_new: {
     name: 'Новые подключения по дням',
     tab: 'features',
-    source: 'endpoint',
-    needs: 'connections.created_at, client, revoked_at: created and revoked per day and client',
+    source: 'api',
+    needs: 'GET /api/admin/stats/features: days[].connectionsCreated, connectionsRevoked',
   },
   pairing: {
     name: 'Воронка сопряжения',
     tab: 'features',
-    source: 'endpoint',
-    needs:
-      'pair_challenges.status, opened_at, approved_at: created, opened, approved, claimed; challenges are short-lived, so the counts may need a daily counter',
+    source: 'api',
+    needs: 'GET /api/admin/stats/features: pairing[] (CONNECT pairings by client)',
   },
   privacy: {
     name: 'Настройки приватности',
     tab: 'features',
-    source: 'endpoint',
-    needs: 'user_settings: users per value of schedule, sport and friends visibility',
+    source: 'api',
+    needs: 'GET /api/admin/stats/features: privacy',
   },
 
   // Sport
@@ -232,58 +224,57 @@ export const METRICS = {
   auto_sign_created: {
     name: 'Новые заявки на автозапись',
     tab: 'sport',
-    source: 'endpoint',
-    needs: 'sport_auto_sign_entries.created_at: entries per day',
+    source: 'api',
+    needs: 'GET /api/admin/stats/sport: days[].autoSign.created',
   },
   auto_sign_outcomes: {
     name: 'Чем заканчивается автозапись',
     tab: 'sport',
-    source: 'endpoint',
-    needs: 'sport_auto_sign_entries.status, satisfied_at, expired_at, cancelled_at',
+    source: 'api',
+    needs: 'GET /api/admin/stats/sport: autoSign.outcomes',
     overview: true,
   },
   auto_sign_latency: {
     name: 'Скорость автозаписи',
     tab: 'sport',
-    source: 'endpoint',
-    needs: 'sport_auto_sign_entries: satisfied_at - first_notified_at',
+    source: 'api',
+    needs: 'GET /api/admin/stats/sport: autoSign.medianSeconds, p90Seconds, timed',
   },
   queue_created: {
     name: 'Вступления в очереди',
     tab: 'sport',
-    source: 'endpoint',
-    needs: 'sport_free_sign_entries.created_at: entries per day',
+    source: 'api',
+    needs: 'GET /api/admin/stats/sport: days[].freeSign.created',
   },
   queue_outcomes: {
     name: 'Чем заканчиваются очереди',
     tab: 'sport',
-    source: 'endpoint',
-    needs: 'sport_free_sign_entries.status, satisfied_at, expired_at',
+    source: 'api',
+    needs: 'GET /api/admin/stats/sport: freeSign.outcomes',
   },
   queue_wait: {
     name: 'Ожидание в очереди',
     tab: 'sport',
-    source: 'endpoint',
-    needs: 'sport_free_sign_entries: satisfied_at - created_at',
+    source: 'api',
+    needs: 'GET /api/admin/stats/sport: freeSign.medianSeconds, p90Seconds, timed',
   },
   sport_subscriptions: {
     name: 'Подписки на секции',
     tab: 'sport',
-    source: 'endpoint',
-    needs: 'sport_section_subscriptions.status, stop_reason',
+    source: 'api',
+    needs: 'GET /api/admin/stats/sport: subscriptions',
   },
   sport_sections: {
     name: 'Популярные секции',
     tab: 'sport',
-    source: 'endpoint',
-    needs:
-      'sport_auto_sign_entries.target_section_name and sport_free_sign_entries with sport_lessons: entries, successes and waits per section',
+    source: 'api',
+    needs: 'GET /api/admin/stats/sport: sections[]',
   },
   sport_slots: {
     name: 'Когда хотят заниматься',
     tab: 'sport',
-    source: 'endpoint',
-    needs: 'sport_auto_sign_entries.target_starts_at: entries per weekday and time',
+    source: 'api',
+    needs: 'GET /api/admin/stats/sport: slots[]',
   },
 
   // Reviews and moderation
@@ -328,33 +319,32 @@ export const METRICS = {
   reviews_created: {
     name: 'Новые отзывы',
     tab: 'reviews',
-    source: 'endpoint',
-    needs: 'teacher_reviews.created_at: own reviews per day, and their total',
+    source: 'api',
+    needs: 'GET /api/admin/stats/moderation: days[].newReviews, ownReviews',
   },
   review_votes: {
     name: 'Голоса за отзывы и ссылки',
     tab: 'reviews',
-    source: 'endpoint',
-    needs: 'teacher_review_votes.created_at, subject_link_votes.created_at',
+    source: 'api',
+    needs: 'GET /api/admin/stats/moderation: days[].reviewVotes, externalReviewVotes, linkVotes',
   },
   cases_flow: {
     name: 'Открытые и решённые заявки по дням',
     tab: 'reviews',
-    source: 'endpoint',
-    needs:
-      'moderation_cases.opened_at, resolved_at, reason, target_type: opened, resolved and the backlog per day',
+    source: 'api',
+    needs: 'GET /api/admin/stats/moderation: days[].casesOpened, casesResolved, backlog',
   },
   decisions: {
     name: 'Чем заканчивается публикация',
     tab: 'reviews',
-    source: 'endpoint',
-    needs: 'moderation_decisions.action, actor (POLICY or MODERATOR)',
+    source: 'api',
+    needs: 'GET /api/admin/stats/moderation: decisions[] by action and actor',
   },
   reports: {
     name: 'Жалобы',
     tab: 'reviews',
-    source: 'endpoint',
-    needs: 'moderation_reports.created_at, reason, dismissed_at',
+    source: 'api',
+    needs: 'GET /api/admin/stats/moderation: reports[] (total, dismissed)',
   },
 
   // System
@@ -376,46 +366,46 @@ export const METRICS = {
   requests: {
     name: 'Нагрузка: запросы к Бэкенду',
     tab: 'system',
-    source: 'collect',
-    needs: 'a request counter on Backend (Micrometer or a table of daily totals)',
+    source: 'api',
+    needs: 'GET /api/admin/stats/server: days[].requests (from collectedSince)',
   },
   error_rate: {
     name: 'Доля ошибок сервера',
     tab: 'system',
-    source: 'collect',
-    needs: 'a counter of 5xx answers next to the request counter',
+    source: 'api',
+    needs: 'GET /api/admin/stats/server: days[].errors5xx / requests',
     overview: true,
   },
   latency: {
     name: 'Время ответа',
     tab: 'system',
-    source: 'collect',
-    needs: 'response time histograms (median and p95 per day)',
+    source: 'api',
+    needs: 'GET /api/admin/stats/server: days[].p50Millis, p95Millis',
   },
   routes: {
     name: 'Запросы по разделам API',
     tab: 'system',
-    source: 'collect',
-    needs: 'the same counters split by route group',
+    source: 'api',
+    needs: 'GET /api/admin/stats/server: routes[]',
   },
   upstream: {
     name: 'Сбои My ITMO',
     tab: 'system',
-    source: 'collect',
-    needs: 'failures of MyItmoApiGateway by MyItmoFailureKind: today they only reach the log',
+    source: 'api',
+    needs: 'GET /api/admin/stats/server: days[].myItmoFailures / myItmoCalls, myItmo[].failures',
     overview: true,
   },
   push: {
     name: 'Доставка уведомлений',
     tab: 'system',
-    source: 'collect',
-    needs: 'the FCM send result per notification kind: it is not stored',
+    source: 'api',
+    needs: 'GET /api/admin/stats/server: push[], days[].push* (sent by FCM, not delivered)',
   },
   sheet_rules: {
     name: 'Разбор таблиц с баллами',
     tab: 'system',
-    source: 'endpoint',
-    needs: 'sheet_rules.status, attempts, analyzed_at',
+    source: 'api',
+    needs: 'GET /api/admin/system/sheet-rules',
   },
 } satisfies Record<string, MetricDef>;
 

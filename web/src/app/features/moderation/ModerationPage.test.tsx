@@ -1,8 +1,9 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  decisionOf,
   linkTarget,
   minutesAgo,
   mockModeration,
@@ -14,7 +15,7 @@ import {
 import { findToast, renderApp } from '../../test/render';
 import { mockScreenWidth } from '../../test/screen';
 import { fail, mockSession, server, userOf } from '../../test/server';
-import type { SubjectLinkTarget } from './types';
+import type { ModerationCase, SubjectLinkTarget } from './types';
 
 const first = moderationCase({ id: 'case-1', title: 'Баллы по матанализу' });
 const second = moderationCase({
@@ -224,15 +225,11 @@ describe('ModerationPage', () => {
         { id: 'case-1', title: 'Чат потока', reason: 'REPORTS' },
         {
           decisions: [
-            {
-              id: 'd1',
+            decisionOf('d1', 'APPROVE', {
               moderatorId: null,
-              action: 'APPROVE',
-              note: null,
-              restriction: null,
               createdAt: minutesAgo(600),
               actor: 'POLICY',
-            },
+            }),
           ],
         },
         target,
@@ -534,16 +531,16 @@ describe('ModerationPage', () => {
 
   describe('teacher reviews', () => {
     const review = reviewCase({ id: 'review-1' });
-    const reviewTitle = 'ИСУ 123456 · Сергей Кузнецов';
+    const reviewTitle = 'Сергей Кузнецов';
 
-    it('lists a review with the teacher ISU, the subject and the start of the text', async () => {
+    it('lists a review with the teacher, the subject and the start of the text', async () => {
       mockSession(userOf(['MODERATOR']));
       mockModeration([review]);
 
       renderApp('/admin/moderation');
 
       const row = within(await queue()).getByRole('button');
-      expect(row).toHaveTextContent('Отзыв · ИСУ 123456');
+      expect(row).toHaveTextContent('Отзыв · Сергей Кузнецов');
       expect(row).toHaveTextContent('Математический анализ · Объясняет понятно, на консультациях');
     });
 
@@ -557,12 +554,32 @@ describe('ModerationPage', () => {
       const preview = within(detail()).getByRole('region', { name: 'Отзыв' });
       expect(preview).toHaveTextContent('Анонимно');
       expect(preview).toHaveTextContent('Сверка с ИСУ идёт');
-      expect(detail()).toHaveTextContent('Отзыв о преподавателе · Математический анализ');
+      expect(detail()).toHaveTextContent(
+        'Отзыв о преподавателе · ИСУ 123456 · Математический анализ',
+      );
       expect(preview).toHaveTextContent(REVIEW_TEXT);
       const author = within(detail()).getByRole('region', { name: 'Автор' });
       expect(author).toHaveTextContent('Иван Петров');
       expect(author).toHaveTextContent('ИСУ 311111');
       expect(within(author).queryByRole('link', { name: 'Профиль' })).not.toBeInTheDocument();
+    });
+
+    it('says when a review counts because the teacher has a sport lesson', async () => {
+      moderatorOnWideScreen();
+      const target = reviewTarget({ id: 'review-1' });
+      target.review = {
+        ...target.review,
+        verification: 'VERIFIED',
+        verifiedBasis: 'SPORT_TEACHER',
+      };
+      mockModeration([reviewCase({ id: 'review-1' }, {}, target)]);
+
+      renderApp('/admin/moderation');
+
+      await openedCase(reviewTitle);
+      const preview = within(detail()).getByRole('region', { name: 'Отзыв' });
+      expect(preview).toHaveTextContent('Ведёт физкультуру');
+      expect(preview).not.toHaveTextContent('Преподавал у автора');
     });
 
     it('names the teacher by ISU when My ITMO does not know the name', async () => {
@@ -571,7 +588,9 @@ describe('ModerationPage', () => {
 
       renderApp('/admin/moderation');
 
-      expect(await openedCase('ИСУ 123456 · имя не найдено')).toBeInTheDocument();
+      expect(await openedCase('ИСУ 123456')).toBeInTheDocument();
+      expect(detail()).toHaveTextContent('Отзыв о преподавателе · имя не найдено');
+      expect(rows()[0]).toHaveTextContent('Отзыв · ИСУ 123456');
     });
 
     it('shows the edited words and subject against the approved version', async () => {
@@ -1124,6 +1143,8 @@ describe('ModerationPage', () => {
       const [item] = within(screen.getByRole('list', { name: 'Заявки' })).getAllByRole('listitem');
       expect(item).toHaveTextContent('Отклонена');
       expect(detail()).toHaveTextContent('модератор скрыл всё у автора по другой заявке');
+      const withdrawer = within(detail()).getByRole('link', { name: 'по другой заявке' });
+      expect(withdrawer).toHaveAttribute('href', '/app/admin/moderation?case=case-1');
       // The tab says what it holds before a case is opened, and a closed case has a final log.
       expect(screen.getByText(/Закрыты без решения модератора по ним/)).toBeInTheDocument();
       expect(within(detail()).getByRole('region', { name: 'Решения' })).toHaveTextContent(
@@ -1132,19 +1153,36 @@ describe('ModerationPage', () => {
       expect(screen.queryByRole('group', { name: 'Действия' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Ограничить' })).not.toBeInTheDocument();
       expect(screen.getByText('Сначала отозванные недавно')).toBeInTheDocument();
+
+      await userEvent.click(withdrawer);
+      expect(await openedCase('Математический анализ')).toBeInTheDocument();
+      expect(location.search).toBe('?case=case-1');
     });
 
-    it('puts a mark on every row, also where the data has no state', async () => {
+    it('puts a mark on every row: a review by its revision, a deleted target without one', async () => {
       moderatorOnWideScreen();
       const review = reviewTarget({ id: 'gone-review' });
       review.revision.status = 'WITHDRAWN';
-      mockModeration([reviewCase({ id: 'gone-review' }, { status: 'WITHDRAWN' }, review)]);
+      mockModeration([
+        reviewCase(
+          { id: 'gone-review' },
+          { status: 'WITHDRAWN', openedAt: minutesAgo(10) },
+          review,
+        ),
+        reviewCase(
+          { id: 'deleted-review' },
+          { status: 'WITHDRAWN', openedAt: minutesAgo(20) },
+          null,
+        ),
+      ]);
 
       renderApp('/admin/moderation?status=WITHDRAWN');
 
-      await openedCase('ИСУ 123456 · Сергей Кузнецов');
-      // The list item of a review carries no revision, so it cannot say more.
-      expect(rows()[0]).toHaveTextContent('Без решения');
+      await openedCase('Сергей Кузнецов');
+      await waitFor(() => expect(rows()).toHaveLength(2));
+      expect(rows()[0]).toHaveTextContent('Отозван');
+      // A deleted target leaves the row nothing to tell but that the case closed by itself.
+      expect(rows()[1]).toHaveTextContent('Без решения');
     });
 
     it('says when the author withdrew the version, and when there are none', async () => {
@@ -1181,7 +1219,7 @@ describe('ModerationPage', () => {
 
     await userEvent.keyboard('j');
 
-    await openedCase('ИСУ 123456 · Сергей Кузнецов');
+    await openedCase('Сергей Кузнецов');
     expect(author()).toHaveTextContent('Отзывов одобрено');
     expect(author()).not.toHaveTextContent('Ссылок одобрено');
   });
@@ -1193,17 +1231,7 @@ describe('ModerationPage', () => {
         { id: 'done-1', title: 'Одобренная' },
         {
           status: 'RESOLVED',
-          decisions: [
-            {
-              id: 'd-approve',
-              moderatorId: 'moderator',
-              action: 'APPROVE',
-              note: null,
-              restriction: null,
-              createdAt: minutesAgo(90),
-              actor: 'MODERATOR',
-            },
-          ],
+          decisions: [decisionOf('d-approve', 'APPROVE', { createdAt: minutesAgo(90) })],
         },
         target,
       );
@@ -1217,15 +1245,7 @@ describe('ModerationPage', () => {
         {
           status: 'RESOLVED',
           decisions: [
-            {
-              id: 'd-reject',
-              moderatorId: 'moderator',
-              action: 'REJECT',
-              note: 'Спам',
-              restriction: null,
-              createdAt: minutesAgo(10),
-              actor: 'MODERATOR',
-            },
+            decisionOf('d-reject', 'REJECT', { note: 'Спам', createdAt: minutesAgo(10) }),
           ],
         },
         target,
@@ -1245,7 +1265,52 @@ describe('ModerationPage', () => {
       const items = within(screen.getByRole('list', { name: 'Заявки' })).getAllByRole('listitem');
       expect(items[0]).toHaveTextContent('Отклонена');
       expect(items[1]).toHaveTextContent('Одобрена');
+      // Who decided, with the decision for a screen reader.
+      expect(newest).toHaveTextContent('Отклонено: Анна Смирнова');
       expect(screen.getByText('Сначала решённые недавно')).toBeInTheDocument();
+    });
+
+    it('says how a review ended and who decided, a policy too', async () => {
+      moderatorOnWideScreen();
+      const target = reviewTarget({ id: 'done-review', teacherName: 'Ольга Тихонова' });
+      target.revision.status = 'REJECTED';
+      const auto = published(linkTarget({ id: 'done-auto', title: 'Автоматически' }));
+      mockModeration([
+        reviewCase(
+          { id: 'done-review' },
+          {
+            status: 'RESOLVED',
+            decisions: [decisionOf('d-review', 'REJECT', { createdAt: minutesAgo(5) })],
+          },
+          target,
+        ),
+        moderationCase(
+          { id: 'done-auto', title: 'Автоматически' },
+          {
+            status: 'RESOLVED',
+            decisions: [
+              decisionOf('d-auto', 'APPROVE', {
+                createdAt: minutesAgo(50),
+                actor: 'POLICY',
+                moderatorId: null,
+              }),
+            ],
+          },
+          auto,
+        ),
+      ]);
+
+      renderApp('/admin/moderation?status=RESOLVED');
+
+      expect(await openedCase('Ольга Тихонова')).toBeInTheDocument();
+      await waitFor(() => expect(rows()).toHaveLength(2));
+      const [review, policy] = rows();
+      expect(review).toHaveTextContent('Отзыв · Ольга Тихонова');
+      expect(review).toHaveTextContent('Отклонён');
+      expect(review).toHaveTextContent('Анна Смирнова');
+      expect(policy).toHaveTextContent('автоматически');
+      const head = within(detail()).getByRole('heading', { level: 2 }).closest('header');
+      expect(head).toHaveTextContent('Отклонён');
     });
 
     it('puts the outcome and its time at the top of the case and hides the decision keys', async () => {
@@ -1333,7 +1398,7 @@ describe('ModerationPage', () => {
 
     renderApp('/admin/moderation');
 
-    await openedCase('ИСУ 123456 · Сергей Кузнецов');
+    await openedCase('Сергей Кузнецов');
     expect(screen.queryByText(/одобренных версий ещё нет/)).not.toBeInTheDocument();
   });
 
@@ -1437,5 +1502,272 @@ describe('ModerationPage', () => {
 
     expect(await openedCase('История')).toBeInTheDocument();
     expect(fetched).not.toContain('case-1');
+  });
+
+  describe('taking a decision back', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /** The toast lives in a popover, which jsdom leaves out of the accessibility tree. */
+    function undoInToast(text: string) {
+      return screen.findByRole('button', { name: `Отменить: ${text}`, hidden: true });
+    }
+
+    function decisionsLog() {
+      return within(detail()).getByRole('region', { name: 'Решения' });
+    }
+
+    it('undoes from the toast and opens the case again in its place in the queue', async () => {
+      moderatorOnWideScreen();
+      const { reverts } = mockModeration([first, second]);
+      renderApp('/admin/moderation');
+      await openedCase('Математический анализ');
+      await userEvent.click(screen.getByRole('button', { name: 'Одобрить' }));
+      await openedCase('Физика');
+      await waitFor(() => expect(navItem()).toHaveTextContent('1'));
+
+      await userEvent.click(await undoInToast('Ссылка одобрена'));
+
+      expect(await findToast('Решение отменено, заявка снова в очереди')).toBeInTheDocument();
+      expect(reverts).toEqual([{ caseId: 'case-1', decisionId: 'decision-case-1-1', csrf: '1' }]);
+      expect(await openedCase('Математический анализ')).toBeInTheDocument();
+      await waitFor(() => expect(rows()).toHaveLength(2));
+      expect(rows()[0]).toHaveTextContent('Баллы по матанализу');
+      await waitFor(() => expect(navItem()).toHaveTextContent('2'));
+      expect(await screen.findByRole('button', { name: 'Одобрить' })).toBeInTheDocument();
+      expect(decisionsLog()).toHaveTextContent('Одобрено');
+      expect(decisionsLog()).toHaveTextContent('Отменено');
+      expect(
+        within(decisionsLog()).queryByRole('button', { name: /Отменить/ }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('has no key for an undo, so no single key takes a decision back', async () => {
+      moderatorOnWideScreen();
+      const { decisions, reverts } = mockModeration([first, second]);
+      renderApp('/admin/moderation');
+      await openedCase('Математический анализ');
+      await userEvent.keyboard('a');
+      await openedCase('Физика');
+      await undoInToast('Ссылка одобрена');
+
+      await userEvent.keyboard('uzx{Control>}z{/Control}{Meta>}z{/Meta}{Enter} ');
+
+      expect(reverts).toEqual([]);
+      expect(decisions).toHaveLength(1);
+    });
+
+    it('offers no undo for a restriction, which is lifted on its own page instead', async () => {
+      moderatorOnWideScreen();
+      mockModeration([first]);
+      renderApp('/admin/moderation');
+      await openedCase('Математический анализ');
+      await userEvent.click(screen.getByRole('button', { name: 'Ограничить' }));
+      const dialog = screen.getByRole('dialog', { name: 'Ограничить автора' });
+      await userEvent.type(within(dialog).getByRole('textbox', { name: 'Причина' }), 'Спам');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Ограничить' }));
+
+      expect(await findToast('Автор ограничен')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /^Отменить/, hidden: true }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('undoes from the log of the case until the window ends, then no longer offers it', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      moderatorOnWideScreen();
+      const third = moderationCase({ id: 'case-3', title: 'Чат', subjectName: 'Химия' });
+      const { reverts } = mockModeration([first, second, third]);
+      renderApp('/admin/moderation');
+      await openedCase('Математический анализ');
+      await userEvent.click(screen.getByRole('button', { name: 'Одобрить' }));
+      await openedCase('Физика');
+      await userEvent.click(screen.getByRole('button', { name: 'Одобрить' }));
+      await openedCase('Химия');
+
+      await userEvent.click(screen.getByRole('radio', { name: 'Решённые' }));
+      expect(await openedCase('Физика')).toBeInTheDocument();
+      expect(decisionsLog()).toHaveTextContent(/можно до \d\d:\d\d/);
+      await userEvent.click(
+        within(decisionsLog()).getByRole('button', { name: 'Отменить решение «Одобрено»' }),
+      );
+
+      expect(await findToast('Решение отменено, заявка снова в очереди')).toBeInTheDocument();
+      expect(reverts.map((revert) => revert.caseId)).toEqual(['case-2']);
+      // The case stays on screen, open again, while the list of resolved ones lets it go.
+      expect(await screen.findByRole('button', { name: 'Одобрить' })).toBeInTheDocument();
+      await waitFor(() => expect(rows()).toHaveLength(1));
+      expect(rows()[0]).toHaveTextContent('Баллы по матанализу');
+
+      await userEvent.click(rows()[0] as HTMLElement);
+      await openedCase('Математический анализ');
+      const undo = () =>
+        within(decisionsLog()).queryByRole('button', { name: 'Отменить решение «Одобрено»' });
+      expect(undo()).toBeInTheDocument();
+      await vi.advanceTimersByTimeAsync(10 * 60_000 + 1_000);
+      await waitFor(() => expect(undo()).not.toBeInTheDocument());
+      expect(decisionsLog()).not.toHaveTextContent('можно до');
+    });
+
+    it('takes back hiding from a resolved case: the target is hidden again, the case stays resolved', async () => {
+      moderatorOnWideScreen();
+      const target = published(linkTarget({ id: 'done-1', title: 'Скрытая' }));
+      target.link.status = 'HIDDEN';
+      mockModeration([
+        moderationCase(
+          { id: 'done-1', title: 'Скрытая' },
+          {
+            status: 'RESOLVED',
+            decisions: [decisionOf('d-hide', 'HIDE', { createdAt: minutesAgo(60) })],
+          },
+          target,
+        ),
+      ]);
+      renderApp('/admin/moderation?status=RESOLVED');
+      await openedCase('Математический анализ');
+      // A decision taken before this session is past its window: nothing to take back.
+      expect(
+        within(decisionsLog()).queryByRole('button', { name: /Отменить/ }),
+      ).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Вернуть' }));
+      await findToast('Ссылка снова видна');
+
+      await userEvent.click(await undoInToast('Ссылка снова видна'));
+
+      expect(await findToast('Решение отменено, ссылка снова скрыта')).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: 'Вернуть' })).toBeInTheDocument();
+      expect(rows()).toHaveLength(1);
+    });
+
+    describe('says why Backend refused', () => {
+      it('when the ten minutes have passed', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        moderatorOnWideScreen();
+        const { reverts } = mockModeration([first, second]);
+        renderApp('/admin/moderation');
+        await openedCase('Математический анализ');
+        await userEvent.click(screen.getByRole('button', { name: 'Одобрить' }));
+        const undo = await undoInToast('Ссылка одобрена');
+
+        vi.setSystemTime(Date.now() + 11 * 60_000);
+        await userEvent.click(undo);
+
+        expect(
+          await findToast('Время на отмену вышло: решение можно отменить в течение 10 минут'),
+        ).toBeInTheDocument();
+        expect(reverts).toHaveLength(1);
+        expect(await openedCase('Физика')).toBeInTheDocument();
+      });
+
+      it('when another decision came after it', async () => {
+        moderatorOnWideScreen();
+        mockModeration([
+          moderationCase(
+            { id: 'case-1', title: 'Чат' },
+            {},
+            published(linkTarget({ id: 'case-1', title: 'Чат' })),
+          ),
+        ]);
+        renderApp('/admin/moderation');
+        await openedCase('Математический анализ');
+        await userEvent.click(screen.getByRole('button', { name: 'Скрыть' }));
+        const undoHide = await undoInToast('Ссылка скрыта');
+        await userEvent.click(screen.getByRole('radio', { name: 'Решённые' }));
+        await openedCase('Математический анализ');
+        await userEvent.click(await screen.findByRole('button', { name: 'Вернуть' }));
+        await findToast('Ссылка снова видна');
+
+        await userEvent.click(undoHide);
+
+        expect(
+          await findToast(
+            'После этого решения по заявке приняли другое, отменить можно только последнее',
+          ),
+        ).toBeInTheDocument();
+      });
+
+      it('when it was already taken back elsewhere', async () => {
+        moderatorOnWideScreen();
+        const { state } = mockModeration([first, second]);
+        renderApp('/admin/moderation');
+        await openedCase('Математический анализ');
+        await userEvent.click(screen.getByRole('button', { name: 'Одобрить' }));
+        const undo = await undoInToast('Ссылка одобрена');
+        // Another tab was quicker.
+        const decided = state.get('case-1') as ModerationCase;
+        state.set('case-1', {
+          ...decided,
+          status: 'OPEN',
+          decisions: decided.decisions.map((item) => ({
+            ...item,
+            revertedAt: new Date().toISOString(),
+          })),
+        });
+
+        await userEvent.click(undo);
+
+        expect(await findToast('Это решение уже отменено')).toBeInTheDocument();
+      });
+
+      it('when the author changed the link since', async () => {
+        moderatorOnWideScreen();
+        const { state } = mockModeration([first, second]);
+        renderApp('/admin/moderation');
+        await openedCase('Математический анализ');
+        await userEvent.click(screen.getByRole('button', { name: 'Одобрить' }));
+        const undo = await undoInToast('Ссылка одобрена');
+        const decided = state.get('case-1') as ModerationCase;
+        const target = decided.target as SubjectLinkTarget;
+        state.set('case-1', {
+          ...decided,
+          target: { ...target, link: { ...target.link, title: 'Переименована автором' } },
+        });
+
+        await userEvent.click(undo);
+
+        expect(
+          await findToast(
+            'Ссылка изменилась после решения: её отредактировал автор, задело другое решение или по ней открыта новая заявка. Отменить уже нельзя',
+          ),
+        ).toBeInTheDocument();
+      });
+
+      it('when the link was deleted', async () => {
+        moderatorOnWideScreen();
+        const { state } = mockModeration([first, second]);
+        renderApp('/admin/moderation');
+        await openedCase('Математический анализ');
+        await userEvent.click(screen.getByRole('button', { name: 'Одобрить' }));
+        const undo = await undoInToast('Ссылка одобрена');
+        state.set('case-1', { ...(state.get('case-1') as ModerationCase), target: null });
+
+        await userEvent.click(undo);
+
+        expect(await findToast('Ссылку удалили, решение уже не отменить')).toBeInTheDocument();
+      });
+
+      it('when the decision is another moderator’s', async () => {
+        moderatorOnWideScreen();
+        mockModeration([first, second]);
+        renderApp('/admin/moderation');
+        await openedCase('Математический анализ');
+        await userEvent.click(screen.getByRole('button', { name: 'Одобрить' }));
+        const undo = await undoInToast('Ссылка одобрена');
+        server.use(
+          http.post('*/api/admin/moderation/cases/:id/decisions/:decisionId/revert', () =>
+            fail(403, 'permission_denied'),
+          ),
+        );
+
+        await userEvent.click(undo);
+
+        expect(
+          await findToast(
+            'Отменить решение может только модератор, который его принял, или администратор',
+          ),
+        ).toBeInTheDocument();
+      });
+    });
   });
 });

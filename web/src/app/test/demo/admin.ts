@@ -1,5 +1,6 @@
 import { getResponse, http, type RequestHandler } from 'msw';
 import type { AuditEntry } from '../../features/audit/types';
+import type { TeacherPage } from '../../features/reviews/types';
 import type {
   AdminClient,
   AdminDevice,
@@ -309,10 +310,51 @@ const history: AuditEntry[] = [
 /** Changes made in the demo. */
 const live: AuditEntry[] = [];
 
+/** The stored name of every user of the list; one whose app has not uploaded a name has none. */
+const storedNames = new Map(users.map((user) => [user.isu, user.name.trim() || null]));
+
+/**
+ * The teachers' names as Отзывы shows them, by ISU. That area imports `audited` from this module, so
+ * it is read once both are loaded: on the first request to the log.
+ */
+let teacherNames: Map<number, string> | undefined;
+
+async function loadTeacherNames(): Promise<Map<number, string>> {
+  const { handlers: reviews } = (await import('./system')) as { handlers: RequestHandler[] };
+  const answer = await getResponse(
+    reviews,
+    new Request('http://localhost/api/admin/reviews/summaries/teachers?page=0&size=1000'),
+  );
+  const { data } = (await answer?.json()) as { data: TeacherPage };
+  return new Map(
+    data.items.flatMap((row) => (row.teacherName ? [[row.teacherIsu, row.teacherName]] : [])),
+  );
+}
+
+/**
+ * `targetName` as Backend fills it when it reads the log: the stored name of a user, the name of a
+ * teacher as staff see it everywhere, null for anything else and for anybody without a name.
+ */
+function targetNameOf(target: string): string | null {
+  const [type, id] = target.split(':');
+  const isu = Number(id);
+  if (type === 'user') return storedNames.get(isu) ?? null;
+  if (type === 'teacher') return teacherNames?.get(isu) ?? null;
+  return null;
+}
+
 /** The whole log, strictly newest first: what the visitor changed, then the history. */
 function auditLog(): AuditEntry[] {
-  return [...live, ...history].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  return [...live, ...history]
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .map((entry) => ({ ...entry, targetName: targetNameOf(entry.target) }));
 }
+
+/** Loads the teachers' names before the log answers; the request goes on to the log itself. */
+const namesTeachers = http.get('*/api/admin/audit', async () => {
+  teacherNames ??= await loadTeacherNames();
+  return undefined;
+});
 
 /**
  * Puts a change made in the demo on top of the audit log, as the signed-in admin. The other demo
@@ -539,7 +581,12 @@ const details: AdminUserDetail[] = users.map((user, index) => {
   return ordinary(user, index);
 });
 
-const backend = usersBackend(users, details, audited);
+/** Restrictions in force now, from the moderation demo that keeps them all. */
+function activeRestrictionsOf(isu: number): number {
+  return restrictions.filter((item) => item.user.isu === isu && item.active).length;
+}
+
+const backend = usersBackend(users, details, audited, activeRestrictionsOf);
 
 /**
  * A card as the users area answers it, with the restrictions the moderation demo keeps for that
@@ -559,5 +606,6 @@ const card = http.get('*/api/admin/users/:isu', async ({ params, request }) => {
 export const handlers: RequestHandler[] = [
   card,
   ...backend.handlers,
+  namesTeachers,
   ...auditBackend(auditLog).handlers,
 ];

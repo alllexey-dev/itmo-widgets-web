@@ -2,3 +2,26 @@
 .audit-detail {
   overflow-wrap: anywhere;
 }
+
+/* A filter that holds a value reads as engaged at a glance, not only by its text. */
+.audit-filter-set {
+  background-color: var(--color-overlay-pressed);
+}
+
+.audit-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/*
+ * A phone: one filter per row, each the width of the page, so a set clause reads on one line; a
+ * date field is too wide for half of it.
+ */
+@media (max-width: 640px) {
+  .audit-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

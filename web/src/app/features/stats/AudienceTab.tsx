@@ -1,4 +1,5 @@
-// The audience tab: how many accounts there are, how many clients come back, and what they run.
+// The audience tab: how many accounts and people there are, whether newcomers stay, how many
+// clients come back, and what they run.
 
 import { Button } from '@astryxdesign/core/Button';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
@@ -11,12 +12,17 @@ import { counted } from '../../lib/format';
 import { Loadable } from '../../lib/Loadable';
 import { BUILD_KIND, METRIC_LABEL, UNKNOWN_VERSION, VERSION_STATE } from '../../lib/metricLabels';
 import { useQueryState } from '../../lib/router';
-import { useAppVersion, useClients, useClientVersions, useDashboard } from './api';
-import { SegmentBar } from './charts';
-import { AudiencePeopleExamples, AudienceUserExamples } from './ExampleBlocks';
+import {
+  useAppVersion,
+  useAudienceStats,
+  useClients,
+  useClientVersions,
+  useDashboard,
+} from './api';
+import { SegmentBar, TimeChart } from './charts';
 import { formatDay, formatInt, formatPct, shareOf } from './format';
-import { CLIENTS_HINT, KIND_ORDER, nightlyHint, NOW_HINT } from './labels';
-import type { MetricId } from './metrics';
+import { CLIENTS_HINT, KIND_ORDER, nightlyHint, NOW_HINT, PEOPLE_HINT } from './labels';
+import { METRICS } from './metrics';
 import {
   activityChart,
   activityDays,
@@ -25,18 +31,31 @@ import {
   clientTotals,
   compositionChart,
   devicePlatformSegments,
-  dayTotal,
   kindSegments,
   platformSegments,
   sum,
+  type ActivityDay,
   type BuildRow,
 } from './model';
-import { TimeChart } from './charts';
 import { DayPanel } from './panels';
+import { COHORT_DAYS, PeriodControl, usePeriod, type Period } from './period';
+import {
+  classicRetentionChart,
+  COHORT_WEEKS,
+  cohortRows,
+  courseRows,
+  facultyRows,
+  growthChart,
+  newUsersChart,
+  newUsersTotal,
+  peopleChart,
+  stepOf,
+  type CohortRow,
+  type ShareRow,
+} from './periodModel';
 import {
   BarCell,
   Facts,
-  isExample,
   NameCell,
   Nothing,
   Num,
@@ -48,16 +67,11 @@ import {
   Tiles,
   type TileView,
 } from './parts';
-import { DataTable } from './tables';
-import type { ClientFilter, Clients, Dashboard } from './types';
+import { ChartData, DataTable } from './tables';
+import type { AudienceStats, ClientFilter, Clients, Dashboard } from './types';
 
-/** The client history holds 90 nightly totals, so these are the periods a chart can show. */
-const PERIODS = [7, 30, 90] as const;
-const DEFAULT_PERIOD = 30;
 /** The days the tile sparklines cover, whatever the period of the charts. */
 const SPARK_DAYS = 30;
-
-const PEOPLE_METRICS: readonly MetricId[] = ['active_people', 'retention', 'retention_classic'];
 
 const SECTIONS = {
   users: 'audience-users',
@@ -71,16 +85,7 @@ function filterOf(value: string): ClientFilter {
   return KIND_ORDER.find((item) => item === kind) ?? 'all';
 }
 
-/**
- * The periods worth offering for a history of `available` days: the standard ones it covers, and
- * the whole history when that is not one of them. A choice the data cannot fill is never offered.
- */
-function periodsFor(available: number): number[] {
-  const whole = Math.min(available, PERIODS[PERIODS.length - 1] ?? available);
-  return [...PERIODS.filter((days) => days < whole), whole];
-}
-
-function userTiles({ totals, days }: Dashboard): TileView[] {
+function userTiles({ totals }: Dashboard): TileView[] {
   return [
     {
       label: METRIC_LABEL.users,
@@ -93,14 +98,132 @@ function userTiles({ totals, days }: Dashboard): TileView[] {
       hint: 'Первый вход через ITMO ID за последние 7 суток',
       value: formatInt(totals.newUsers7d),
     },
+  ];
+}
+
+function newUserTiles(stats: AudienceStats, period: Period): TileView[] {
+  return [
     {
-      label: `Новые за ${days.length} дней`,
-      hint: 'Сумма по дням графика ниже',
-      value: formatInt(dayTotal(days, 'newUsers')),
-      spark: days.map((day) => day.newUsers),
+      label: 'Новые за период',
+      hint: 'Первый вход через ITMO ID за выбранный период: сумма графика ниже',
+      value: formatInt(newUsersTotal(stats)),
+      note: period.span,
+      spark: newUsersChart(stats, stepOf(period.days), period.id === 'all').points.map(
+        (point) => point.values.newUsers ?? 0,
+      ),
     },
   ];
 }
+
+/** People active in the rolling windows that end now, compared like the clients below. */
+function peopleTiles({ activePeople, peopleHistory }: AudienceStats): TileView[] {
+  const recent = peopleHistory.slice(-SPARK_DAYS);
+  const delta = (key: 'active1d' | 'active7d' | 'active30d', lag: number, against: string) => {
+    const percent = changeOver(peopleHistory, key, lag);
+    return percent === null ? null : { percent, against };
+  };
+  const hint = `${PEOPLE_HINT} Значение на сейчас.`;
+  return [
+    {
+      label: 'Люди за сутки',
+      hint,
+      value: formatInt(activePeople.active1d),
+      delta: delta('active1d', 7, 'к тому же дню прошлой недели'),
+      spark: recent.map((day) => day.active1d),
+    },
+    {
+      label: 'Люди за 7 дней',
+      hint,
+      value: formatInt(activePeople.active7d),
+      delta: delta('active7d', 7, 'к прошлой неделе'),
+      spark: recent.map((day) => day.active7d),
+    },
+    {
+      label: 'Люди за 30 дней',
+      hint,
+      value: formatInt(activePeople.active30d),
+      delta: delta('active30d', 30, 'к прошлому месяцу'),
+      spark: recent.map((day) => day.active30d),
+    },
+  ];
+}
+
+/** How strongly a cell of the cohort table is filled: five steps from 50 to 90 percent. */
+const heatOf = (share: number) => Math.max(1, Math.min(5, Math.floor((share - 40) / 10)));
+
+function cohortColumns(): TableColumn<CohortRow>[] {
+  return [
+    {
+      key: 'label',
+      header: 'Неделя регистрации',
+      width: pixel(188),
+      renderCell: (row) => (
+        <Text type="body" weight="medium">
+          {row.label}
+        </Text>
+      ),
+    },
+    {
+      key: 'size',
+      header: 'Новичков',
+      width: pixel(92),
+      align: 'end',
+      renderCell: (row) => <Num isMuted>{formatInt(row.size)}</Num>,
+    },
+    ...Array.from({ length: COHORT_WEEKS }, (_, week): TableColumn<CohortRow> => ({
+      key: `week-${week}`,
+      // The number of the week after registration: eight of them have to fit a laptop screen.
+      header: String(week + 1),
+      width: proportional(1, { minWidth: 56 }),
+      align: 'center',
+      renderCell: (row) => {
+        const share = row.weeks[week];
+        return share == null ? (
+          <span className="st-cohort-empty">—</span>
+        ) : (
+          <span className="st-cohort" data-heat={heatOf(share)}>
+            {formatPct(share, 0)}
+          </span>
+        );
+      },
+    })),
+  ];
+}
+
+function shareColumns(first: string, rows: ShareRow[]): TableColumn<ShareRow>[] {
+  const max = Math.max(...rows.map((row) => row.share), 1);
+  return [
+    {
+      key: 'name',
+      header: first,
+      width: proportional(2, { minWidth: 150 }),
+      renderCell: (row) => <NameCell name={row.name} note={row.note} />,
+    },
+    {
+      key: 'users',
+      header: 'Людей',
+      width: pixel(80),
+      align: 'end',
+      renderCell: (row) => <Num>{formatInt(row.users)}</Num>,
+    },
+    {
+      key: 'share',
+      header: 'Доля',
+      width: proportional(1.6, { minWidth: 130 }),
+      renderCell: (row) => <BarCell value={row.share} max={max} text={formatPct(row.share)} />,
+    },
+    {
+      key: 'active',
+      header: 'Активны',
+      width: pixel(96),
+      align: 'end',
+      renderCell: (row) => <Num isMuted>{formatPct(row.active, 0)}</Num>,
+    },
+  ];
+}
+
+/** "За 30 дней": the period at the start of a sentence. */
+const spanStart = (period: Period) => `З${period.span.slice(1)}`;
 
 function clientTiles(clients: Clients, filter: ClientFilter): TileView[] {
   const totals = clientTotals(clients.kinds, filter);
@@ -223,31 +346,43 @@ function Jumps({ sections }: { sections: readonly (readonly [string, string])[] 
 }
 
 export function AudienceTab() {
-  const [query, setQuery] = useQueryState({ period: DEFAULT_PERIOD, client: 'all' });
+  const [query, setQuery] = useQueryState({ client: 'all' });
+  const [period] = usePeriod();
   const filter = filterOf(query.client);
+  const step = stepOf(period.days);
+  const isWhole = period.id === 'all';
 
   const dashboard = useDashboard();
+  const audience = useAudienceStats(period.days);
+  // A period of half a year or longer holds the latest 26 registration weeks already; a shorter
+  // one asks for them apart, so retention is never read from weeks too young to show it.
+  const hasCohorts = period.days >= COHORT_DAYS;
+  const ownCohorts = useAudienceStats(hasCohorts ? null : COHORT_DAYS);
+  const cohorts = hasCohorts ? audience : ownCohorts;
   const clients = useClients();
   const versions = useClientVersions();
   const android = useAppVersion('ANDROID');
   const ios = useAppVersion('IOS');
 
   const kindName = filter === 'all' ? null : CLIENT_KINDS[filter].label;
-  const hasPeople = PEOPLE_METRICS.some(isExample);
-  // The periods the loaded history can fill; the chosen one is the longest of them it allows.
-  const history = clients.data ? activityDays(clients.data.history, filter) : [];
-  const periods = periodsFor(history.length);
+  // The client history is the last 90 nightly totals whatever the period: the charts show the
+  // period's days of it, or all of it when it is shorter.
+  const history: ActivityDay[] = clients.data ? activityDays(clients.data.history, filter) : [];
+  const shown = Math.min(period.days, history.length);
   const last = history.at(-1);
   const lastDay = last ? formatDay(last.day) : undefined;
-  const period =
-    periods.filter((days) => days <= query.period).at(-1) ?? periods[0] ?? DEFAULT_PERIOD;
+  const shorter =
+    history.length && history.length < period.days
+      ? ` История клиентов — ${counted(history.length, ['день', 'дня', 'дней'])}.`
+      : '';
 
   return (
     <TabFrame tab="audience">
+      <PeriodControl />
       <Jumps
         sections={[
           [SECTIONS.users, 'Пользователи'],
-          ...(hasPeople ? [[SECTIONS.people, 'Люди и удержание'] as const] : []),
+          [SECTIONS.people, 'Люди и удержание'],
           [SECTIONS.clients, 'Клиенты'],
           [SECTIONS.devices, 'Устройства'],
         ]}
@@ -262,25 +397,148 @@ export function AudienceTab() {
           <Tiles resource={dashboard} name="итоги">
             {userTiles}
           </Tiles>
+          <Tiles resource={audience} name="аудиторию">
+            {(data) => newUserTiles(data, period)}
+          </Tiles>
         </TileGrid>
-        <DayPanel
-          dashboard={dashboard}
-          metric="newUsers"
-          hasTable
-          hint="Первый вход через ITMO ID"
-        />
-        <AudienceUserExamples />
+        <SourcePanel
+          title={METRIC_LABEL.newUsers}
+          hint={`Первый вход через ITMO ID, ${step === 'day' ? 'по дням' : 'по месяцам'}`}
+          resource={audience}
+        >
+          {(data) => {
+            const total = newUsersTotal(data);
+            if (total === 0) return <Nothing title={`${spanStart(period)} никого`} />;
+            const chart = newUsersChart(data, step, isWhole);
+            return (
+              <>
+                <Text type="supporting" color="secondary" hasTabularNumbers>
+                  {formatInt(total)} {period.span}
+                </Text>
+                <TimeChart chart={chart} />
+                <ChartData chart={chart} title={METRIC_LABEL.newUsers} />
+              </>
+            );
+          }}
+        </SourcePanel>
+        <SourcePanel
+          title={METRICS.users_growth.name}
+          hint={`Сколько аккаунтов было на конец каждого ${step === 'day' ? 'дня' : 'месяца'}`}
+          resource={audience}
+        >
+          {(data) => {
+            const chart = growthChart(data, step, isWhole);
+            return chart.points.length ? (
+              <TimeChart chart={chart} />
+            ) : (
+              <Nothing title="Аккаунтов пока нет" />
+            );
+          }}
+        </SourcePanel>
+        <div className="st-cols" data-cols="2">
+          <SourcePanel
+            title="По факультетам"
+            hint="Все аккаунты по факультету текущей группы и доля активных за 30 дней, на сейчас"
+            resource={audience}
+          >
+            {(data) => {
+              const rows = facultyRows(data);
+              return rows.length ? (
+                <DataTable
+                  rows={rows}
+                  columns={shareColumns('Факультет', rows)}
+                  label="Пользователи по факультетам"
+                />
+              ) : (
+                <Nothing title="Аккаунтов пока нет" />
+              );
+            }}
+          </SourcePanel>
+          <SourcePanel
+            title="По курсам"
+            hint="Все аккаунты по курсу текущей группы и доля активных за 30 дней, на сейчас"
+            resource={audience}
+          >
+            {(data) => {
+              const rows = courseRows(data);
+              return rows.length ? (
+                <DataTable
+                  rows={rows}
+                  columns={shareColumns('Курс', rows)}
+                  label="Пользователи по курсам"
+                />
+              ) : (
+                <Nothing title="Аккаунтов пока нет" />
+              );
+            }}
+          </SourcePanel>
+        </div>
       </Section>
 
-      {hasPeople ? (
-        <Section
-          id={SECTIONS.people}
-          title="Люди и удержание"
-          text="Сколько человек пользуется приложением и возвращаются ли новички: человек с телефоном и сайтом считается один раз"
+      <Section
+        id={SECTIONS.people}
+        title="Люди и удержание"
+        text="Сколько человек пользуется приложением и возвращаются ли новички: человек с телефоном и сайтом считается один раз"
+      >
+        <TileGrid count={3}>
+          <Tiles resource={audience} name="активных людей">
+            {peopleTiles}
+          </Tiles>
+        </TileGrid>
+        <div className="st-cols st-stretch" data-cols="2">
+          <SourcePanel
+            title={METRIC_LABEL.activePeople}
+            hint="За сутки, 7 и 30 дней, по итогам каждого дня; плитки выше — на сейчас"
+            resource={audience}
+          >
+            {(data) => {
+              const days = data.peopleHistory.slice(-period.days);
+              return days.length ? (
+                <TimeChart chart={peopleChart(days)} />
+              ) : (
+                <Nothing
+                  title="Истории пока нет"
+                  text="Итоги по дням появляются после первой ночи."
+                />
+              );
+            }}
+          </SourcePanel>
+          <SourcePanel
+            title={METRICS.retention_classic.name}
+            hint="Доля новичков, которые заходили именно на N-й неделе после недели регистрации, по последним 26 неделям регистрации"
+            resource={cohorts}
+          >
+            {(data) => {
+              const chart = classicRetentionChart(data.retentionClassic);
+              return chart.points.length ? (
+                <TimeChart chart={chart} />
+              ) : (
+                <Nothing
+                  title="Пока не по чему считать"
+                  text="Нужна неделя регистрации, после которой прошла хотя бы одна неделя."
+                />
+              );
+            }}
+          </SourcePanel>
+        </div>
+        <SourcePanel
+          title={METRICS.retention.name}
+          hint="Доля новичков недели, которых видели на N-й неделе после регистрации или позже; столбцы — номер недели. Последние 26 недель регистрации."
+          resource={cohorts}
         >
-          <AudiencePeopleExamples />
-        </Section>
-      ) : null}
+          {(data) =>
+            data.retention.length ? (
+              <DataTable
+                rows={cohortRows(data.retention)}
+                columns={cohortColumns()}
+                label="Удержание по неделям регистрации"
+              />
+            ) : (
+              <Nothing title="Недель регистрации пока нет" />
+            )
+          }
+        </SourcePanel>
+      </Section>
 
       <Section
         id={SECTIONS.clients}
@@ -310,36 +568,14 @@ export function AudienceTab() {
             {(data) => clientTiles(data, filter)}
           </Tiles>
         </TileGrid>
-        {periods.length > 1 ? (
-          <div className="st-filters">
-            <Text type="label" color="secondary">
-              Период графиков
-            </Text>
-            <div className="st-filter">
-              <SegmentedControl
-                label="Период графиков"
-                value={String(period)}
-                onChange={(value) => setQuery({ period: Number(value) })}
-              >
-                {periods.map((days) => (
-                  <SegmentedControlItem
-                    key={days}
-                    value={String(days)}
-                    label={counted(days, ['день', 'дня', 'дней'])}
-                  />
-                ))}
-              </SegmentedControl>
-            </div>
-          </div>
-        ) : null}
         <div className="st-cols st-stretch" data-cols="2-1">
           <SourcePanel
             title={METRIC_LABEL.activeClients}
-            hint={`За сутки, 7 и 30 дней${kindName ? ` (${kindName})` : ''}. ${nightlyHint(lastDay, 'плитки выше')}`}
+            hint={`За сутки, 7 и 30 дней${kindName ? ` (${kindName})` : ''}. ${nightlyHint(lastDay, 'плитки выше')}.${shorter}`}
             resource={clients}
           >
             {(data) => {
-              const days = activityDays(data.history, filter).slice(-period);
+              const days = activityDays(data.history, filter).slice(-period.days);
               return days.length ? (
                 <TimeChart chart={activityChart(days)} />
               ) : (
@@ -395,7 +631,7 @@ export function AudienceTab() {
                 </Text>
               );
             }
-            const chart = compositionChart(data.history, filter, period);
+            const chart = compositionChart(data.history, filter, shown || period.days);
             return chart.points.length && chart.series.length ? (
               <TimeChart chart={chart} />
             ) : (

@@ -92,11 +92,11 @@ export function canRemove(connection: Connection, grant: ScopeGrant): boolean {
 }
 
 /**
- * The phone's name. Backend forgets the model together with the push registration, so [remembered]
- * (the name the page showed before it turned the notifications off) stands in while it is known.
+ * The phone's name: the model while it has a push registration, its platform after Backend forgot
+ * the model with the registration (a sign-out from here does that).
  */
-export function installName(install: Install, remembered?: string): string {
-  return phoneName(install.platform, install.deviceName ?? remembered);
+export function installName(install: Install): string {
+  return phoneName(install.platform, install.deviceName);
 }
 
 /** "ITMO.Widgets 2.4.0, Android API 36". */
@@ -107,20 +107,31 @@ export function installLine(install: Install): string {
 
 /**
  * Whether the install still has a push registration to drop, as far as the answer tells: the
- * registration is what names the device and what makes pushes possible. An install without one
- * was signed out of pushes (from here or in the app) or never turned them on.
+ * registration is what names the device and what makes pushes possible. An install without one was
+ * signed out of pushes from another device (`signedOutAt`) or never turned them on.
  */
 export function hasPushRegistration(install: Install): boolean {
-  return install.pushEnabled || install.deviceName !== null;
+  return !install.signedOutAt && (install.pushEnabled || install.deviceName !== null);
 }
 
-/** "Активность вчера", with what is known about its notifications when they do not come. */
+/** Whether the web can turn the phone's notifications off; the calling install signs out in the app. */
+export function canTurnOff(install: Install): boolean {
+  return hasPushRegistration(install) && !install.current;
+}
+
+/**
+ * "Активность вчера", with what is known about its notifications when they do not come. Install
+ * sign-out comes from the web or from the app on another phone, and Backend does not say which.
+ */
 export function installActivity(install: Install, now = new Date()): string {
   const seen = `Активность ${formatRelative(install.lastSeenAt, now)}`;
+  if (install.signedOutAt) {
+    return `${seen} · уведомления отключены ${formatDate(install.signedOutAt, now)} с сайта или другого телефона`;
+  }
   if (install.pushEnabled) return seen;
   return hasPushRegistration(install)
     ? `${seen} · уведомления выключены на телефоне`
-    : `${seen} · уведомления отключены`;
+    : `${seen} · уведомления не включены`;
 }
 
 /** What the page is about to end or take away. */

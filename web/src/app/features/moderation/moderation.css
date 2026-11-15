@@ -180,6 +180,21 @@
   color: var(--color-text-error);
 }
 
+/* Who resolved the case: it gives way first when the row is short of room, after the author. */
+.mod-row-meta > .mod-row-outcome {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: var(--spacing-0-5);
+  min-width: 0;
+}
+
+.mod-row-outcome-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ---------------------------------------------------------------- case */
 
 .mod-detail {
@@ -565,6 +580,27 @@
   min-width: 0;
 }
 
+.mod-event-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* A reverted decision stays in the log, struck through, next to the decision taken after it. */
+.mod-timeline li[data-reverted] .mod-event-label {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.mod-undo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-block-start: var(--spacing-1);
+}
+
 .mod-decision-note {
   margin: var(--spacing-1) 0 0;
   padding: var(--spacing-2) var(--spacing-3);
@@ -651,7 +687,8 @@
   .mod-author-actions a,
   .mod-preview-head a,
   .mod-list-actions button,
-  .mod-list-actions a {
+  .mod-list-actions a,
+  .mod-undo button {
     min-height: 44px;
   }
 

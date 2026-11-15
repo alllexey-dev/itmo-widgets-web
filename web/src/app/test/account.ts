@@ -103,9 +103,18 @@ export function profileBackend(restrictions: Restriction[] = [], saved = privacy
   return { handlers, calls };
 }
 
-/** Backend's golden `userDevices.json`: an agent, this browser (...0603), a revoked MCP, two installs. */
+/**
+ * Backend's golden `userDevices.json`: an agent, this browser (...0603), a revoked MCP, the calling
+ * Pixel and an iPhone whose notifications were turned off from another device.
+ */
 export function devicesOf(): UserDevices {
-  return structuredClone(fixture) as UserDevices;
+  const devices = structuredClone(fixture) as UserDevices;
+  // A copy of the golden from before `signedOutAt` lacks the field; Backend always sends it.
+  devices.installs = devices.installs.map((row) => ({
+    ...row,
+    signedOutAt: row.signedOutAt ?? null,
+  }));
+  return devices;
 }
 
 /** The devices list and its changes: narrowing scopes, revoking a connection, an install sign-out. */
@@ -137,10 +146,20 @@ export function devicesBackend(devices = devicesOf()): Backend {
     }),
     http.post('*/api/users/me/installs/:id/sign-out', async ({ request, params }) => {
       await record(request);
-      // The install stays; its push registration, which also named the device, is gone.
-      devices.installs = devices.installs.map((row) =>
-        row.instanceId === params.id ? { ...row, deviceName: null, pushEnabled: false } : row,
-      );
+      const install = devices.installs.find((row) => row.instanceId === params.id);
+      if (!install) return fail(404, 'not_found');
+      if (install.current) return fail(400, 'invalid_request_data');
+      // The install stays; its push registration, which also named the device, is gone and the
+      // install is marked as signed out. One without a registration keeps its state.
+      const registered =
+        !install.signedOutAt && (install.pushEnabled || install.deviceName !== null);
+      if (registered) {
+        Object.assign(install, {
+          deviceName: null,
+          pushEnabled: false,
+          signedOutAt: new Date().toISOString(),
+        });
+      }
       return ok({});
     }),
   ];

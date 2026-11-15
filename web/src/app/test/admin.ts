@@ -219,6 +219,7 @@ export function adminUserOf(overrides: Partial<AdminUserItem> = {}): AdminUserIt
     groups: [{ name: 'P3212', course: 2, facultyShortName: 'ФПИиКТ' }],
     roles: [],
     createdAt: minutesAgo(60),
+    activeRestrictions: 0,
     ...overrides,
   };
 }
@@ -237,6 +238,7 @@ export function userRestrictionOf(
     expiresAt: null,
     revokedAt: null,
     revokedByIsu: null,
+    revokedByName: null,
     active: true,
     caseId: 'case-1',
     ...overrides,
@@ -275,17 +277,25 @@ export interface AdminCall {
 /** What a change of the users area writes to the audit log. */
 export type Audited = (action: string, target: string, details: string | null) => void;
 
+/** Who revokes a restriction in the tests: the signed-in user of `userOf` in `./server`. */
+const REVOKER = { isu: 400001, name: 'Анна Смирнова' };
+
 /**
  * The users area of Backend over [users] and their cards: searches by ISU prefix, name or group,
- * grants and takes away the moderator role and agent access, revokes restrictions. Keeps the list
- * queries and the changing requests, oldest first.
+ * filters by `role` and `restricted` (a value Backend does not take is 400 `invalid_request`),
+ * grants and takes away the moderator role and agent access, revokes restrictions. A row's
+ * `activeRestrictions` counts the active restrictions of the user's card, or comes from
+ * [activeRestrictionsOf] when the restrictions live elsewhere. Keeps the list queries, their whole
+ * parameters (`requests`) and the changing requests, oldest first.
  */
 export function usersBackend(
   users: readonly AdminUserItem[],
   details: readonly AdminUserDetail[] = users.map((user) => adminUserDetailOf(user)),
   audited: Audited = () => undefined,
+  activeRestrictionsOf?: (isu: number) => number,
 ) {
   const queries: { query: string; page: string }[] = [];
+  const requests: URLSearchParams[] = [];
   const calls: AdminCall[] = [];
   const state = new Map(details.map((detail) => [String(detail.user.isu), detail]));
 
@@ -305,6 +315,15 @@ export function usersBackend(
       const params = new URL(request.url).searchParams;
       const query = params.get('query') ?? '';
       queries.push({ query, page: params.get('page') ?? '' });
+      requests.push(params);
+      const role = params.get('role');
+      const restricted = params.get('restricted');
+      if (role !== null && role !== 'ADMIN' && role !== 'MODERATOR') {
+        return fail(400, 'invalid_request');
+      }
+      if (restricted !== null && restricted !== 'true' && restricted !== 'false') {
+        return fail(400, 'invalid_request');
+      }
       const needle = query.toLowerCase();
       const matching = users
         .filter(
@@ -313,7 +332,20 @@ export function usersBackend(
             user.name.toLowerCase().includes(needle) ||
             user.groups.some((group) => group.name.toLowerCase().includes(needle)),
         )
-        .map((user) => ({ ...user, roles: state.get(String(user.isu))?.roles ?? user.roles }));
+        .map((user): AdminUserItem => {
+          const detail = state.get(String(user.isu));
+          const active = activeRestrictionsOf
+            ? activeRestrictionsOf(user.isu)
+            : detail
+              ? detail.restrictions.filter((restriction) => restriction.active).length
+              : user.activeRestrictions;
+          return { ...user, roles: detail?.roles ?? user.roles, activeRestrictions: active };
+        })
+        .filter(
+          (user) =>
+            (role === null || user.roles.includes(role)) &&
+            (restricted === null || user.activeRestrictions > 0 === (restricted === 'true')),
+        );
       return ok(pageOf(matching, request));
     }),
     http.get('*/api/admin/users/:isu', ({ params }) => {
@@ -360,7 +392,13 @@ export function usersBackend(
           ...detail,
           restrictions: detail.restrictions.map((restriction) =>
             restriction.id === params.id
-              ? { ...restriction, active: false, revokedAt: new Date().toISOString() }
+              ? {
+                  ...restriction,
+                  active: false,
+                  revokedAt: new Date().toISOString(),
+                  revokedByIsu: REVOKER.isu,
+                  revokedByName: REVOKER.name,
+                }
               : restriction,
           ),
         });
@@ -369,20 +407,30 @@ export function usersBackend(
       return found ? ok(null) : undefined;
     }),
   ];
-  return { handlers, queries, calls };
+  return { handlers, queries, requests, calls };
 }
 
-/** Answers the users area from `usersBackend`; returns its list queries and changing requests. */
+/**
+ * Answers the users area from `usersBackend`; returns its list queries, their whole parameters and
+ * the changing requests.
+ */
 export function mockUsers(
   users: readonly AdminUserItem[],
   details?: readonly AdminUserDetail[],
-): { queries: { query: string; page: string }[]; calls: AdminCall[] } {
-  const { handlers, queries, calls } = usersBackend(users, details);
+): {
+  queries: { query: string; page: string }[];
+  requests: URLSearchParams[];
+  calls: AdminCall[];
+} {
+  const { handlers, queries, requests, calls } = usersBackend(users, details);
   server.use(...handlers);
-  return { queries, calls };
+  return { queries, requests, calls };
 }
 
-/** An audit entry: Анна Смирнова made user 322222 a moderator five minutes ago. */
+/**
+ * An audit entry: Анна Смирнова made user 322222 (Олег Сидоров, `adminUserOf`) a moderator five
+ * minutes ago. An entry about another target names nobody unless [overrides] give `targetName`.
+ */
 export function auditEntryOf(overrides: Partial<AuditEntry> = {}): AuditEntry {
   return {
     id: `entry-${overrides.action ?? 'ROLE_GRANTED'}`,
@@ -392,38 +440,109 @@ export function auditEntryOf(overrides: Partial<AuditEntry> = {}): AuditEntry {
     createdAt: minutesAgo(5),
     actorIsu: 400001,
     actorName: 'Анна Смирнова',
+    targetName: overrides.target === undefined ? 'Олег Сидоров' : null,
     ...overrides,
   };
 }
 
-/** The audit log of Backend over [entries], read on every request; keeps the pages asked. */
-export function auditBackend(entries: readonly AuditEntry[] | (() => readonly AuditEntry[])) {
-  const pages: string[] = [];
-  const handlers: RequestHandler[] = [
-    http.get('*/api/admin/audit', ({ request }) => {
-      pages.push(new URL(request.url).searchParams.get('page') ?? '');
-      return ok(pageOf(typeof entries === 'function' ? entries() : entries, request));
-    }),
-  ];
-  return { handlers, pages };
+/** The actions Backend writes to the audit log (`docs/contracts/admin.md`, Audit). */
+export const AUDIT_ACTIONS = [
+  'ROLE_GRANTED',
+  'ROLE_REVOKED',
+  'AGENT_ACCESS_GRANTED',
+  'AGENT_ACCESS_REVOKED',
+  'MODERATION_SETTINGS_CHANGED',
+  'SPORT_SETTINGS_CHANGED',
+  'APP_VERSION_CHANGED',
+  'REVIEWS_SYNC_STARTED',
+  'SERVICE_CREDENTIAL_REPLACED',
+  'AI_SUMMARIES_RUN_STARTED',
+  'AI_SUMMARY_HIDDEN',
+  'AI_SUMMARY_SHOWN',
+  'AI_SUMMARY_REGENERATION_REQUESTED',
+] as const;
+
+const MOSCOW_DAY = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Moscow',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/** A `YYYY-MM-DD` that is a real day, as Backend reads `from` and `to`. */
+function isDay(value: string): boolean {
+  return (
+    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    new Date(`${value}T00:00:00Z`).toISOString().startsWith(value)
+  );
 }
 
 /**
- * Answers the audit log with [entries]; returns the pages asked, oldest first. The log looks up the
- * name of every user an entry is about: [users] have cards, anybody else is unknown to Backend.
+ * The audit log of Backend over [entries], read on every request: newest first as given, filtered by
+ * `actorIsu`, `action`, `targetType`, `target`, `from` and `to` the way the contract says (Moscow
+ * days, both ends inclusive; an unknown action or an unreadable date is 400 `invalid_request`, `from`
+ * after `to` 400 `invalid_request_data`). Keeps the pages asked and the whole parameters of every
+ * request (`requests`). It also answers the list of administrators the page offers as the filter of
+ * who acted, with nobody: put `usersBackend` handlers in front of these to offer some.
+ */
+export function auditBackend(entries: readonly AuditEntry[] | (() => readonly AuditEntry[])) {
+  const pages: string[] = [];
+  const requests: URLSearchParams[] = [];
+  const handlers: RequestHandler[] = [
+    http.get('*/api/admin/audit', ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      pages.push(params.get('page') ?? '');
+      requests.push(params);
+      const actorIsu = params.get('actorIsu');
+      const action = params.get('action');
+      const targetType = params.get('targetType');
+      const target = params.get('target');
+      const from = params.get('from');
+      const to = params.get('to');
+      if (action !== null && !(AUDIT_ACTIONS as readonly string[]).includes(action)) {
+        return fail(400, 'invalid_request');
+      }
+      if (actorIsu !== null && !/^\d+$/.test(actorIsu)) return fail(400, 'invalid_request');
+      if ((from !== null && !isDay(from)) || (to !== null && !isDay(to))) {
+        return fail(400, 'invalid_request');
+      }
+      if (from !== null && to !== null && from > to) return fail(400, 'invalid_request_data');
+      const all = typeof entries === 'function' ? entries() : entries;
+      const matching = all.filter((entry) => {
+        const day = MOSCOW_DAY.format(new Date(entry.createdAt));
+        const type = entry.target.split(':')[0];
+        return (
+          (actorIsu === null || entry.actorIsu === Number(actorIsu)) &&
+          (action === null || entry.action === action) &&
+          (targetType === null || type === targetType) &&
+          (target === null || entry.target === target) &&
+          (from === null || day >= from) &&
+          (to === null || day <= to)
+        );
+      });
+      return ok(pageOf(matching, request));
+    }),
+    // The page offers the administrators as the filter of who acted. Without the users area in
+    // front of these handlers it knows none; any other list query is left to that area.
+    http.get('*/api/admin/users', ({ request }) =>
+      new URL(request.url).searchParams.get('role') === 'ADMIN'
+        ? ok(pageOf([], request))
+        : undefined,
+    ),
+  ];
+  return { handlers, pages, requests };
+}
+
+/**
+ * Answers the audit log with [entries]; returns the pages asked, oldest first. The filter of who
+ * acted lists the administrators of [users] (`GET /api/admin/users?role=ADMIN`); their cards answer
+ * too, anybody else is unknown to Backend.
  */
 export function mockAudit(
   entries: readonly AuditEntry[],
   users: readonly AdminUserItem[] = [],
 ): string[] {
   const { handlers, pages } = auditBackend(entries);
-  const cards = new Map(users.map((user) => [String(user.isu), adminUserDetailOf(user)]));
-  server.use(
-    ...handlers,
-    http.get('*/api/admin/users/:isu', ({ params }) => {
-      const card = cards.get(String(params.isu));
-      return card ? ok(card) : fail(404, 'not_found');
-    }),
-  );
+  server.use(...usersBackend(users).handlers, ...handlers);
   return pages;
 }

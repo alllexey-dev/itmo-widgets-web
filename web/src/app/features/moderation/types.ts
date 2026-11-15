@@ -20,6 +20,7 @@ export type ReviewVerification = Schemas['ModeratedTeacherReview']['verification
 export type ModerationAction = Schemas['ModerationDecision']['action'];
 export type SubjectLinkRevision = Schemas['SubjectLinkRevision'];
 export type AdminCaseItem = Schemas['AdminCaseItem'];
+export type AdminCaseOutcome = Schemas['AdminCaseOutcome'];
 export type ModerationReport = Schemas['ModerationReport'];
 export type UserRestriction = Schemas['UserRestriction'];
 export type SubmitterHistory = Schemas['SubmitterHistory'];

@@ -225,7 +225,10 @@ const sections = [
   }),
 ];
 
-/** Demo answers of Друзья, a person's page and the sections of Главная for `npm run dev:demo`. */
+/**
+ * Demo answers of Друзья, a person's page and the sections of Главная for `npm run dev:demo`; the
+ * friends of a day (`/api/schedule/friends`) come from the same timetables as a person's schedule.
+ */
 export const handlers: RequestHandler[] = [
   ...socialBackend(people, { viewer: STAFF.anna.isu }).handlers,
   http.get('*/api/sport/sections/my', () => ok(sections)),

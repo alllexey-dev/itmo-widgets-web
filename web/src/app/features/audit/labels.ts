@@ -64,24 +64,93 @@ const PLACES: Record<string, { text: string; href: string } | undefined> = {
 };
 
 export type Target =
-  /** A user: the page shows the name it finds and links to the card. */
-  | { kind: 'user'; isu: number }
+  /** A user or a teacher: the name Backend stored, with the ISU and the page that shows them. */
+  | { kind: 'person'; role: 'user' | 'teacher'; isu: number; name: string | null; href: string }
   /** A named part of the system, with the page where it is changed. */
   | { kind: 'place'; text: string; href: string }
   /** A target this web does not know: Backend's own text. */
   | { kind: 'raw'; text: string };
 
-/** What the action touched. */
-export function targetOf(target: string): Target {
+/**
+ * What the action touched. [name] is the entry's `targetName`: the stored name of a user, the name
+ * of a teacher as staff see it everywhere, null for a user that is gone or has no name, a teacher
+ * nobody has a name for and every other target.
+ */
+export function targetOf(target: string, name: string | null = null): Target {
+  const shown = name?.trim() || null;
   const user = /^user:(\d+)$/.exec(target);
-  if (user) return { kind: 'user', isu: Number(user[1]) };
+  if (user) {
+    const isu = Number(user[1]);
+    return { kind: 'person', role: 'user', isu, name: shown, href: `/admin/users/${isu}` };
+  }
   const teacher = /^teacher:(\d+)$/.exec(target);
-  if (teacher) return { kind: 'place', text: `Преподаватель · ИСУ ${teacher[1]}`, href: REVIEWS };
+  if (teacher) {
+    return { kind: 'person', role: 'teacher', isu: Number(teacher[1]), name: shown, href: REVIEWS };
+  }
   const key = /^credential:(.+)$/.exec(target)?.[1];
   const credential = key === undefined ? undefined : CREDENTIALS[key];
   if (credential) return { kind: 'place', text: credential, href: KEYS };
   const place = PLACES[target];
   return place ? { kind: 'place', ...place } : { kind: 'raw', text: target };
+}
+
+/** Who a person target is besides the name: `ИСУ 123456`, `Преподаватель · ИСУ 123456`. */
+export function personLine(target: { role: 'user' | 'teacher'; isu: number }): string {
+  return target.role === 'teacher' ? `Преподаватель · ИСУ ${target.isu}` : `ИСУ ${target.isu}`;
+}
+
+/** A target in a few words, for the filter that holds it: the name, else what the log shows. */
+export function targetLabel(target: string, name: string | null = null): string {
+  const found = targetOf(target, name);
+  if (found.kind === 'person') return found.name ?? personLine(found);
+  return found.text;
+}
+
+/**
+ * The kinds of target the log can be narrowed to (`targetType` of `GET /api/admin/audit`), named as
+ * the filter offers them.
+ */
+export const TARGET_TYPES: readonly { value: string; label: string }[] = [
+  { value: 'user', label: 'Пользователи' },
+  { value: 'teacher', label: 'Преподаватели' },
+  { value: 'credential', label: 'Ключи' },
+  { value: 'moderation-settings', label: 'Правила модерации' },
+  { value: 'sport-settings', label: 'Автозапись на спорт' },
+  { value: 'app-version', label: 'Версия приложения' },
+  { value: 'reviews-sync', label: 'Синхронизация отзывов' },
+  { value: 'ai-summaries', label: 'ИИ-сводки' },
+];
+
+/** The actions the filter offers, grouped by where they are made. */
+export const ACTION_GROUPS: readonly { title: string; actions: readonly string[] }[] = [
+  {
+    title: 'Пользователи',
+    actions: ['ROLE_GRANTED', 'ROLE_REVOKED', 'AGENT_ACCESS_GRANTED', 'AGENT_ACCESS_REVOKED'],
+  },
+  {
+    title: 'Система',
+    actions: [
+      'MODERATION_SETTINGS_CHANGED',
+      'SPORT_SETTINGS_CHANGED',
+      'APP_VERSION_CHANGED',
+      'SERVICE_CREDENTIAL_REPLACED',
+    ],
+  },
+  {
+    title: 'Отзывы',
+    actions: [
+      'REVIEWS_SYNC_STARTED',
+      'AI_SUMMARIES_RUN_STARTED',
+      'AI_SUMMARY_HIDDEN',
+      'AI_SUMMARY_SHOWN',
+      'AI_SUMMARY_REGENERATION_REQUESTED',
+    ],
+  },
+];
+
+/** True for an action this web names; the filter sends no other. */
+export function isKnownAction(action: string): boolean {
+  return ACTIONS[action] !== undefined;
 }
 
 /** One line of the details: words of the cabinet, or Backend's own notation when it has none. */

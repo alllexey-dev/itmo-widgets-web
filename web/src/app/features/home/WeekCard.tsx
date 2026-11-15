@@ -1,21 +1,89 @@
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Heading } from '@astryxdesign/core/Heading';
+import { Spinner } from '@astryxdesign/core/Spinner';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { ArrowRight } from 'lucide-react';
-import { useId } from 'react';
-import { useResource } from '../../lib/data';
-import { ExampleMark } from '../../lib/ExampleMark';
+import { useId, type ReactNode } from 'react';
+import { useResource, type Resource } from '../../lib/data';
 import { Loadable } from '../../lib/Loadable';
-import { dashboard } from './api';
-import { SHOW_EXAMPLES, withExampleMetrics } from './examples';
-import { weekMetrics } from './week';
+import { METRIC_LABEL } from '../../lib/metricLabels';
+import { dashboard, serverStats, sportStats } from './api';
+import { serverMetric, sportMetric, weekMetrics, type WeekMetric } from './week';
 import './home.css';
+
+/** One figure: its name above, the value with its change below. */
+function Tile({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <VStack gap={1} role="group" aria-label={label}>
+      <Text type="supporting" color="secondary">
+        {label}
+      </Text>
+      <HStack gap={2} vAlign="end">
+        {children}
+      </HStack>
+    </VStack>
+  );
+}
+
+function Metric({ metric }: { metric: WeekMetric }) {
+  return (
+    <Tile label={metric.label}>
+      <Text size="2xl" weight="bold" hasTabularNumbers>
+        {metric.value}
+      </Text>
+      {metric.delta ? (
+        <span className="home-delta" data-good={metric.delta.isGood} title="К предыдущим 7 дням">
+          {metric.delta.text}
+        </span>
+      ) : null}
+    </Tile>
+  );
+}
+
+/**
+ * A figure of its own source: it loads and fails in its tile, so the figures of the dashboard stay
+ * readable when a statistics route does not answer.
+ */
+function SourceMetric<T>({
+  label,
+  resource,
+  metric,
+}: {
+  label: string;
+  resource: Resource<T>;
+  metric: (data: T) => WeekMetric;
+}) {
+  const { data, error, loading, reload } = resource;
+  if (data !== undefined) {
+    return (
+      <div className="home-busy" aria-busy={loading} data-busy={loading}>
+        <Metric metric={metric(data)} />
+      </div>
+    );
+  }
+  if (error && !loading) {
+    return (
+      <Tile label={label}>
+        <Text color="secondary">Не загрузилось</Text>
+        <Button label="Повторить" variant="ghost" size="sm" onClick={reload} />
+      </Tile>
+    );
+  }
+  return (
+    <Tile label={label}>
+      <Spinner size="sm" aria-label={`Загружаем: ${label}`} />
+    </Tile>
+  );
+}
 
 /** "За 7 дней" for the administrator: the headline numbers and the way to Статистика. */
 export function WeekCard() {
   const week = useResource(dashboard);
+  // Asked together with the dashboard, not after it.
+  const sport = useResource(sportStats);
+  const server = useResource(serverStats);
   const titleId = useId();
   return (
     <Card padding={5}>
@@ -39,36 +107,23 @@ export function WeekCard() {
           isCompact
         >
           {(data) => {
-            const metrics = SHOW_EXAMPLES
-              ? withExampleMetrics(weekMetrics(data))
-              : weekMetrics(data);
+            const metrics = weekMetrics(data);
             return (
               <div className="home-week-box">
-                <div className="home-week" data-count={metrics.length}>
+                <div className="home-week" data-count={metrics.length + 2}>
                   {metrics.map((metric) => (
-                    <VStack key={metric.label} gap={1} role="group" aria-label={metric.label}>
-                      <HStack gap={2} vAlign="center">
-                        <Text type="supporting" color="secondary">
-                          {metric.label}
-                        </Text>
-                        {metric.isExample ? <ExampleMark /> : null}
-                      </HStack>
-                      <HStack gap={2} vAlign="end">
-                        <Text size="2xl" weight="bold" hasTabularNumbers>
-                          {metric.value}
-                        </Text>
-                        {metric.delta ? (
-                          <span
-                            className="home-delta"
-                            data-good={metric.delta.isGood}
-                            title="К предыдущим 7 дням"
-                          >
-                            {metric.delta.text}
-                          </span>
-                        ) : null}
-                      </HStack>
-                    </VStack>
+                    <Metric key={metric.label} metric={metric} />
                   ))}
+                  <SourceMetric
+                    label={METRIC_LABEL.sportSignups}
+                    resource={sport}
+                    metric={sportMetric}
+                  />
+                  <SourceMetric
+                    label={METRIC_LABEL.serverErrors}
+                    resource={server}
+                    metric={serverMetric}
+                  />
                 </div>
               </div>
             );

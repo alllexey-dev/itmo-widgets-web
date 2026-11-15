@@ -1,10 +1,18 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { aiSummariesOf, reviewsSyncOf } from '../../test/admin';
 import { renderApp } from '../../test/render';
 import { mockSession, userOf } from '../../test/server';
-import { caseItemOf, mockStats, restrictionOf, verificationOf } from '../../test/stats';
+import {
+  caseItemOf,
+  mockStats,
+  moderationStatsOf,
+  restrictionOf,
+  verificationOf,
+} from '../../test/stats';
 import type * as Metrics from './metrics';
+import { daysBefore, moscowToday } from './period';
 
 // The examples of metrics without data are off here: these tests are about the real blocks, which
 // are the same with examples on (Examples.test.tsx).
@@ -191,5 +199,88 @@ describe('Statistics reviews and moderation', () => {
     expect(await group('Решено заявок')).toHaveTextContent('1');
     expect(await region('ИИ-сводки')).toHaveTextContent('Готовы');
     expect(screen.queryByRole('group', { name: 'Открытые заявки' })).not.toBeInTheDocument();
+  });
+
+  it('draws the reviews, the cases and the votes of the period', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard?tab=reviews');
+
+    const reviews = await region('Новые отзывы');
+    expect(
+      await within(reviews).findByRole('figure', { name: 'Новые отзывы по дням, всего 30' }),
+    ).toBeInTheDocument();
+    expect(reviews).toHaveTextContent('Своих отзывов сейчас: 140');
+    const cases = await region('Открытые и решённые заявки по дням');
+    const flow = within(cases).getByRole('figure', { name: 'Открытые и решённые заявки по дням' });
+    flow.focus();
+    await userEvent.keyboard('{End}');
+    expect(within(flow).getByRole('status')).toHaveTextContent(/Открыто\s*2.*Решено\s*2/);
+    expect(cases).toHaveTextContent('В очереди на конец первого дня: 5, последнего: 5');
+    const votes = await region('Голоса за отзывы и ссылки');
+    expect(
+      within(votes).getByRole('figure', { name: 'Голоса за отзывы и ссылки по дням, всего 270' }),
+    ).toBeInTheDocument();
+  });
+
+  it('splits the decisions by action and by who decided, and the reports by reason', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard?tab=reviews');
+
+    const decisions = await region('Чем заканчивается публикация');
+    expect(await within(decisions).findByText('Одобрено')).toBeInTheDocument();
+    expect(rowOf(decisions, 'Одобрено')).toHaveTextContent(/54.*90,0/);
+    expect(rowOf(decisions, 'Отклонено')).toHaveTextContent('6');
+    expect(within(decisions).queryByText('Скрыто')).not.toBeInTheDocument();
+    expect(rowOf(decisions, 'Правило')).toHaveTextContent(/24.*40,0/);
+    const reports = await region('Жалобы');
+    expect(rowOf(reports, 'Не открывается')).toHaveTextContent(/12.*40,0/);
+    expect(reports).toHaveTextContent(/Всего жалоб\s*30/);
+    expect(reports).toHaveTextContent(/Отклонено модератором\s*33 %/);
+  });
+
+  it('says so when nothing was decided or reported in the period', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats({ moderation: moderationStatsOf({ decisions: [], reports: [] }) });
+
+    renderApp('/admin/dashboard?tab=reviews');
+
+    expect(await screen.findByText('Решений за 30 дней не было')).toBeInTheDocument();
+    expect(screen.getByText('Жалоб за 30 дней не было')).toBeInTheDocument();
+  });
+
+  it('puts the period where its figures start and asks Backend for it', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requested = mockStats();
+    renderApp('/admin/dashboard?tab=reviews');
+    const restrictions = await group('Действующие ограничения');
+
+    const periods = screen.getByRole('radiogroup', { name: 'Период' });
+    // The queue and the bases above are as they are now: the period does not reach them.
+    expect(
+      restrictions.compareDocumentPosition(periods) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    await userEvent.click(within(periods).getByRole('radio', { name: '7 дней' }));
+
+    await waitFor(() =>
+      expect(requested).toContain(
+        `/api/admin/stats/moderation?from=${daysBefore(moscowToday(), 6)}`,
+      ),
+    );
+  });
+
+  it('keeps the queue when the statistics of the period fail', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats({ moderation: null, openCases: OPEN });
+
+    renderApp('/admin/dashboard?tab=reviews');
+
+    const reviews = await region('Новые отзывы');
+    expect(await within(reviews).findByText('Не удалось загрузить')).toBeInTheDocument();
+    expect(await group('Открытые заявки')).toHaveTextContent('3');
+    expect(within(await region('Жалобы')).getByText('Не удалось загрузить')).toBeInTheDocument();
   });
 });

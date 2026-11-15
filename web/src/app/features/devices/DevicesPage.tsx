@@ -19,10 +19,10 @@ import { DEVICES_PATH, revoke, signOutInstall, updateScopes } from './api';
 import './devices.css';
 import {
   canRemove,
+  canTurnOff,
   clientOf,
   confirmationOf,
   connectionLine,
-  hasPushRegistration,
   installActivity,
   installLine,
   installName,
@@ -153,17 +153,8 @@ function ConnectionRow({
  * nothing left to turn off here, so its row only says so. The button keeps its whole label: in a
  * narrow panel it goes under the text instead of losing words.
  */
-function InstallRow({
-  install,
-  name,
-  onEnd,
-}: {
-  install: Install;
-  name: string;
-  onEnd: (install: Install) => void;
-}) {
-  // The calling install signs out in the app itself.
-  const canTurnOff = hasPushRegistration(install) && !install.current;
+function InstallRow({ install, onEnd }: { install: Install; onEnd: (install: Install) => void }) {
+  const name = installName(install);
   return (
     <li className="devices-phone">
       <Item
@@ -177,7 +168,7 @@ function InstallRow({
           </VStack>
         }
       />
-      {canTurnOff ? (
+      {canTurnOff(install) ? (
         <span className="devices-phone-action">
           <Button
             label={`Отключить уведомления на ${name}`}
@@ -208,9 +199,6 @@ export default function DevicesPage() {
   const [target, setTarget] = useState<Target | null>(null);
   const [isConfirming, setConfirming] = useState(false);
   const [isLeaving, setLeaving] = useState(false);
-  // Backend forgets a phone's model with its push registration; the page keeps the name it showed,
-  // so the user still sees which phone was turned off, until the page is opened again.
-  const [phoneNames, setPhoneNames] = useState<Record<string, string>>({});
 
   const narrow = useApiMutation({
     run: ({ connection, scope }: Narrowing) =>
@@ -242,12 +230,7 @@ export default function DevicesPage() {
     // The mutations show their failures themselves.
     const quiet = () => undefined;
     if ('install' in target) {
-      const { install } = target;
-      const name = installName(install);
-      await signOut
-        .mutateAsync(install)
-        .then(() => setPhoneNames((names) => ({ ...names, [install.instanceId]: name })))
-        .catch(quiet);
+      await signOut.mutateAsync(target.install).catch(quiet);
     } else if ('scope' in target) {
       await narrow.mutateAsync(target).catch(quiet);
     } else if (target.connection.id !== self) {
@@ -321,7 +304,6 @@ export default function DevicesPage() {
                       <InstallRow
                         key={install.instanceId}
                         install={install}
-                        name={installName(install, phoneNames[install.instanceId])}
                         onEnd={(item) => ask({ install: item })}
                       />
                     ))}

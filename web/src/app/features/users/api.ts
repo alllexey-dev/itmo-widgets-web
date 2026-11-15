@@ -42,3 +42,8 @@ export function restrictionsHref(isu: number): string {
 export function caseHref(caseId: string): string {
   return `/admin/moderation?case=${encodeURIComponent(caseId)}`;
 }
+
+/** Everything the audit log says about the user: the changes of their roles and access. */
+export function auditHref(isu: number): string {
+  return `/admin/audit?target=user:${isu}`;
+}

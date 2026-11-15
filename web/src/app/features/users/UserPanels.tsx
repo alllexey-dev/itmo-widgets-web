@@ -1,5 +1,6 @@
 import { Button } from '@astryxdesign/core/Button';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
+import { Link } from '@astryxdesign/core/Link';
 import { useMediaQuery } from '@astryxdesign/core/hooks';
 import { List, ListItem } from '@astryxdesign/core/List';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
@@ -189,6 +190,20 @@ function period(restriction: AdminRestriction): string {
     : `с ${formatDate(restriction.startsAt)}, бессрочно`;
 }
 
+/** Who lifted a revoked restriction, by the name Backend stored, a link to their card. */
+function RevokedBy({ restriction }: { restriction: AdminRestriction }) {
+  const isu = restriction.revokedByIsu;
+  if (restriction.revokedAt === null || isu === null) return null;
+  return (
+    <Line>
+      Кто снял:{' '}
+      <Link href={`/admin/users/${isu}`} type="supporting" hasUnderline>
+        {restriction.revokedByName?.trim() || `ИСУ ${isu}`}
+      </Link>
+    </Line>
+  );
+}
+
 interface RestrictionsProps {
   isu: number;
   restrictions: AdminRestriction[];
@@ -253,6 +268,7 @@ export function RestrictionsPanel({ isu, restrictions, onRevoke }: RestrictionsP
                   <Lines>
                     <Line>{restriction.reason}</Line>
                     <Line>{period(restriction)}</Line>
+                    <RevokedBy restriction={restriction} />
                     {isPhone ? (
                       <HStack paddingBlockStart={1} paddingBlockEnd={1}>
                         {actions}

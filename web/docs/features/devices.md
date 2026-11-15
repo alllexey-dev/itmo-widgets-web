@@ -50,7 +50,8 @@ its scope is fixed.
 notifications off, that sport sign-ups through the phone stop with them, and that its ITMO sign-in
 is ended in the app on another phone: the app installs, each with its name, the app version with
 the OS (`ITMO.Widgets 2.4.0, Android API 36`), the last activity and what is known about its
-notifications.
+notifications (`installActivity`): nothing while they come, `уведомления выключены на телефоне`,
+`уведомления отключены <date> с сайта или другого телефона` or `уведомления не включены`.
 
 ## Rules
 
@@ -63,28 +64,28 @@ notifications.
   scopes are sent, the list loads again and the toast says `Доступ убран`; a failure keeps the
   scope and shows `Не удалось убрать доступ`.
 - **A phone is named the same everywhere**: `phoneName` (`src/app/lib/clients.ts`) gives the model
-  from the push registration, else `iPhone` or `Телефон на Android`.
+  from the push registration, else `iPhone` or `Телефон на Android`. Backend forgets the model with
+  the registration, so a phone turned off from here is named by its platform; the row shows what
+  Backend has and reads the same after the page is opened again. Which phone it was is in the
+  toast, and the row tells it apart by the date it was turned off, its version and its activity.
 - **What the web does to a phone is called what it is.** Backend's install sign-out only drops the
   push registration: the phone stops getting pushes, and since Backend signals a sport sign-up
   only to a phone a push can reach, sign-ups through it stop too; the install stays in the list
   and its ITMO.ID session is untouched. So the button is always `Отключить уведомления`, never
   shortened: in a narrow panel it goes under the row's text. The page, its confirmation and the
   profile card use one wording for the consequence (`STOPS_SPORT`).
-- **A phone without a push registration has no button** (`hasPushRegistration`): the answer shows
-  it as `pushEnabled: false` without a `deviceName`, which is what an install looks like after the
-  action (and one that never turned pushes on). Its row says `уведомления отключены`. Backend does
-  not say whether an install was signed out from here, so the row cannot tell that apart from
-  pushes that were never on. The calling install (`current`) has no button either: it signs out
-  in the app itself.
+- **A phone without a push registration has no button** (`hasPushRegistration`, `canTurnOff`).
+  Backend's `signedOutAt` (Backend `docs/contracts/connections.md`, Devices) is when an install
+  sign-out last dropped the phone's registration, from the web or from the app on another phone,
+  and is cleared when the phone registers again. With it the row says
+  `уведомления отключены <date> с сайта или другого телефона`: Backend does not say which of the
+  two it was. Without it, `pushEnabled: false` and no `deviceName` mean the pushes were never
+  turned on: `уведомления не включены`. The calling install (`current`) has no button either: it
+  signs out in the app itself.
 - **A phone that turned its notifications off itself keeps the button** (an iPhone with alerts
   off: registered, `pushEnabled: false`). Its row says `уведомления выключены на телефоне`, and the
   confirmation says what the button still does: with the registration gone, pushes will not come
   even when the phone turns them on again, until the app registers anew.
-- **The row keeps the phone's name after the action.** Backend forgets the model together with the
-  push registration, so two phones of one platform would become indistinguishable. The page
-  remembers the name it showed (by `instanceId`, in the page's state) and keeps showing it, and
-  the toast names the phone by its model. Opening the page again shows what Backend has: the
-  platform name.
 - Every ending action asks first, in an alert dialog (`confirmationOf`):
   - another connection: `Отключить <name>?`. A browser (named, never "this browser") signs out at
     once; an agent or an MCP server loses Backend access at once, and the phone ends its ITMO
@@ -92,7 +93,7 @@ notifications.
   - this browser: `Выйти в этом браузере?`, signing in again needs the phone. It signs out like
     the account menu does and opens the login page.
   - a phone: `Отключить уведомления на <name>?`, with the action `Отключить уведомления`, then the
-    toast `Уведомления на <name> отключены`.
+    toast `Уведомления на <name> отключены`, with the name the phone had before.
 - The action button of the dialog shows the request and the reload; the dialog closes when they
   finish. A failure shows a toast (`Не удалось отключить устройство`, `Не удалось отключить
 уведомления`, `Не удалось выйти`) and changes nothing.
@@ -108,11 +109,14 @@ notifications.
 
 `DevicesPage.test.tsx` renders the whole app at `/me/devices` on Backend's golden
 `userDevices.json` (`src/app/test/fixtures/user-devices.json`: an agent, this browser, a revoked
-MCP server and two installs) behind `devicesBackend` (`src/app/test/account.ts`), which narrows,
-revokes and signs out like Backend:
+MCP server, the calling Pixel and an iPhone turned off from another device) behind
+`devicesBackend` (`src/app/test/account.ts`), which narrows, revokes and signs out like Backend
+(an install sign-out drops the model and sets `signedOutAt`; one without a registration keeps its
+state):
 
-- live connections with this browser marked, the revoked one hidden, the installs with version, OS
-  and the fallback name of a phone without a model; the link back to the profile;
+- live connections with this browser marked, the revoked one hidden, the installs with version, OS,
+  the fallback name of a phone without a model and the day it was turned off; the link back to
+  the profile;
 - the client type, the activity or the connection day, a closed ITMO sign-in and one that ends
   within a week, each with what it means and what to do;
 - scope texts from Backend; a scope is taken away only after the confirmation, which sends the
@@ -122,8 +126,9 @@ revokes and signs out like Backend:
   confirmation; cancelling; a failed revoke;
 - signing this browser out from its own row;
 - turning a phone's notifications off: the confirmation with what stops, the request, the toast
-  and the row that then keeps its name and has no pushes and no button; a phone that came without
-  a model is named by its platform; no button on the calling phone and on one without a
-  registration; a registered phone with pushes off keeps the full-label button and its
-  confirmation says what it still does; a failure changes nothing;
+  with the model and the row that then shows Backend's platform name, today's date and no button,
+  the same after the page is opened again; no button on the calling phone and on one without a
+  registration; a phone that never turned pushes on says so; a registered phone with pushes off
+  keeps the full-label button and its confirmation says what it still does; a failure changes
+  nothing;
 - the empty installs panel and the retry after a failed load.

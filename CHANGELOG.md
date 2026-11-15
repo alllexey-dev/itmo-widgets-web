@@ -4,6 +4,14 @@ Dates are production deploys; before 2026-10-02 they are commit dates.
 
 ## Unreleased
 
+- Needs Backend with alllexey-dev/itmo-widgets-backend#67 on both hosts first; API types come from Backend c719ab1.
+- Статистика draws every figure from Backend (`/api/admin/stats/*`, `/api/admin/system/sheet-rules`), with one period for the page (7, 30, 90, 365 days or all time); the examples are gone. People and retention are counted per account, installs apart.
+- Модерация: «Отменить» for 10 minutes after a decision, in the toast and in the decision log, with the reason when Backend refuses; Ограничения search by name or the start of an ISU number; review rows name the teacher, closed rows show their outcome and who decided, a withdrawn case links to the case that withdrew it, a lifted restriction names who lifted it.
+- Журнал filters by who, action, object and dates and names users and teachers; Пользователи filters by role and restrictions and marks restricted users; a user card links to their entries in Журнал.
+- Главная: «Друзья сейчас» is one request for any number of friends; «Записи на спорт» and «Ошибки сервера» are real figures for administrators.
+- Устройства: a phone turned off from the web or another phone says so with the date after a reload too; a phone that never turned notifications on says so.
+- The privacy policy, dated 16 November 2026, names the calendar weeks in which an account used the server (kept while the account exists) and the daily counters without user data; the deletion page lists the weeks.
+
 - The whole site is rebuilt from scratch on React 19 and the Astryx design system as one Vite app; Svelte, `@alllexey/ui` and the hand-written static pages are gone. The look is Astryx Neutral with the system font, light and dark by the system scheme.
 - The landing is a short showcase: the slogan "My ITMO, который вы заслужили", downloads for Android and iPhone from GitHub Releases, Telegram as the news channel, a feature grid with screenshots. Every public page (landing, policy, account deletion, link pages) is prerendered and ships without JavaScript, except `link.js` on `/u/*` and `/sport/*`; the CSP is unchanged.
 - The cabinet at `/app/` has a side navigation grouped by role (Моё, Модерация, Управление) and an account menu with Профиль, Устройства, the light, dark or system theme and sign-out. Ограничения and Статистика are pages of their own. All addresses of the previous cabinet still work.

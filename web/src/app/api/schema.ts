@@ -84,6 +84,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/moderation/cases/{id}/decisions/{decisionId}/revert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["adminModeration_revert"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/moderation/restrictions": {
         parameters: {
             query?: never;
@@ -244,6 +260,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/stats/audience": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["adminStats_audience"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stats/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["adminStats_features"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stats/moderation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["adminStats_moderation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stats/server": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["adminStats_server"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stats/sport": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["adminStats_sport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/system/app-version": {
         parameters: {
             query?: never;
@@ -324,6 +420,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/system/sheet-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["adminSystem_sheetRules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/system/sport": {
         parameters: {
             query?: never;
@@ -333,6 +445,22 @@ export interface paths {
         };
         get: operations["adminSystem_sport"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/system/sport/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["adminSystem_sportSettings"];
+        put: operations["adminSystem_updateSportSettings"];
         post?: never;
         delete?: never;
         options?: never;
@@ -708,6 +836,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/links/{id}/sheet-rule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["sheetRule_rule"];
+        put?: never;
+        post: operations["sheetRule_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/links/{id}/vote": {
         parameters: {
             query?: never;
@@ -861,6 +1005,22 @@ export interface paths {
         };
         get?: never;
         put: operations["teacherReview_vote"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/schedule/friends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["schedule_friendsOnDay"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1348,6 +1508,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/teachers/{isu}/reviews/hints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["teacherReview_hints"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/teachers/{isu}/reviews/mine": {
         parameters: {
             query?: never;
@@ -1640,6 +1816,14 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AdminActivePeople: {
+            /** Format: int64 */
+            active1d: number;
+            /** Format: int64 */
+            active30d: number;
+            /** Format: int64 */
+            active7d: number;
+        };
         AdminAgentAccess: {
             enabled: boolean;
         };
@@ -1694,6 +1878,27 @@ export interface components {
             minimum: string;
             note: string;
         };
+        AdminAudienceDay: {
+            /** Format: date */
+            date: string;
+            /** Format: int64 */
+            newUsers: number;
+        };
+        AdminAudienceStats: {
+            activePeople: components["schemas"]["AdminActivePeople"];
+            courses: components["schemas"]["AdminCourseCount"][];
+            days: components["schemas"]["AdminAudienceDay"][];
+            faculties: components["schemas"]["AdminFacultyCount"][];
+            /** Format: date */
+            from: string;
+            peopleHistory: components["schemas"]["AdminPeopleDay"][];
+            retention: components["schemas"]["AdminRetentionCohort"][];
+            retentionClassic: components["schemas"]["AdminClassicCohort"][];
+            /** Format: date */
+            to: string;
+            /** Format: int64 */
+            usersBefore: number;
+        };
         AdminAuditEntry: {
             action: string;
             /** Format: int32 */
@@ -1705,6 +1910,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             target: string;
+            targetName: string | null;
         };
         AdminCaseItem: {
             author: components["schemas"]["AdminUserSummary"] | null;
@@ -1713,6 +1919,7 @@ export interface components {
             link: components["schemas"]["AdminLinkSummary"] | null;
             /** Format: date-time */
             openedAt: string;
+            outcome: components["schemas"]["AdminCaseOutcome"] | null;
             /** @enum {string} */
             reason: "SUBMISSION" | "REPORTS" | "VOTES";
             /** Format: int64 */
@@ -1725,6 +1932,43 @@ export interface components {
             status: "OPEN" | "RESOLVED" | "WITHDRAWN";
             /** @enum {string} */
             targetType: "SUBJECT_RESOURCE" | "TEACHER_REVIEW";
+            /** Format: uuid */
+            withdrawnByCaseId: string | null;
+        };
+        AdminCaseOutcome: {
+            /** @enum {string} */
+            action: "APPROVE" | "REJECT" | "HIDE" | "RESTORE" | "DISMISS" | "RESTRICT_USER" | "HIDE_ALL_BY_USER";
+            /** @enum {string} */
+            actor: "MODERATOR" | "POLICY";
+            /** Format: date-time */
+            decidedAt: string;
+            /** Format: int32 */
+            moderatorIsu: number | null;
+            moderatorName: string | null;
+            note: string | null;
+        };
+        AdminCaseStats: {
+            /** Format: int64 */
+            maxSecondsToDecision: number | null;
+            /** Format: int64 */
+            medianSecondsToDecision: number | null;
+            /** Format: int64 */
+            opened: number;
+            /** @enum {string} */
+            reason: "SUBMISSION" | "REPORTS" | "VOTES";
+            /** Format: int64 */
+            resolved: number;
+            /** @enum {string} */
+            targetType: "SUBJECT_RESOURCE" | "TEACHER_REVIEW";
+            /** Format: int64 */
+            withdrawn: number;
+        };
+        AdminClassicCohort: {
+            active: number[];
+            /** Format: int64 */
+            size: number;
+            /** Format: date */
+            weekStart: string;
         };
         AdminClient: {
             base: string | null;
@@ -1810,6 +2054,14 @@ export interface components {
             history: components["schemas"]["AdminClientDay"][];
             kinds: components["schemas"]["AdminClientKind"][];
         };
+        AdminCourseCount: {
+            /** Format: int64 */
+            active30d: number;
+            /** Format: int32 */
+            course: number | null;
+            /** Format: int64 */
+            users: number;
+        };
         AdminDashboard: {
             days: components["schemas"]["AdminDashboardDay"][];
             totals: components["schemas"]["AdminDashboardTotals"];
@@ -1850,6 +2102,16 @@ export interface components {
             /** Format: int64 */
             webSessions7d: number;
         };
+        AdminDecisionStats: {
+            /** @enum {string} */
+            action: "APPROVE" | "REJECT" | "HIDE" | "RESTORE" | "DISMISS" | "RESTRICT_USER" | "HIDE_ALL_BY_USER";
+            /** @enum {string} */
+            actor: "MODERATOR" | "POLICY";
+            /** Format: int64 */
+            count: number;
+            /** @enum {string} */
+            targetType: "SUBJECT_RESOURCE" | "TEACHER_REVIEW";
+        };
         AdminDevice: {
             /** Format: int32 */
             appBuild: number | null;
@@ -1865,6 +2127,51 @@ export interface components {
             /** @enum {string} */
             platform: "ANDROID" | "IOS";
         };
+        AdminFacultyCount: {
+            /** Format: int64 */
+            active30d: number;
+            facultyName: string | null;
+            facultyShortName: string | null;
+            /** Format: int64 */
+            users: number;
+        };
+        AdminFeatureStats: {
+            days: components["schemas"]["AdminFeatureStatsDay"][];
+            features: components["schemas"]["AdminFeatureUsage"][];
+            /** Format: date */
+            from: string;
+            pairing: components["schemas"]["AdminPairingFunnel"][];
+            privacy: components["schemas"]["AdminPrivacyStats"];
+            /** Format: int64 */
+            socialUsers: number;
+            /** Format: date */
+            to: string;
+            /** Format: int64 */
+            users: number;
+            /** Format: int64 */
+            usersWithFriends: number;
+        };
+        AdminFeatureStatsDay: {
+            connectionsCreated: {
+                [key: string]: number;
+            };
+            connectionsRevoked: {
+                [key: string]: number;
+            };
+            /** Format: date */
+            date: string;
+            /** Format: int64 */
+            friendAccepts: number;
+            /** Format: int64 */
+            friendRequests: number;
+        };
+        AdminFeatureUsage: {
+            /** Format: int64 */
+            events: number | null;
+            feature: string;
+            /** Format: int64 */
+            users: number;
+        };
         AdminLinkSummary: {
             hidden: boolean;
             /** Format: uuid */
@@ -1875,6 +2182,40 @@ export interface components {
             /** Format: int64 */
             subjectId: number;
             subjectName: string;
+        };
+        AdminModerationStats: {
+            cases: components["schemas"]["AdminCaseStats"][];
+            days: components["schemas"]["AdminModerationStatsDay"][];
+            decisions: components["schemas"]["AdminDecisionStats"][];
+            /** Format: date */
+            from: string;
+            /** Format: int64 */
+            ownReviews: number;
+            reports: components["schemas"]["AdminReportStats"][];
+            /** Format: date */
+            to: string;
+        };
+        AdminModerationStatsDay: {
+            /** Format: int64 */
+            backlog: number;
+            /** Format: int64 */
+            casesOpened: number;
+            /** Format: int64 */
+            casesResolved: number;
+            /** Format: int64 */
+            casesWithdrawn: number;
+            /** Format: date */
+            date: string;
+            /** Format: int64 */
+            externalReviewVotes: number;
+            /** Format: int64 */
+            linkVotes: number;
+            /** Format: int64 */
+            newReviews: number;
+            /** Format: int64 */
+            reports: number;
+            /** Format: int64 */
+            reviewVotes: number;
         };
         AdminPageAdminAuditEntry: {
             items: components["schemas"]["AdminAuditEntry"][];
@@ -1921,6 +2262,62 @@ export interface components {
             /** Format: int64 */
             total: number;
         };
+        AdminPairingFunnel: {
+            /** Format: int64 */
+            approved: number;
+            /** Format: int64 */
+            claimed: number;
+            /** @enum {string} */
+            client: "agent" | "mcp" | "web";
+            /** Format: int64 */
+            created: number;
+            /** Format: int64 */
+            expired: number;
+            /** Format: int64 */
+            opened: number;
+        };
+        AdminPeopleDay: {
+            /** Format: int64 */
+            active1d: number;
+            /** Format: int64 */
+            active30d: number;
+            /** Format: int64 */
+            active7d: number;
+            /** Format: date */
+            day: string;
+        };
+        AdminPrivacyStats: {
+            friends: {
+                [key: string]: number;
+            };
+            schedule: {
+                [key: string]: number;
+            };
+            sport: {
+                [key: string]: number;
+            };
+        };
+        AdminPushStats: {
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            noDevice: number;
+            /** Format: int64 */
+            sent: number;
+            /** Format: int64 */
+            tokenGone: number;
+            type: string;
+        };
+        AdminReportStats: {
+            /** Format: int64 */
+            dismissed: number;
+            /** @enum {string} */
+            reason: "BROKEN" | "WRONG_SUBJECT" | "SPAM" | "OTHER" | "OFFENSIVE" | "WRONG_TEACHER";
+            /** @enum {string} */
+            targetType: "SUBJECT_RESOURCE" | "TEACHER_REVIEW";
+            /** Format: int64 */
+            total: number;
+        };
         AdminRestriction: {
             active: boolean;
             /** @enum {string} */
@@ -1936,9 +2333,17 @@ export interface components {
             revokedAt: string | null;
             /** Format: int32 */
             revokedByIsu: number | null;
+            revokedByName: string | null;
             /** Format: date-time */
             startsAt: string;
             user: components["schemas"]["AdminUserSummary"];
+        };
+        AdminRetentionCohort: {
+            retained: number[];
+            /** Format: int64 */
+            size: number;
+            /** Format: date */
+            weekStart: string;
         };
         AdminReviewSummary: {
             anonymous: boolean;
@@ -1946,11 +2351,14 @@ export interface components {
             hidden: boolean;
             /** Format: uuid */
             id: string;
+            /** @enum {string} */
+            revisionStatus: "PENDING" | "APPROVED" | "REJECTED" | "WITHDRAWN";
             /** Format: int32 */
             score: number;
             subjectTitle: string | null;
             /** Format: int32 */
             teacherIsu: number;
+            teacherName: string | null;
         };
         AdminReviewVerification: {
             /** Format: int64 */
@@ -1993,6 +2401,53 @@ export interface components {
             /** Format: int32 */
             upstreamTeachers: number;
         };
+        AdminRouteStats: {
+            /** Format: int64 */
+            errors4xx: number;
+            /** Format: int64 */
+            errors5xx: number;
+            group: string;
+            /** Format: int32 */
+            p50Millis: number | null;
+            /** Format: int32 */
+            p95Millis: number | null;
+            /** Format: int64 */
+            requests: number;
+        };
+        AdminServerDay: {
+            /** Format: date */
+            date: string;
+            /** Format: int64 */
+            errors5xx: number;
+            /** Format: int64 */
+            myItmoCalls: number;
+            /** Format: int64 */
+            myItmoFailures: number;
+            /** Format: int32 */
+            p50Millis: number | null;
+            /** Format: int32 */
+            p95Millis: number | null;
+            /** Format: int64 */
+            pushFailed: number;
+            /** Format: int64 */
+            pushSent: number;
+            /** Format: int64 */
+            pushTokenGone: number;
+            /** Format: int64 */
+            requests: number;
+        };
+        AdminServerStats: {
+            /** Format: date */
+            collectedSince: string | null;
+            days: components["schemas"]["AdminServerDay"][];
+            /** Format: date */
+            from: string;
+            myItmo: components["schemas"]["AdminUpstreamStats"][];
+            push: components["schemas"]["AdminPushStats"][];
+            routes: components["schemas"]["AdminRouteStats"][];
+            /** Format: date */
+            to: string;
+        };
         AdminServiceCredential: {
             /** Format: date-time */
             expiresAt: string | null;
@@ -2020,6 +2475,50 @@ export interface components {
             /** @enum {string|null} */
             updatedSource: "MIGRATION" | "SEED" | "ROTATION" | "ADMIN" | null;
         };
+        AdminSheetRuleError: {
+            error: string;
+            /** Format: int64 */
+            sheets: number;
+        };
+        AdminSheetRules: {
+            /** Format: int64 */
+            attempts: number;
+            /** Format: date */
+            budgetDay: string;
+            /** Format: int32 */
+            budgetUsed: number;
+            /** Format: int32 */
+            dailyBudget: number;
+            enabled: boolean;
+            errors: components["schemas"]["AdminSheetRuleError"][];
+            /** Format: date-time */
+            lastAnalyzedAt: string | null;
+            running: boolean;
+            /** Format: date-time */
+            runningSince: string | null;
+            statuses: {
+                [key: string]: number;
+            };
+        };
+        AdminSportDayEntries: {
+            /** Format: int64 */
+            created: number;
+            /** Format: int64 */
+            satisfied: number;
+        };
+        AdminSportEntryStats: {
+            /** Format: int64 */
+            created: number;
+            /** Format: int64 */
+            medianSeconds: number | null;
+            outcomes: {
+                [key: string]: number;
+            };
+            /** Format: int64 */
+            p90Seconds: number | null;
+            /** Format: int64 */
+            timed: number;
+        };
         AdminSportRun: {
             /** Format: int64 */
             durationMillis: number;
@@ -2040,6 +2539,57 @@ export interface components {
             /** Format: int32 */
             updatedLessons: number;
         };
+        AdminSportSectionStats: {
+            /** Format: int64 */
+            autoSignEntries: number;
+            /** Format: int64 */
+            freeSignEntries: number;
+            /** Format: int64 */
+            medianWaitSeconds: number | null;
+            /** Format: int64 */
+            satisfied: number;
+            sectionName: string;
+        };
+        AdminSportSettings: {
+            /** Format: int32 */
+            autoSignLimit: number;
+            overridden: boolean;
+            /** Format: date-time */
+            updatedAt: string | null;
+        };
+        AdminSportSettingsRequest: {
+            /** Format: int32 */
+            autoSignLimit: number;
+        };
+        AdminSportSlotStats: {
+            /** Format: int64 */
+            entries: number;
+            /** Format: int64 */
+            satisfied: number;
+            timeStart: string;
+            /** Format: int32 */
+            weekday: number;
+        };
+        AdminSportStats: {
+            autoSign: components["schemas"]["AdminSportEntryStats"];
+            days: components["schemas"]["AdminSportStatsDay"][];
+            freeSign: components["schemas"]["AdminSportEntryStats"];
+            /** Format: date */
+            from: string;
+            sections: components["schemas"]["AdminSportSectionStats"][];
+            slots: components["schemas"]["AdminSportSlotStats"][];
+            subscriptions: components["schemas"]["AdminSportSubscriptionStats"];
+            /** Format: date */
+            to: string;
+        };
+        AdminSportStatsDay: {
+            autoSign: components["schemas"]["AdminSportDayEntries"];
+            /** Format: date */
+            date: string;
+            freeSign: components["schemas"]["AdminSportDayEntries"];
+            /** Format: int64 */
+            signUps: number;
+        };
         AdminSportStatus: {
             /** Format: int64 */
             activeAutoSignEntries: number;
@@ -2056,6 +2606,18 @@ export interface components {
                 [key: string]: number;
             };
             runs: components["schemas"]["AdminSportRun"][];
+        };
+        AdminSportSubscriptionStats: {
+            /** Format: int64 */
+            active: number;
+            /** Format: int64 */
+            created: number;
+            occurrences: {
+                [key: string]: number;
+            };
+            stopped: {
+                [key: string]: number;
+            };
         };
         AdminSummaryHiddenRequest: {
             hidden: boolean;
@@ -2081,6 +2643,14 @@ export interface components {
             teacherIsu: number;
             teacherName: string | null;
         };
+        AdminUpstreamStats: {
+            /** Format: int64 */
+            calls: number;
+            failures: {
+                [key: string]: number;
+            };
+            operation: string;
+        };
         AdminUserDetail: {
             agentAccess: boolean;
             clients: components["schemas"]["AdminClient"][];
@@ -2099,6 +2669,8 @@ export interface components {
             user: components["schemas"]["AdminUserSummary"];
         };
         AdminUserItem: {
+            /** Format: int32 */
+            activeRestrictions: number;
             /** Format: date-time */
             createdAt: string;
             groups: components["schemas"]["GroupData"][];
@@ -2130,6 +2702,11 @@ export interface components {
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
+        ApiResponseAdminAudienceStats: {
+            data: components["schemas"]["AdminAudienceStats"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
         ApiResponseAdminClientVersions: {
             data: components["schemas"]["AdminClientVersions"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
@@ -2142,6 +2719,16 @@ export interface components {
         };
         ApiResponseAdminDashboard: {
             data: components["schemas"]["AdminDashboard"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseAdminFeatureStats: {
+            data: components["schemas"]["AdminFeatureStats"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseAdminModerationStats: {
+            data: components["schemas"]["AdminModerationStats"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
@@ -2177,6 +2764,26 @@ export interface components {
         };
         ApiResponseAdminReviewsSync: {
             data: components["schemas"]["AdminReviewsSync"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseAdminServerStats: {
+            data: components["schemas"]["AdminServerStats"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseAdminSheetRules: {
+            data: components["schemas"]["AdminSheetRules"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseAdminSportSettings: {
+            data: components["schemas"]["AdminSportSettings"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseAdminSportStats: {
+            data: components["schemas"]["AdminSportStats"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
@@ -2232,6 +2839,11 @@ export interface components {
         };
         ApiResponseListAdminServiceCredential: {
             data: components["schemas"]["AdminServiceCredential"][] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseListFriendDay: {
+            data: components["schemas"]["FriendDay"][] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
@@ -2320,6 +2932,11 @@ export interface components {
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
+        ApiResponseSheetRuleResponse: {
+            data: components["schemas"]["SheetRuleResponse"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
         ApiResponseSportAutoSignEntry: {
             data: components["schemas"]["SportAutoSignEntry"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
@@ -2347,6 +2964,11 @@ export interface components {
         };
         ApiResponseSubjectLinksResponse: {
             data: components["schemas"]["SubjectLinksResponse"] | null;
+            error: components["schemas"]["ErrorDetails"] | null;
+            success: boolean;
+        };
+        ApiResponseTeacherReviewHints: {
+            data: components["schemas"]["TeacherReviewHints"] | null;
             error: components["schemas"]["ErrorDetails"] | null;
             success: boolean;
         };
@@ -2493,6 +3115,10 @@ export interface components {
             code: "invalid_request" | "invalid_request_data" | "validation_error" | "unauthorized" | "reauth_required" | "permission_denied" | "access_denied" | "restricted" | "csrf" | "client_session" | "not_enrolled" | "recent_sign_in_required" | "not_found" | "business_rule_violation" | "conflict" | "rate_limited" | "internal_server_error";
             message: string;
         };
+        FriendDay: {
+            lessons: components["schemas"]["LessonDto"][];
+            user: components["schemas"]["UserData"];
+        };
         FriendSportBooking: {
             entry: components["schemas"]["SportQueueEntry"] | null;
             /** Format: int32 */
@@ -2526,6 +3152,8 @@ export interface components {
             platform: "ANDROID" | "IOS";
             pushEnabled: boolean;
             sid: string | null;
+            /** Format: date-time */
+            signedOutAt: string | null;
             version: string;
         };
         ItmoSession: {
@@ -2599,6 +3227,8 @@ export interface components {
             teacherName: string | null;
             /** @enum {string} */
             verification: "PENDING" | "VERIFIED" | "UNVERIFIED";
+            /** @enum {string|null} */
+            verifiedBasis: "ISU_FLOW" | "SPORT_TEACHER" | null;
             /** Format: int64 */
             verifiedFlowId: number | null;
         };
@@ -2630,6 +3260,10 @@ export interface components {
             moderatorId: string | null;
             note: string | null;
             restriction: components["schemas"]["DecisionRestriction"] | null;
+            /** Format: date-time */
+            revertedAt: string | null;
+            /** Format: date-time */
+            revertibleUntil: string | null;
         };
         ModerationDecisionRequest: {
             /** @enum {string} */
@@ -2774,6 +3408,17 @@ export interface components {
         };
         ServiceCredentialRequest: {
             value: string;
+        };
+        SheetRuleResponse: {
+            /** Format: date-time */
+            analyzedAt: string | null;
+            reason: string | null;
+            /** @description The analyzer's sanitised rule, schema_version 1 */
+            rule: {
+                [key: string]: unknown;
+            } | null;
+            /** @enum {string} */
+            status: "NONE" | "PENDING" | "RUNNING" | "READY" | "INSUFFICIENT" | "FAILED";
         };
         SportAutoSignEntry: {
             /** Format: date-time */
@@ -3056,6 +3701,12 @@ export interface components {
             /** Format: date */
             writtenOn: string | null;
         };
+        TeacherReviewHints: {
+            coach: boolean;
+            subjects: string[];
+            /** Format: int32 */
+            teacherIsu: number;
+        };
         TeacherReviewRevision: {
             /** Format: date-time */
             decidedAt: string | null;
@@ -3199,6 +3850,12 @@ export interface operations {
     adminAudit_audit: {
         parameters: {
             query?: {
+                actorIsu?: number;
+                action?: "ROLE_GRANTED" | "ROLE_REVOKED" | "MODERATION_SETTINGS_CHANGED" | "APP_VERSION_CHANGED" | "SPORT_SETTINGS_CHANGED" | "REVIEWS_SYNC_STARTED" | "SERVICE_CREDENTIAL_REPLACED" | "AI_SUMMARIES_RUN_STARTED" | "AI_SUMMARY_HIDDEN" | "AI_SUMMARY_SHOWN" | "AI_SUMMARY_REGENERATION_REQUESTED" | "AGENT_ACCESS_GRANTED" | "AGENT_ACCESS_REVOKED";
+                targetType?: string;
+                target?: string;
+                from?: string;
+                to?: string;
                 page?: number;
                 size?: number;
             };
@@ -3312,10 +3969,34 @@ export interface operations {
             };
         };
     };
+    adminModeration_revert: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseModerationCase"];
+                };
+            };
+        };
+    };
     adminModeration_restrictions: {
         parameters: {
             query?: {
                 isu?: number;
+                q?: string;
                 active?: boolean;
                 page?: number;
                 size?: number;
@@ -3575,6 +4256,121 @@ export interface operations {
             };
         };
     };
+    adminStats_audience: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminAudienceStats"];
+                };
+            };
+        };
+    };
+    adminStats_features: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminFeatureStats"];
+                };
+            };
+        };
+    };
+    adminStats_moderation: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminModerationStats"];
+                };
+            };
+        };
+    };
+    adminStats_server: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminServerStats"];
+                };
+            };
+        };
+    };
+    adminStats_sport: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminSportStats"];
+                };
+            };
+        };
+    };
     adminSystem_appVersion: {
         parameters: {
             query?: {
@@ -3709,6 +4505,26 @@ export interface operations {
             };
         };
     };
+    adminSystem_sheetRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminSheetRules"];
+                };
+            };
+        };
+    };
     adminSystem_sport: {
         parameters: {
             query?: never;
@@ -3729,10 +4545,56 @@ export interface operations {
             };
         };
     };
+    adminSystem_sportSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminSportSettings"];
+                };
+            };
+        };
+    };
+    adminSystem_updateSportSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminSportSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAdminSportSettings"];
+                };
+            };
+        };
+    };
     adminUsers_search: {
         parameters: {
             query?: {
                 query?: string;
+                role?: "MODERATOR" | "ADMIN";
+                restricted?: boolean;
                 page?: number;
                 size?: number;
             };
@@ -4293,6 +5155,50 @@ export interface operations {
             };
         };
     };
+    sheetRule_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSheetRuleResponse"];
+                };
+            };
+        };
+    };
+    sheetRule_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSheetRuleResponse"];
+                };
+            };
+        };
+    };
     subjectLink_vote: {
         parameters: {
             query?: never;
@@ -4553,6 +5459,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseTeacherReviewsResponse"];
+                };
+            };
+        };
+    };
+    schedule_friendsOnDay: {
+        parameters: {
+            query?: {
+                date?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListFriendDay"];
                 };
             };
         };
@@ -5224,6 +6152,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseTeacherReviewsResponse"];
+                };
+            };
+        };
+    };
+    teacherReview_hints: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                isu: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseTeacherReviewHints"];
                 };
             };
         };

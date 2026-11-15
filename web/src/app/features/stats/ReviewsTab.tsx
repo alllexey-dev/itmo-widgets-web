@@ -8,15 +8,28 @@ import { formatRelative } from '../../lib/format';
 import {
   SAMPLE_SIZE,
   useActiveRestrictions,
+  useModerationStats,
   useOpenCases,
   useResolvedCases,
   useReviewsSync,
   useSummaries,
   useVerification,
 } from './api';
-import { ReviewExamples } from './ExampleBlocks';
-import { Meter, SegmentBar } from './charts';
-import { formatInt, formatSpan } from './format';
+import { Meter, SegmentBar, TimeChart } from './charts';
+import { formatInt, formatPct, formatSpan } from './format';
+import { METRICS } from './metrics';
+import { PeriodControl, usePeriod } from './period';
+import {
+  actorSegments,
+  backlogOf,
+  casesFlowChart,
+  decisionSegments,
+  reportSegments,
+  reportTotals,
+  reviewsChart,
+  stepOf,
+  votesChart,
+} from './periodModel';
 import { REVIEW_CHECK_NAME, SYNC_NAME } from '../../lib/metricLabels';
 import { SYNC_OUTCOMES } from './labels';
 import {
@@ -91,6 +104,10 @@ function restrictionTiles(page: RestrictionsPage): TileView[] {
 }
 
 export function ReviewsTab() {
+  const [period] = usePeriod();
+  const step = stepOf(period.days);
+  const by = step === 'day' ? 'по дням' : 'по месяцам';
+  const stats = useModerationStats(period.days);
   const open = useOpenCases();
   const resolved = useResolvedCases();
   const restrictions = useActiveRestrictions();
@@ -251,7 +268,94 @@ export function ReviewsTab() {
           )}
         </SourcePanel>
       </div>
-      <ReviewExamples />
+      {/* What is above is the queue and the bases as they are now; the period starts here. */}
+      <PeriodControl />
+      <div className="st-cols st-stretch" data-cols="2">
+        <SourcePanel
+          title={METRICS.reviews_created.name}
+          hint={`Отзывы пользователей приложения о преподавателях; ${by}, ${period.span}`}
+          resource={stats}
+        >
+          {(data) => (
+            <>
+              <Text type="supporting" color="secondary" hasTabularNumbers>
+                Своих отзывов сейчас: {formatInt(data.ownReviews)}
+              </Text>
+              <TimeChart chart={reviewsChart(data, step)} />
+            </>
+          )}
+        </SourcePanel>
+        <SourcePanel
+          title={METRICS.cases_flow.name}
+          hint={`Успевает ли модерация: открытые и решённые заявки ${by}, ${period.span}`}
+          resource={stats}
+        >
+          {(data) => {
+            const backlog = backlogOf(data);
+            return (
+              <>
+                {backlog ? (
+                  <Text type="supporting" color="secondary" hasTabularNumbers>
+                    В очереди на конец первого дня: {formatInt(backlog.start)}, последнего:{' '}
+                    {formatInt(backlog.end)}
+                  </Text>
+                ) : null}
+                <TimeChart chart={casesFlowChart(data, step)} />
+              </>
+            );
+          }}
+        </SourcePanel>
+      </div>
+      <div className="st-cols st-stretch" data-cols="3">
+        <SourcePanel
+          title={METRICS.review_votes.name}
+          hint={`Голоса, которые ещё стоят, по дню, когда их отдали; ${by}, ${period.span}`}
+          resource={stats}
+        >
+          {(data) => <TimeChart chart={votesChart(data, step)} height={200} />}
+        </SourcePanel>
+        <SourcePanel
+          title={METRICS.decisions.name}
+          hint={`Решения по заявкам ${period.span}, кроме отменённых`}
+          resource={stats}
+        >
+          {(data) => {
+            const decisions = decisionSegments(data);
+            if (!decisions.length) return <Nothing title={`Решений ${period.span} не было`} />;
+            return (
+              <>
+                <SegmentBar segments={decisions} label="Решения по заявкам по действию" />
+                <VStack gap={2}>
+                  <SubHeading>Кто решал</SubHeading>
+                  <SegmentBar segments={actorSegments(data)} label="Кто принимал решения" />
+                </VStack>
+              </>
+            );
+          }}
+        </SourcePanel>
+        <SourcePanel
+          title={METRICS.reports.name}
+          hint={`На ссылки и отзывы, ${period.span}, по причине`}
+          resource={stats}
+        >
+          {(data) => {
+            const reasons = reportSegments(data);
+            if (!reasons.length) return <Nothing title={`Жалоб ${period.span} не было`} />;
+            const totals = reportTotals(data);
+            return (
+              <>
+                <SegmentBar segments={reasons} label="Жалобы по причинам" />
+                <Facts
+                  rows={[
+                    ['Всего жалоб', formatInt(totals.total)],
+                    ['Отклонено модератором', formatPct(totals.dismissed, 0)],
+                  ]}
+                />
+              </>
+            );
+          }}
+        </SourcePanel>
+      </div>
     </TabFrame>
   );
 }

@@ -6,18 +6,28 @@ import { Text } from '@astryxdesign/core/Text';
 
 import { CLIENT_KINDS, type ClientKind } from '../../lib/clients';
 import { METRIC_LABEL, WEB_SESSIONS_HINT } from '../../lib/metricLabels';
-import { useClients, useDashboard } from './api';
-import { SegmentBar } from './charts';
-import { formatInt } from './format';
-import { FEATURE_EXAMPLE_TILES, FeatureExamples, FeatureExampleTiles } from './ExampleBlocks';
+import { useClients, useDashboard, useFeatureStats } from './api';
+import { Meter, SegmentBar, TimeChart } from './charts';
+import { formatInt, formatPct, shareOf } from './format';
+import { METRICS } from './metrics';
 import { dayTotal, linkSegments, sum } from './model';
-import { DayPanel } from './panels';
+import { DayPanel, FeatureUsagePanel } from './panels';
+import { PeriodControl, usePeriod, type Period } from './period';
+import {
+  connectionsChart,
+  connectionTotals,
+  friendsFlowChart,
+  pairingExpired,
+  pairingSteps,
+  privacyGroups,
+  stepOf,
+} from './periodModel';
 import {
   BarCell,
-  exampleCount,
   NameCell,
   Num,
   SourcePanel,
+  SubHeading,
   Nothing,
   TabFrame,
   TileGrid,
@@ -25,7 +35,7 @@ import {
   type TileView,
 } from './parts';
 import { DataTable } from './tables';
-import type { Clients, Dashboard } from './types';
+import type { Clients, Dashboard, FeatureStats } from './types';
 
 /** The clients that are connections approved from the phone, not app installs. */
 const CONNECTIONS: readonly { kind: ClientKind; note: string }[] = [
@@ -124,16 +134,68 @@ function tiles({ totals, days }: Dashboard): TileView[] {
   ];
 }
 
+function socialTiles(stats: FeatureStats, period: Period): TileView[] {
+  return [
+    {
+      label: 'Пользователи социальных функций',
+      hint: 'Люди, которые сами пользовались друзьями, отзывами, ссылками, голосами, жалобами, спортом или подключениями через Бэкенд за выбранный период',
+      value: formatInt(stats.socialUsers),
+      note: period.span,
+    },
+    {
+      label: 'С друзьями',
+      hint: 'Доля аккаунтов, у которых сейчас есть хотя бы один друг',
+      value: formatPct(shareOf(stats.usersWithFriends, stats.users)),
+      note: `${formatInt(stats.usersWithFriends)} из ${formatInt(stats.users)}`,
+    },
+  ];
+}
+
+function Funnel({ stats }: { stats: FeatureStats }) {
+  const steps = pairingSteps(stats);
+  const first = steps[0]?.value ?? 0;
+  return (
+    <>
+      <ol className="st-funnel">
+        {steps.map((step) => (
+          <li key={step.key}>
+            <span className="st-kv">
+              <Text type="body">{step.label}</Text>
+              <Text type="body" weight="semibold" hasTabularNumbers>
+                {formatInt(step.value)}{' '}
+                <Text type="supporting" color="secondary" hasTabularNumbers>
+                  {formatPct(shareOf(step.value, first), 0)}
+                </Text>
+              </Text>
+            </span>
+            <Meter value={step.value} max={first} />
+          </li>
+        ))}
+      </ol>
+      <Text type="supporting" color="secondary">
+        Истекли, не дойдя до конца: {formatInt(pairingExpired(stats))}. Шаг считается в день, когда
+        он случился, поэтому шаги периода не обязаны складываться в воронку своих кодов.
+      </Text>
+    </>
+  );
+}
+
 export function FeaturesTab() {
+  const [period] = usePeriod();
+  const step = stepOf(period.days);
   const dashboard = useDashboard();
   const clients = useClients();
+  const features = useFeatureStats(period.days);
   return (
     <TabFrame tab="features">
-      <TileGrid count={4 + exampleCount(FEATURE_EXAMPLE_TILES)}>
+      <PeriodControl />
+      <TileGrid count={6}>
         <Tiles resource={dashboard} name="итоги">
           {tiles}
         </Tiles>
-        <FeatureExampleTiles />
+        <Tiles resource={features} name="статистику функций">
+          {(data) => socialTiles(data, period)}
+        </Tiles>
       </TileGrid>
       <div className="st-cols st-stretch" data-cols="2-1">
         <DayPanel
@@ -174,7 +236,56 @@ export function FeaturesTab() {
           );
         }}
       </SourcePanel>
-      <FeatureExamples />
+      <FeatureUsagePanel resource={features} span={period.span} />
+      <div className="st-cols st-stretch" data-cols="3">
+        <SourcePanel
+          title={METRICS.friends_flow.name}
+          hint={`Заявки, которые ещё стоят, и дружбы, которые ещё есть, ${step === 'day' ? 'по дням' : 'по месяцам'} ${period.span}`}
+          resource={features}
+        >
+          {(data) => <TimeChart chart={friendsFlowChart(data, step)} />}
+        </SourcePanel>
+        <SourcePanel
+          title={METRICS.connections_new.name}
+          hint={`Сайт, агенты и MCP-серверы, одобренные с телефона, ${period.span}`}
+          resource={features}
+        >
+          {(data) => {
+            const totals = connectionTotals(data);
+            return (
+              <>
+                <Text type="supporting" color="secondary" hasTabularNumbers>
+                  Подключено {formatInt(totals.created)}, отозвано {formatInt(totals.revoked)}
+                </Text>
+                <TimeChart chart={connectionsChart(data, step)} />
+              </>
+            );
+          }}
+        </SourcePanel>
+        <SourcePanel
+          title={METRICS.pairing.name}
+          hint={`Где теряются попытки подключить клиент, ${period.span}`}
+          resource={features}
+        >
+          {(data) => <Funnel stats={data} />}
+        </SourcePanel>
+      </div>
+      <SourcePanel
+        title={METRICS.privacy.name}
+        hint="Кому пользователи показывают свои данные, на сейчас"
+        resource={features}
+      >
+        {(data) => (
+          <div className="st-cols" data-cols="3">
+            {privacyGroups(data).map((group) => (
+              <VStack gap={2} key={group.key}>
+                <SubHeading>{group.name}</SubHeading>
+                <SegmentBar segments={group.segments} label={`Видимость: ${group.name}`} />
+              </VStack>
+            ))}
+          </div>
+        )}
+      </SourcePanel>
       <div className="st-note">
         <VStack gap={1}>
           <Text type="body" weight="semibold">

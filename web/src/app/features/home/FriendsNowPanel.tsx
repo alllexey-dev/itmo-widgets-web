@@ -18,7 +18,7 @@ import { useNow } from './useNow';
 const SHOWN = 5;
 
 function Friends({ data, now }: { data: FriendsToday; now: Date }) {
-  if (data.friends === 0) {
+  if (!data.hasFriends) {
     return (
       <EmptyState
         icon={<Users size={32} />}
@@ -29,12 +29,13 @@ function Friends({ data, now }: { data: FriendsToday; now: Date }) {
       />
     );
   }
+  // Backend does not say whether a friend hides the schedule or has a free day, so neither is named.
   if (data.days.length === 0) {
     return (
       <EmptyState
         icon={<CalendarOff size={32} />}
-        title="Расписание друзей скрыто"
-        description="Здесь видно, кто сейчас на занятиях, когда друг открывает вам расписание."
+        title="Сегодня у друзей нет занятий"
+        description="Здесь видно, кто из друзей на занятиях, если друг открыл вам расписание."
         headingLevel={3}
         isCompact
       />

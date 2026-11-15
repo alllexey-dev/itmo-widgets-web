@@ -32,7 +32,7 @@ function nav() {
 }
 
 function search() {
-  return screen.getByRole('searchbox', { name: 'Номер ИСУ' });
+  return screen.getByRole('searchbox', { name: 'Поиск по имени или ИСУ' });
 }
 
 describe('RestrictionsPage', () => {
@@ -84,20 +84,37 @@ describe('RestrictionsPage', () => {
     expect(location.pathname).toBe('/app/admin/moderation');
   });
 
-  it('finds restrictions by ISU and keeps it in the address', async () => {
+  it('finds restrictions by part of a name and keeps the query in the address', async () => {
     moderator();
     const { requests } = mockRestrictions([active, other]);
     renderApp('/admin/restrictions');
     await screen.findByRole('row', { name: /Олег Сидоров/ });
 
-    await userEvent.type(search(), '322222');
+    await userEvent.type(search(), 'сидор');
 
     await waitFor(() =>
       expect(screen.queryByRole('row', { name: /Иван Петров/ })).not.toBeInTheDocument(),
     );
     expect(screen.getByRole('row', { name: /Олег Сидоров/ })).toBeInTheDocument();
-    expect(requests.at(-1)?.get('isu')).toBe('322222');
-    expect(location.search).toBe('?isu=322222');
+    expect(requests.at(-1)?.get('q')).toBe('сидор');
+    expect(requests.at(-1)?.get('isu')).toBeNull();
+    expect(new URLSearchParams(location.search).get('q')).toBe('сидор');
+  });
+
+  it('finds restrictions by the start of an ISU number', async () => {
+    moderator();
+    const { requests } = mockRestrictions([active, other]);
+    renderApp('/admin/restrictions');
+    await screen.findByRole('row', { name: /Олег Сидоров/ });
+
+    await userEvent.type(search(), '3222');
+
+    await waitFor(() =>
+      expect(screen.queryByRole('row', { name: /Иван Петров/ })).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole('row', { name: /Олег Сидоров/ })).toBeInTheDocument();
+    expect(requests.at(-1)?.get('q')).toBe('3222');
+    expect(location.search).toBe('?q=3222');
   });
 
   it('waits for a pause in typing before it asks', async () => {
@@ -107,8 +124,8 @@ describe('RestrictionsPage', () => {
     await screen.findByRole('row', { name: /Олег Сидоров/ });
     const before = requests.length;
 
-    await userEvent.type(search(), '322222');
-    await waitFor(() => expect(requests.at(-1)?.get('isu')).toBe('322222'));
+    await userEvent.type(search(), 'Олег');
+    await waitFor(() => expect(requests.at(-1)?.get('q')).toBe('Олег'));
 
     expect(requests.length).toBe(before + 1);
   });
@@ -117,60 +134,77 @@ describe('RestrictionsPage', () => {
     moderator();
     const { requests } = mockRestrictions([active, other]);
 
+    renderApp('/admin/restrictions?q=%D0%9E%D0%BB%D0%B5%D0%B3&all=1');
+
+    expect(await screen.findByRole('row', { name: /Олег Сидоров/ })).toBeInTheDocument();
+    expect(search()).toHaveValue('Олег');
+    expect(screen.getByRole('radio', { name: 'Все' })).toBeChecked();
+    expect(requests.at(-1)?.get('active')).toBe('false');
+    expect(requests.at(-1)?.get('q')).toBe('Олег');
+  });
+
+  it('shows one person by a whole ISU from a user card, until the search changes', async () => {
+    moderator();
+    const { requests } = mockRestrictions([active, other]);
+
     renderApp('/admin/restrictions?isu=322222&all=1');
 
     expect(await screen.findByRole('row', { name: /Олег Сидоров/ })).toBeInTheDocument();
+    expect(screen.queryByRole('row', { name: /Иван Петров/ })).not.toBeInTheDocument();
     expect(search()).toHaveValue('322222');
-    expect(screen.getByRole('radio', { name: 'Все' })).toBeChecked();
-    expect(requests.at(-1)?.get('active')).toBe('false');
+    expect(requests.at(-1)?.get('isu')).toBe('322222');
+    expect(requests.at(-1)?.get('q')).toBeNull();
+
+    await userEvent.clear(search());
+    await userEvent.type(search(), 'Иван');
+
+    expect(await screen.findByRole('row', { name: /Иван Петров/ })).toBeInTheDocument();
+    expect(requests.at(-1)?.get('isu')).toBeNull();
+    expect(location.search).toBe(`?all=1&q=${encodeURIComponent('Иван')}`);
   });
 
-  it('asks for digits only', async () => {
+  it('keeps the query to the length Backend takes', async () => {
     moderator();
     const { requests } = mockRestrictions([active]);
     renderApp('/admin/restrictions');
     await screen.findByRole('row', { name: /Иван Петров/ });
 
-    await userEvent.type(search(), 'Иван');
+    await userEvent.click(search());
+    await userEvent.paste('а'.repeat(120));
 
-    expect(await screen.findByText('Это не номер ИСУ')).toBeInTheDocument();
-    expect(search()).toHaveAttribute('aria-invalid', 'true');
-    expect(search()).toHaveValue('Иван');
-    // Not a search: it is not sent, not kept in the address, and no rows pose as its result.
-    expect(requests.every((params) => params.get('isu') === null)).toBe(true);
-    expect(location.search).toBe('');
-    expect(screen.queryByRole('row', { name: /Иван Петров/ })).not.toBeInTheDocument();
-  });
-
-  it('keeps what is typed when a number stops being one', async () => {
-    moderator();
-    mockRestrictions([active, other]);
-    renderApp('/admin/restrictions');
-    await screen.findByRole('row', { name: /Олег Сидоров/ });
-
-    await userEvent.type(search(), '322222');
-    await waitFor(() => expect(location.search).toBe('?isu=322222'));
-    await userEvent.type(search(), 'x');
-
-    await waitFor(() => expect(location.search).toBe(''));
-    expect(search()).toHaveValue('322222x');
+    expect(search()).toHaveValue('а'.repeat(100));
+    await waitFor(() => expect(requests.at(-1)?.get('q')).toBe('а'.repeat(100)));
   });
 
   it('says when the search finds nothing', async () => {
     moderator();
     mockRestrictions([active]);
 
-    renderApp('/admin/restrictions?isu=399999');
+    renderApp('/admin/restrictions?q=399');
 
-    expect(await screen.findByText('Ограничений с таким номером ИСУ нет')).toBeInTheDocument();
-    expect(screen.getAllByText(/Поиск идёт по номеру целиком/)[0]).toBeInTheDocument();
+    expect(await screen.findByText('Никого не нашли')).toBeInTheDocument();
+    expect(screen.getAllByText(/по части имени или по началу номера ИСУ/)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/Снятые и истёкшие ограничения/)[0]).toBeInTheDocument();
   });
 
   it('includes ended restrictions under «Все»', async () => {
     moderator();
     const { requests } = mockRestrictions([
       active,
-      restriction({ id: 'old', active: false, revokedAt: minutesAgo(10), revokedByIsu: 400001 }),
+      restriction({
+        id: 'old',
+        active: false,
+        revokedAt: minutesAgo(10),
+        revokedByIsu: 400001,
+        revokedByName: 'Анна Смирнова',
+      }),
+      restriction({
+        id: 'unnamed',
+        user: userSummary({ isu: 322222, name: 'Олег Сидоров' }),
+        active: false,
+        revokedAt: minutesAgo(20),
+        revokedByIsu: 400002,
+      }),
       restriction({ id: 'expired', active: false, expiresAt: minutesAgo(10) }),
     ]);
     renderApp('/admin/restrictions');
@@ -178,12 +212,17 @@ describe('RestrictionsPage', () => {
 
     await userEvent.click(screen.getByRole('radio', { name: 'Все' }));
 
-    expect(await screen.findByText('Снято')).toBeInTheDocument();
+    expect((await screen.findAllByText('Снято'))[0]).toBeInTheDocument();
     expect(screen.getByText('Истекло')).toBeInTheDocument();
     expect(screen.getByText('Действует')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Состояние' })).toBeInTheDocument();
-    // A lifted restriction says when and by whom.
-    expect(screen.getByRole('row', { name: /Снято/ })).toHaveTextContent('модератор ИСУ 400001');
+    // A lifted restriction says when and by whom: the name, or the ISU of an account without one.
+    expect(screen.getByRole('row', { name: /Иван Петров.*Снято/ })).toHaveTextContent(
+      'Анна Смирнова',
+    );
+    expect(screen.getByRole('row', { name: /Олег Сидоров.*Снято/ })).toHaveTextContent(
+      'модератор ИСУ 400002',
+    );
     expect(requests.at(-1)?.get('active')).toBe('false');
     expect(location.search).toBe('?all=1');
     expect(screen.getAllByRole('button', { name: /Снять ограничение/ })).toHaveLength(1);

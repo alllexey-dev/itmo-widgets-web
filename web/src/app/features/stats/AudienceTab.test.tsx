@@ -1,10 +1,18 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../../test/render';
 import { mockSession, userOf } from '../../test/server';
-import { appVersionOf, clientHistoryOf, clientsOf, mockStats } from '../../test/stats';
+import {
+  appVersionOf,
+  audienceStatsOf,
+  clientHistoryOf,
+  clientsOf,
+  datesOf,
+  mockStats,
+} from '../../test/stats';
 import type * as Metrics from './metrics';
+import { COHORT_DAYS, daysBefore, moscowToday } from './period';
 
 // The examples of metrics without data are off here: these tests are about the real blocks, which
 // are the same with examples on (Examples.test.tsx).
@@ -35,7 +43,9 @@ describe('Statistics audience', () => {
 
     expect(await group('Пользователи')).toHaveTextContent(/1\s250/);
     expect(await group('Новые за 7 дней')).toHaveTextContent('42');
-    expect(await group('Новые за 30 дней')).toHaveTextContent('30');
+    const period = await group('Новые за период');
+    expect(period).toHaveTextContent('30');
+    expect(period).toHaveTextContent('за 30 дней');
     const users = await region('Новые пользователи');
     expect(
       await within(users).findByRole('figure', { name: 'Новые пользователи по дням, всего 30' }),
@@ -125,7 +135,7 @@ describe('Statistics audience', () => {
     expect(screen.getAllByText('Истории пока нет')).toHaveLength(2);
   });
 
-  it('cuts the charts to the chosen period of the history', async () => {
+  it('cuts the client charts to the chosen period of their history', async () => {
     mockSession(userOf(['ADMIN']));
     mockStats({ clients: clientsOf({ history: clientHistoryOf(90) }) });
     renderApp('/admin/dashboard?tab=audience');
@@ -134,7 +144,7 @@ describe('Statistics audience', () => {
       await within(active).findByRole('figure', { name: 'Активные клиенты по дням, 30 дней' }),
     ).toBeInTheDocument();
 
-    const periods = screen.getByRole('radiogroup', { name: 'Период графиков' });
+    const periods = screen.getByRole('radiogroup', { name: 'Период' });
     await userEvent.click(within(periods).getByRole('radio', { name: '90 дней' }));
 
     expect(
@@ -149,59 +159,179 @@ describe('Statistics audience', () => {
     ).toBeInTheDocument();
   });
 
-  it('offers only the periods the loaded history can fill', async () => {
-    mockSession(userOf(['ADMIN']));
-    mockStats({ clients: clientsOf({ history: clientHistoryOf(30) }) });
-
-    renderApp('/admin/dashboard?tab=audience&period=90');
-
-    const periods = await screen.findByRole('radiogroup', { name: 'Период графиков' });
-    expect(
-      within(periods)
-        .getAllByRole('radio')
-        .map((radio) => radio.textContent),
-    ).toEqual(['7 дней', '30 дней']);
-    // The address asked for 90 days: the longest period the history has is chosen instead.
-    expect(within(periods).getByRole('radio', { name: '30 дней' })).toBeChecked();
-    const active = await region('Активные клиенты');
-    expect(
-      within(active).getByRole('figure', { name: 'Активные клиенты по дням, 30 дней' }),
-    ).toBeInTheDocument();
-  });
-
-  it('offers a short history whole, under its real length', async () => {
+  it('shows a client history shorter than the period whole, and says how long it is', async () => {
     mockSession(userOf(['ADMIN']));
     mockStats({ clients: clientsOf({ history: clientHistoryOf(12) }) });
 
     renderApp('/admin/dashboard?tab=audience');
 
-    const periods = await screen.findByRole('radiogroup', { name: 'Период графиков' });
-    expect(
-      within(periods)
-        .getAllByRole('radio')
-        .map((radio) => radio.textContent),
-    ).toEqual(['7 дней', '12 дней']);
     const active = await region('Активные клиенты');
     expect(
-      within(active).getByRole('figure', { name: 'Активные клиенты по дням, 12 дней' }),
+      await within(active).findByRole('figure', { name: 'Активные клиенты по дням, 12 дней' }),
+    ).toBeInTheDocument();
+    expect(active).toHaveTextContent('История клиентов — 12 дней');
+    expect(
+      within(await region('Кто заходит каждый день')).getByRole('figure', {
+        name: 'Активные за день клиенты по типам клиентов, 12 дней',
+      }),
     ).toBeInTheDocument();
   });
 
-  it('keeps the tiles of the rolling windows out of the period of the charts', async () => {
+  it('keeps the tiles of the rolling windows as they are in any period', async () => {
     mockSession(userOf(['ADMIN']));
     mockStats({ clients: clientsOf({ history: clientHistoryOf(90) }) });
     renderApp('/admin/dashboard?tab=audience');
     const month = await group('Активны за 30 дней');
     const before = month.textContent;
 
-    const periods = screen.getByRole('radiogroup', { name: 'Период графиков' });
+    const periods = screen.getByRole('radiogroup', { name: 'Период' });
     await userEvent.click(within(periods).getByRole('radio', { name: '7 дней' }));
 
     const active = await region('Активные клиенты');
     await within(active).findByRole('figure', { name: 'Активные клиенты по дням, 7 дней' });
     expect(month.textContent).toBe(before);
-    // The period control comes after the tiles: what is above it, it does not change.
-    expect(month.compareDocumentPosition(periods) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('asks Backend for the users of the chosen period', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requested = mockStats();
+    renderApp('/admin/dashboard?tab=audience');
+    expect(await group('Новые за период')).toHaveTextContent('за 30 дней');
+    // The default 30 days are Backend's own: no parameter at all.
+    expect(requested).toContain('/api/admin/stats/audience');
+
+    const periods = screen.getByRole('radiogroup', { name: 'Период' });
+    await userEvent.click(within(periods).getByRole('radio', { name: '7 дней' }));
+
+    const from = daysBefore(moscowToday(), 6);
+    await waitFor(() => expect(requested).toContain(`/api/admin/stats/audience?from=${from}`));
+    await waitFor(async () =>
+      expect(await group('Новые за период')).toHaveTextContent('за 7 дней'),
+    );
+  });
+
+  it('draws the new users and the growth of accounts of the period', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard?tab=audience');
+
+    const users = await region('Новые пользователи');
+    expect(await within(users).findByText('30 за 30 дней')).toBeInTheDocument();
+    const growth = await region('Рост числа пользователей');
+    // 1 220 accounts before September and one new a day.
+    expect(
+      within(growth).getByRole('figure', {
+        name: /^Рост числа пользователей по дням, на конец периода 1\s250$/,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('folds a long period into months, starting all time at the first account', async () => {
+    mockSession(userOf(['ADMIN']));
+    // Four months of accounts at the end of 1 099 days of history.
+    const days = datesOf(1099).map((date, index) => ({
+      date,
+      newUsers: index >= 1099 - 120 ? 1 : 0,
+    }));
+    mockStats({
+      audience: audienceStatsOf({
+        usersBefore: 0,
+        days,
+        from: days[0]?.date ?? '',
+        to: '2026-09-30',
+      }),
+    });
+
+    renderApp('/admin/dashboard?tab=audience&period=all');
+
+    const users = await region('Новые пользователи');
+    expect(
+      await within(users).findByRole('figure', {
+        name: 'Новые пользователи по месяцам, всего 120',
+      }),
+    ).toBeInTheDocument();
+    expect(users).toHaveTextContent('120 за всё время');
+    await userEvent.click(within(users).getByRole('button', { name: 'Данные по месяцам' }));
+    const table = within(users).getByRole('table', {
+      name: 'Данные по месяцам: Новые пользователи',
+    });
+    // June to September 2026: the empty months before the first account are left out.
+    expect(within(table).getAllByRole('row')).toHaveLength(5);
+    expect(within(table).getAllByRole('row')[1]).toHaveTextContent(/сент\. 2026.*30/);
+  });
+
+  it('counts people apart from the clients, and says what a person is', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard?tab=audience');
+
+    const people = await screen.findByRole('region', { name: 'Люди и удержание' });
+    expect(await group('Люди за сутки')).toHaveTextContent('300');
+    expect(await group('Люди за 7 дней')).toHaveTextContent('520');
+    const month = await group('Люди за 30 дней');
+    expect(month).toHaveTextContent('700');
+    expect(
+      within(month).getByRole('button', { name: 'Что считает «Люди за 30 дней»' }),
+    ).toBeInTheDocument();
+    expect(
+      within(people).getByRole('figure', { name: 'Активные люди по дням, 30 дней' }),
+    ).toBeInTheDocument();
+    // The clients of the same window are another figure under another name.
+    expect(await group('Активны за 30 дней')).toHaveTextContent('960');
+  });
+
+  it('shows who stays, from the latest 26 registration weeks', async () => {
+    mockSession(userOf(['ADMIN']));
+    const requested = mockStats();
+
+    renderApp('/admin/dashboard?tab=audience');
+
+    const table = await screen.findByRole('table', { name: 'Удержание по неделям регистрации' });
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(7);
+    // Newest week first; a week not lived through yet is a dash.
+    expect(rows[1]).toHaveTextContent(/21 сент\. – 27 сент\..*5.*—/);
+    expect(rows[6]).toHaveTextContent(/17 авг\. – 23 авг\..*40.*90 %.*80 %.*75 %.*70 %.*65 %.*—/);
+    expect(requested).toContain(
+      `/api/admin/stats/audience?from=${daysBefore(moscowToday(), COHORT_DAYS - 1)}`,
+    );
+    const curve = await region('Удержание по каждой неделе');
+    const chart = within(curve).getByRole('figure', {
+      name: 'Удержание по каждой неделе после регистрации',
+    });
+    chart.focus();
+    await userEvent.keyboard('{Home}');
+    // Week 1: the weeks with a count for it, 22 of 40 newcomers; a week before the collection is not one.
+    expect(within(chart).getByRole('status')).toHaveTextContent('55,0 %');
+  });
+
+  it('lists the accounts by faculty and course', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard?tab=audience');
+
+    const faculties = await screen.findByRole('table', { name: 'Пользователи по факультетам' });
+    expect(rowOf(faculties, 'ФИТиП')).toHaveTextContent(/700.*56,0.*60/);
+    expect(rowOf(faculties, 'Без группы')).toHaveTextContent(/50.*10/);
+    const courses = screen.getByRole('table', { name: 'Пользователи по курсам' });
+    expect(rowOf(courses, '1 курс')).toHaveTextContent(/600.*48,0.*67/);
+  });
+
+  it('keeps the accounts and the clients when the audience statistics fail', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats({ audience: null });
+
+    renderApp('/admin/dashboard?tab=audience');
+
+    expect(await screen.findByText('Не удалось загрузить аудиторию')).toBeInTheDocument();
+    expect(screen.getByText('Не удалось загрузить активных людей')).toBeInTheDocument();
+    expect(await group('Пользователи')).toHaveTextContent(/1\s250/);
+    expect(await group('Новые за 7 дней')).toHaveTextContent('42');
+    expect(await group('Активны за сутки')).toHaveTextContent('350');
+    expect(screen.queryByRole('group', { name: 'Люди за сутки' })).not.toBeInTheDocument();
   });
 
   it('compares the clients with the week and the month before', async () => {
@@ -406,6 +536,6 @@ describe('Statistics audience', () => {
     expect(await group('Пользователи')).toHaveTextContent(/1\s250/);
     expect(await region('Активные устройства')).toHaveTextContent(/За 30 дней\s*900/);
     expect(screen.queryByRole('group', { name: 'Активны за сутки' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('radiogroup', { name: 'Период графиков' })).not.toBeInTheDocument();
+    expect(await group('Люди за сутки')).toHaveTextContent('300');
   });
 });
