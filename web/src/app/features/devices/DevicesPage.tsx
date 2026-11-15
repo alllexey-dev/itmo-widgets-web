@@ -15,11 +15,10 @@ import { useNotify } from '../../lib/notify';
 import { PageHeader } from '../../lib/PageHeader';
 import { Panel } from '../../lib/Panel';
 import { useSession, useUser } from '../../lib/session';
-import { DEVICES_PATH, revoke, signOutInstall, updateScopes } from './api';
+import { DEVICES_PATH, revoke, updateScopes } from './api';
 import './devices.css';
 import {
   canRemove,
-  canTurnOff,
   clientOf,
   confirmationOf,
   connectionLine,
@@ -148,19 +147,13 @@ function ConnectionRow({
   );
 }
 
-/**
- * A phone with the app. The web can only drop its push registration; a phone without one has
- * nothing left to turn off here, so its row only says so. The button keeps its whole label: in a
- * narrow panel it goes under the text instead of losing words.
- */
-function InstallRow({ install, onEnd }: { install: Install; onEnd: (install: Install) => void }) {
-  const name = installName(install);
+/** A phone with the app, listed for reference: the web cannot sign it out. */
+function InstallRow({ install }: { install: Install }) {
   return (
-    <li className="devices-phone">
+    <li>
       <Item
-        className="devices-phone-main"
         startContent={<IconTile icon={Smartphone} />}
-        label={name}
+        label={installName(install)}
         description={
           <VStack gap={0}>
             <span>{installLine(install)}</span>
@@ -168,25 +161,13 @@ function InstallRow({ install, onEnd }: { install: Install; onEnd: (install: Ins
           </VStack>
         }
       />
-      {canTurnOff(install) ? (
-        <span className="devices-phone-action">
-          <Button
-            label={`Отключить уведомления на ${name}`}
-            variant="secondary"
-            size="sm"
-            onClick={() => onEnd(install)}
-          >
-            Отключить уведомления
-          </Button>
-        </span>
-      ) : null}
     </li>
   );
 }
 
 /**
- * The Backend part of the app's devices screen, the lost-phone path: connected clients with their
- * access and the app installs. ITMO.ID sessions stay on the phone, which ends them after a revoke.
+ * The Backend part of the app's devices screen: connected clients with their access, which the
+ * web can narrow or end, and the app installs, listed for reference. ITMO.ID sessions stay on the phone, which ends them after a revoke.
  */
 export default function DevicesPage() {
   const user = useUser();
@@ -213,13 +194,6 @@ export default function DevicesPage() {
     done: (_, connection) => `${connection.name} отключён`,
     failed: 'Не удалось отключить устройство',
   });
-  const signOut = useApiMutation({
-    run: (install: Install) => signOutInstall(install.instanceId),
-    forgets: [DEVICES_PATH],
-    done: (_, install) => `Уведомления на ${installName(install)} отключены`,
-    failed: 'Не удалось отключить уведомления',
-  });
-
   function ask(next: Target) {
     setTarget(next);
     setConfirming(true);
@@ -229,9 +203,7 @@ export default function DevicesPage() {
     if (!target) return;
     // The mutations show their failures themselves.
     const quiet = () => undefined;
-    if ('install' in target) {
-      await signOut.mutateAsync(target.install).catch(quiet);
-    } else if ('scope' in target) {
+    if ('scope' in target) {
       await narrow.mutateAsync(target).catch(quiet);
     } else if (target.connection.id !== self) {
       await disconnect.mutateAsync(target.connection).catch(quiet);
@@ -301,11 +273,7 @@ export default function DevicesPage() {
                 ) : (
                   <ul className="devices-list" aria-label="Телефоны с приложением">
                     {data.installs.map((install) => (
-                      <InstallRow
-                        key={install.instanceId}
-                        install={install}
-                        onEnd={(item) => ask({ install: item })}
-                      />
+                      <InstallRow key={install.instanceId} install={install} />
                     ))}
                   </ul>
                 )}
@@ -321,7 +289,7 @@ export default function DevicesPage() {
         title={confirmation?.title ?? ''}
         description={confirmation?.description ?? ''}
         actionLabel={confirmation?.actionLabel ?? ''}
-        isActionLoading={narrow.isPending || disconnect.isPending || signOut.isPending || isLeaving}
+        isActionLoading={narrow.isPending || disconnect.isPending || isLeaving}
         onAction={() => void confirm()}
       />
     </VStack>

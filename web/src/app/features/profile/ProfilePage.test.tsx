@@ -318,7 +318,7 @@ describe('ProfilePage', () => {
     );
   });
 
-  it('says what the web can and cannot do for a lost phone', async () => {
+  it('says where a lost phone is signed out', async () => {
     mockSession(userOf([]));
     mockProfile();
 
@@ -326,10 +326,7 @@ describe('ProfilePage', () => {
 
     const card = await screen.findByRole('region', { name: 'Устройства' });
     expect(card).toHaveTextContent(
-      'Отсюда можно отключить на нём уведомления. Вместе с ними остановится запись на спорт через этот телефон.',
-    );
-    expect(card).toHaveTextContent(
-      'Вход в ИТМО на нём завершается не здесь, а в приложении на другом телефоне: Профиль → Устройства.',
+      'Потеряли телефон? Выйдите на нём из приложения на другом телефоне: Профиль → Устройства.',
     );
   });
 });

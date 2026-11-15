@@ -43,38 +43,10 @@
   padding-inline: calc(36px + var(--spacing-2) * 2) var(--spacing-2);
 }
 
-/* A phone: its row, then the button at the end of the row. */
-.devices-phone {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-}
-
-.devices-phone-main {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.devices-phone-action {
-  flex: none;
-  padding-inline-end: var(--spacing-2);
-}
-
-/* In a narrow panel what sits under a row takes the whole width, and the button of a phone goes
-   under its text, so its label stays whole. */
+/* In a narrow panel what sits under a row takes the whole width. */
 @container (max-width: 460px) {
   .devices-scopes,
   .devices-note {
     padding-inline-start: var(--spacing-2);
-  }
-
-  .devices-phone {
-    display: block;
-  }
-
-  .devices-phone-action {
-    display: block;
-    padding-block-end: var(--spacing-2);
-    padding-inline: calc(36px + var(--spacing-2) * 2) var(--spacing-2);
   }
 }

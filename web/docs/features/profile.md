@@ -32,8 +32,8 @@ A warning banner for restrictions, then two columns that become one in a narrow 
   app, the 30 idle days after which it ends and, for staff, the 7-day rule of phone approvals with
   the day of the last one (`approvedAt`). `Выйти` signs this browser out.
 - **Устройства**: what the devices page holds (browsers and programs with access to the user's
-  data, phones with the app), what the web can do for a lost phone and what it cannot, and the
-  link `Открыть устройства` to `/me/devices`.
+  data, phones with the app), where a lost phone is signed out, and the link `Открыть устройства`
+  to `/me/devices`.
 
 ## Rules
 
@@ -52,10 +52,9 @@ A warning banner for restrictions, then two columns that become one in a narrow 
   forbids happens in the app (subject links, teacher reviews, votes and reports; the cabinet has
   none of them), so each line starts with `В приложении нельзя ...` and names the thing as the app
   does: `ссылки к предметам`, `отзывы о преподавателях`.
-- The devices card promises only what the web does for a lost phone, in the words of the devices
-  page: it turns the phone's notifications off, and sport sign-ups through the phone stop with
-  them. The phone's ITMO sign-in is ended
-  in the app on another phone, and the card says so.
+- The devices card promises nothing the web cannot do for a lost phone: the web lists phones only,
+  and the card says that a phone is signed out in the app on another phone (Профиль → Устройства),
+  as the devices page does.
 - Sentences that end with a date do not double the period of a short month (`sentence`).
 - `Выйти` goes to the login page; a failure other than an already ended connection keeps the user
   signed in and shows `Не удалось выйти`.

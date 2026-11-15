@@ -2,7 +2,6 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { formatDate } from '../../lib/format';
 import { devicesBackend, devicesOf } from '../../test/account';
 import { findToast, renderApp } from '../../test/render';
 import {
@@ -16,7 +15,6 @@ import {
 } from '../../test/server';
 
 const NAS = '00000000-0000-4000-8000-000000000601';
-const PIXEL = '00000000-0000-4000-8000-000000000701';
 
 /** The devices list and its changes, answered like Backend; returns the changing requests. */
 function mockDevices(devices = devicesOf()) {
@@ -71,12 +69,10 @@ describe('DevicesPage', () => {
     expect(rows.queryByText('MacBook Air')).not.toBeInTheDocument();
     expect(installs().getByText('Google Pixel 8')).toBeInTheDocument();
     expect(installs().getByText('ITMO.Widgets 2.4.0, Android API 36')).toBeInTheDocument();
-    // Turned off from another device: Backend forgot the model, so it is named by its platform,
-    // and the row says when; there is nothing left to turn off.
+    // Turned off from another phone: Backend forgot the model, so it is named by its platform, and
+    // the row says when.
     expect(installs().getByText('iPhone')).toBeInTheDocument();
-    expect(
-      installs().getByText(/· уведомления отключены 4 окт\. с сайта или другого телефона$/),
-    ).toBeInTheDocument();
+    expect(installs().getByText(/· уведомления отключены 4 окт\.$/)).toBeInTheDocument();
     expect(installs().queryByRole('button')).not.toBeInTheDocument();
   });
 
@@ -304,84 +300,20 @@ describe('DevicesPage', () => {
     expect(location.pathname).toBe('/app/login');
   });
 
-  it('turns the notifications of another phone off, and the row shows it', async () => {
+  it('lists phones for reference only and says where a lost phone is signed out', async () => {
     mockSession(userOf([]));
     const calls = mockDevices(devicesWithOtherPhone());
-    renderApp('/me/devices');
-    await connections();
-
-    await userEvent.click(
-      installs().getByRole('button', { name: 'Отключить уведомления на Google Pixel 8' }),
-    );
-    const dialog = await screen.findByRole('alertdialog', {
-      name: 'Отключить уведомления на Google Pixel 8?',
-    });
-    expect(dialog).toHaveTextContent(
-      'Вход в ИТМО на нём останется: завершить его можно только в приложении на другом телефоне (Профиль → Устройства).',
-    );
-    expect(dialog).toHaveTextContent(
-      'Вместе с ними остановится запись на спорт через этот телефон.',
-    );
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Отключить уведомления' }));
-
-    expect(await findToast('Уведомления на Google Pixel 8 отключены')).toBeInTheDocument();
-    expect(calls).toEqual([
-      { method: 'POST', path: `/api/users/me/installs/${PIXEL}/sign-out`, csrf: '1' },
-    ]);
-    // Backend keeps the install without its model and marks when it was turned off; the row shows
-    // what Backend has, so it reads the same after the page is opened again.
-    await waitFor(() => expect(installs().queryByRole('button')).not.toBeInTheDocument());
-    const today = formatDate(new Date());
-    expect(installs().getByText('Телефон на Android')).toBeInTheDocument();
-    expect(installs().queryByText('Google Pixel 8')).not.toBeInTheDocument();
-    expect(
-      installs().getByText(
-        `Активность 5 окт. · уведомления отключены ${today} с сайта или другого телефона`,
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it('shows a phone turned off from here the same when the page is opened again', async () => {
-    mockSession(userOf([]));
-    mockDevices(devicesWithOtherPhone());
-    const { unmount } = renderApp('/me/devices');
-    await connections();
-    await userEvent.click(
-      installs().getByRole('button', { name: 'Отключить уведомления на Google Pixel 8' }),
-    );
-    await userEvent.click(
-      within(await screen.findByRole('alertdialog')).getByRole('button', {
-        name: 'Отключить уведомления',
-      }),
-    );
-    await findToast('Уведомления на Google Pixel 8 отключены');
-    unmount();
 
     renderApp('/me/devices');
     await connections();
 
-    expect(installs().getByText('Телефон на Android')).toBeInTheDocument();
-    expect(
-      installs().getByText(
-        `Активность 5 окт. · уведомления отключены ${formatDate(new Date())} с сайта или другого телефона`,
-      ),
-    ).toBeInTheDocument();
-    expect(installs().queryByRole('button')).not.toBeInTheDocument();
-  });
-
-  it('offers nothing on the calling phone and on one without a push registration', async () => {
-    mockSession(userOf([]));
-    mockDevices();
-
-    renderApp('/me/devices');
-    await connections();
-
-    // The fixture's Pixel is `current`, as in the app's own answer; its iPhone has no registration.
-    expect(installs().getByText('iPhone')).toBeInTheDocument();
+    // The web can neither sign a phone out nor end its ITMO session, so it offers nothing.
+    expect(installs().getByText('Google Pixel 8')).toBeInTheDocument();
     expect(installs().queryByRole('button')).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Телефоны с приложением' })).toHaveTextContent(
-      'Отсюда можно только отключить уведомления на телефоне. Вместе с ними остановится запись на спорт через этот телефон.',
+      'Только для просмотра. Потеряли телефон — выйдите на нём из приложения на другом телефоне: Профиль → Устройства',
     );
+    expect(calls).toEqual([]);
   });
 
   it('tells a phone that turned its notifications off from one without a registration', async () => {
@@ -397,15 +329,7 @@ describe('DevicesPage', () => {
     await connections();
 
     expect(installs().getByText(/уведомления выключены на телефоне$/)).toBeInTheDocument();
-    const button = installs().getByRole('button', { name: 'Отключить уведомления на iPhone 15' });
-    expect(button).toHaveTextContent(/^Отключить уведомления$/);
-
-    await userEvent.click(button);
-
-    // The dialog says what the button still does for such a phone.
-    expect(await screen.findByRole('alertdialog')).toHaveTextContent(
-      'Уведомления сейчас выключены на самом телефоне. Если отключить их и здесь, они не придут, даже когда на телефоне их включат снова, — пока приложение не подключит их заново.',
-    );
+    expect(installs().getByText('iPhone 15')).toBeInTheDocument();
   });
 
   it('says when a phone never turned its notifications on', async () => {
@@ -424,28 +348,6 @@ describe('DevicesPage', () => {
     expect(installs().getByText('Телефон на Android')).toBeInTheDocument();
     expect(installs().getByText(/· уведомления не включены$/)).toBeInTheDocument();
     expect(installs().queryByRole('button')).not.toBeInTheDocument();
-  });
-
-  it('keeps the phone as it is when turning its notifications off fails', async () => {
-    mockSession(userOf([]));
-    mockDevices(devicesWithOtherPhone());
-    server.use(
-      http.post('*/api/users/me/installs/:id/sign-out', () => fail(503, 'service_unavailable')),
-    );
-    renderApp('/me/devices');
-    await connections();
-
-    await userEvent.click(
-      installs().getByRole('button', { name: 'Отключить уведомления на Google Pixel 8' }),
-    );
-    await userEvent.click(
-      within(await screen.findByRole('alertdialog')).getByRole('button', {
-        name: 'Отключить уведомления',
-      }),
-    );
-
-    expect(await findToast('Не удалось отключить уведомления')).toBeInTheDocument();
-    expect(installs().getByText('Google Pixel 8')).toBeInTheDocument();
   });
 
   it('says so when there are no phones with the app', async () => {
