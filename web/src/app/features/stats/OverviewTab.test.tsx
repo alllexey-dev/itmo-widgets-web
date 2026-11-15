@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -42,6 +42,24 @@ describe('Statistics overview', () => {
     expect(waiting).toHaveTextContent('Автозапись 11 · Очередь на место 4');
     expect(screen.getByRole('group', { name: 'Входы на сайт' })).toHaveTextContent('7');
     expect(screen.getByRole('group', { name: 'Открытые заявки' })).toHaveTextContent('5');
+  });
+
+  it('draws a trend under each total that has a daily history, and none under the sport queues', async () => {
+    mockSession(userOf(['ADMIN']));
+    mockStats();
+
+    renderApp('/admin/dashboard');
+
+    const users = await screen.findByRole('group', { name: 'Пользователи' });
+    expect(users.querySelector('.st-spark')).not.toBeNull();
+    for (const name of ['Дружбы', 'Входы на сайт', 'Открытые заявки']) {
+      const tile = screen.getByRole('group', { name });
+      await waitFor(() => expect(tile.querySelector('.st-spark')).not.toBeNull());
+    }
+    // Backend keeps no daily count of waiting entries, so there is nothing true to draw.
+    expect(
+      screen.getByRole('group', { name: 'Ждут места на спорт' }).querySelector('.st-spark'),
+    ).toBeNull();
   });
 
   it('leads to the moderation queue from one place', async () => {
