@@ -10,13 +10,10 @@ const WEEK = 7 * 24 * 60 * 60_000;
 const IN_APP = 'Профиль → Устройства';
 
 /**
- * What turning a phone's notifications off also stops: Backend signals a sport sign-up only to a
- * phone a push can reach. The profile page says the same.
+ * Phones are only listed here: the web can neither sign a phone out nor end its ITMO session, so
+ * the way out for a lost phone is the app on another phone.
  */
-export const STOPS_SPORT = 'Вместе с ними остановится запись на спорт через этот телефон.';
-
-/** What the web can do with a phone and what it cannot, above the list of phones. */
-export const PHONES_HINT = `Отсюда можно только отключить уведомления на телефоне. ${STOPS_SPORT} Вход в ИТМО на нём завершается в приложении на другом телефоне: ${IN_APP}`;
+export const PHONES_HINT = `Только для просмотра. Потеряли телефон — выйдите на нём из приложения на другом телефоне: ${IN_APP}`;
 
 interface ClientType {
   label: string;
@@ -93,7 +90,7 @@ export function canRemove(connection: Connection, grant: ScopeGrant): boolean {
 
 /**
  * The phone's name: the model while it has a push registration, its platform after Backend forgot
- * the model with the registration (a sign-out from here does that).
+ * the model with the registration (a sign-out from another phone does that).
  */
 export function installName(install: Install): string {
   return phoneName(install.platform, install.deviceName);
@@ -106,27 +103,19 @@ export function installLine(install: Install): string {
 }
 
 /**
- * Whether the install still has a push registration to drop, as far as the answer tells: the
- * registration is what names the device and what makes pushes possible. An install without one was
- * signed out of pushes from another device (`signedOutAt`) or never turned them on.
+ * Whether the install still has a push registration, as far as the answer tells: the registration is
+ * what names the device and what makes pushes possible. An install without one was signed out of
+ * pushes from another phone (`signedOutAt`) or never turned them on.
  */
-export function hasPushRegistration(install: Install): boolean {
+function hasPushRegistration(install: Install): boolean {
   return !install.signedOutAt && (install.pushEnabled || install.deviceName !== null);
 }
 
-/** Whether the web can turn the phone's notifications off; the calling install signs out in the app. */
-export function canTurnOff(install: Install): boolean {
-  return hasPushRegistration(install) && !install.current;
-}
-
-/**
- * "Активность вчера", with what is known about its notifications when they do not come. Install
- * sign-out comes from the web or from the app on another phone, and Backend does not say which.
- */
+/** "Активность вчера", with what is known about its notifications when they do not come. */
 export function installActivity(install: Install, now = new Date()): string {
   const seen = `Активность ${formatRelative(install.lastSeenAt, now)}`;
   if (install.signedOutAt) {
-    return `${seen} · уведомления отключены ${formatDate(install.signedOutAt, now)} с сайта или другого телефона`;
+    return `${seen} · уведомления отключены ${formatDate(install.signedOutAt, now)}`;
   }
   if (install.pushEnabled) return seen;
   return hasPushRegistration(install)
@@ -135,8 +124,7 @@ export function installActivity(install: Install, now = new Date()): string {
 }
 
 /** What the page is about to end or take away. */
-export type Target =
-  { connection: Connection } | { install: Install } | { connection: Connection; scope: ScopeGrant };
+export type Target = { connection: Connection } | { connection: Connection; scope: ScopeGrant };
 
 export interface Confirmation {
   title: string;
@@ -146,18 +134,6 @@ export interface Confirmation {
 
 /** The confirmation of ending [target]; [self] is the id of this browser's connection. */
 export function confirmationOf(target: Target, self: string): Confirmation {
-  if ('install' in target) {
-    const { install } = target;
-    // Off on the phone itself: the registration is still there, and dropping it is what is left.
-    const now = install.pushEnabled
-      ? `Телефон перестанет получать уведомления ITMO.Widgets. ${STOPS_SPORT}`
-      : `Уведомления сейчас выключены на самом телефоне. Если отключить их и здесь, они не придут, даже когда на телефоне их включат снова, — пока приложение не подключит их заново. ${STOPS_SPORT}`;
-    return {
-      title: `Отключить уведомления на ${installName(install)}?`,
-      description: `${now} Вход в ИТМО на нём останется: завершить его можно только в приложении на другом телефоне (${IN_APP}).`,
-      actionLabel: 'Отключить уведомления',
-    };
-  }
   const { connection } = target;
   if ('scope' in target) {
     return {

@@ -12,8 +12,3 @@ export function updateScopes(id: string, scopes: ScopeId[]): Promise<Connection>
 export function revoke(id: string): Promise<unknown> {
   return api.post<unknown>(`/api/users/me/connections/${id}/revoke`);
 }
-
-/** Drops the install's push registration; the phone ends its ITMO.ID session itself. */
-export function signOutInstall(instanceId: string): Promise<unknown> {
-  return api.post<unknown>(`/api/users/me/installs/${instanceId}/sign-out`);
-}

@@ -4,6 +4,7 @@ Dates are production deploys; before 2026-10-02 they are commit dates.
 
 ## Unreleased
 
+- Устройства lists phones for reference only: «Отключить уведомления» is gone, since the web could only drop a phone's pushes while the app on it stayed signed in. A lost phone is signed out in the app on another phone, and Устройства and Профиль say so.
 - Статистика → Обзор draws a 30-day line under Пользователи, Дружбы, Входы на сайт and Открытые заявки; Ждут места на спорт has none, since Backend keeps no daily count of waiting entries.
 - Needs Backend with alllexey-dev/itmo-widgets-backend#67 on both hosts first; API types come from Backend c719ab1.
 - Статистика draws every figure from Backend (`/api/admin/stats/*`, `/api/admin/system/sheet-rules`), with one period for the page (7, 30, 90, 365 days or all time); the examples are gone. People and retention are counted per account, installs apart.
