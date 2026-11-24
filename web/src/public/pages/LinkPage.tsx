@@ -69,7 +69,13 @@ export function LinkActions({
     <HStack gap={2} wrap="wrap" hAlign="center" className="lk-actions">
       {children}
       {IS_IN_GOOGLE_PLAY ? (
-        <Button label="Google Play" variant="secondary" size="lg" href={GOOGLE_PLAY} />
+        <Button
+          label="Google Play"
+          variant="secondary"
+          size="lg"
+          icon={<BrandIcon brand="googleplay" size={18} />}
+          href={GOOGLE_PLAY}
+        />
       ) : null}
       <Button
         label="Скачать APK"
