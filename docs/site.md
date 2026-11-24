@@ -55,16 +55,21 @@
 - Публичные страницы всегда следуют системной цветовой схеме: цвета темы заданы через
   `light-dark()`, переключателя темы нет. Скриншоты выбирает браузер: `<picture>` с
   `prefers-color-scheme` и файлами из `/img/light` и `/img/dark`.
+- Скриншоты лендинга есть для Android и для iPhone. Платформу выбирает переключатель под
+  телефонами первого экрана (`PlatformSwitch`): две радиокнопки, которые `landing.css` читает
+  через `:has()`, без JavaScript. В HTML лежат оба кадра каждого экрана, по умолчанию виден
+  Android. Кадры iPhone помечены `loading="lazy"` и не скачиваются, пока посетитель не
+  переключится. В браузере без `:has()` переключатель скрыт.
 - Верстка - компоненты Astryx и их свойства, для остального - `.css` рядом с компонентом,
   только на токенах темы. Атрибут `style` в разметке не используется: CSP его запрещает (см.
   "Заголовки").
 - `theme-color` в `<head>` - это фон страницы из темы (`--color-background-body`) для светлой
   и темной схемы. Meta-тег не умеет читать токены: при смене фона темы значения правятся в
   шести публичных документах.
-- Google Play. Приложения в Play пока нет, поэтому кнопки Google Play нигде не видно, а на
-  страницах ссылок стоит подпись "Google Play - скоро". После публикации включите
-  `IS_IN_GOOGLE_PLAY` в `web/src/public/site/links.ts`: кнопка появится на лендинге (первый
-  экран и карточка Android) и на страницах ссылок, подпись исчезнет.
+- Google Play. Приложение опубликовано в Play с версии 2.3.0 (24 ноября 2026), поэтому
+  `IS_IN_GOOGLE_PLAY` в `web/src/public/site/links.ts` включен: кнопка Google Play стоит на
+  лендинге (первый экран и карточка Android) и на страницах ссылок. Если флаг выключить,
+  кнопка исчезнет, а на страницах ссылок вернется подпись "Google Play - скоро".
 
 ## Ссылки на приложение
 
@@ -153,24 +158,38 @@ connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; fram
 
 ## Скриншоты лендинга
 
-Снимки экранов - кадры демо-режима из `vibe/showcase/` репозитория приложения
-(описание каждого файла - в его `index.md`). Лендинг использует кадры Android из
-`android/{light,dark}/` (1080 x 2400). Реальных аккаунтов в кадрах нет. Настройки и
-"Уведомления" на лендинг не берем: в демо они показывают "Сервер ITMO.Widgets: Не подключено".
+Снимки экранов - кадры демо-режима приложения 2.3.0 (вторник 24 ноября 2026, 11:05 МСК, идет
+пара), один и тот же набор экранов для Android и iPhone, светлая и темная тема. Реальных
+аккаунтов в кадрах нет. Исходные кадры лежат в `vibe/showcase-2.3.0/` репозитория приложения
+(папка не в git).
+
+- Android (1080 x 2400): `StoreScreenshotCapture` на эмуляторе с `captureScreenshots=true`
+  (`docs/features/demo.md` приложения); тему, размер экрана, часы и строку состояния задает
+  тот, кто запускает.
+- iPhone (1206 x 2622): XCUITest на симуляторе iPhone 17, русский язык, демо без плашки и
+  остановленные часы; инструменты съемки - `vibe/showcase-2.3.0/ios/capture.patch`, в
+  репозитории приложения их нет.
 
 Имена файлов в `web/public/img/{light,dark}/` постоянные, поэтому обновленные снимки
-просто заменяют старые:
+просто заменяют старые. У каждого экрана два файла: `<name>.webp` (Android) и
+`ios-<name>.webp` (iPhone), `Screenshot` всегда выводит обе платформы.
 
-| Кадр | Файл |
-|---|---|
-| Android `02-today`, `09-lesson`, `13-recordbook` | `home`, `lesson`, `recordbook` |
-| Android `24-sport-sign`, `20-sport-mine`, `31-teacher-reviews`, `11-friend-picker` | `sport`, `sport-mine`, `teacher`, `friends` |
-| Android `05-pass`, `40-widgets-more` | `qr`, `widgets` |
+| Файл | Кадр Android | Экран |
+|---|---|---|
+| `home` | `01-home` | Сегодня |
+| `lesson` | `03-lesson` | лист пары |
+| `recordbook` | `04-recordbook` | Зачётка |
+| `sport`, `sport-mine` | `06-sport`, `07-sport-mine` | Спорт: "Запись" и "Моё" |
+| `teacher` | `08-teacher` | отзывы о преподавателе |
+| `friends` | `12-friend-picker` | "Чьё расписание" |
+| `qr` | `11-qr` | Пропуск |
+| `widgets` | `13-widgets` | галерея виджетов |
 
 Кадр обрезается сверху до 9:16 и сжимается до 540 x 960:
 
 ```bash
-magick 02-today.png -gravity North -crop 1080x1920+0+0 +repage -resize 540x960 -quality 82 web/public/img/light/home.webp
+magick 01-home.png -gravity North -crop 1080x1920+0+0 +repage -resize 540x960 -quality 82 web/public/img/light/home.webp
+magick home.png -gravity North -crop 1206x2144+0+0 +repage -resize 540x960 -quality 82 web/public/img/light/ios-home.webp
 ```
 
 Какая часть кадра видна в плитке лендинга, задает свойство `y` у `Shot` в

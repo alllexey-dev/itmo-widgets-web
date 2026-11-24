@@ -4,6 +4,9 @@ Dates are production deploys; before 2026-10-02 they are commit dates.
 
 ## Unreleased
 
+- The landing follows the 2.3.0 release: the Google Play button is on (first screen, the Android card, link pages), the "бета" wording is gone, the APK and .ipa buttons open the latest GitHub release, and the iPhone card names AltStore only, since widgets do not work with SideStore and Sideloadly.
+- The landing shows every screenshot for Android or for iPhone: a switch under the phones of the first screen changes the whole page. It works without JavaScript (radio buttons and `:has()`), and the iPhone frames are downloaded only after the switch.
+- Landing screenshots are re-shot on the 2.3.0 app for both platforms (demo, 24 November 2026): the new day timeline, the widgets gallery with "Пара", picture avatars of the demo students. Google Play buttons have the Play icon.
 - Устройства lists phones for reference only: «Отключить уведомления» is gone, since the web could only drop a phone's pushes while the app on it stayed signed in. A lost phone is signed out in the app on another phone, and Устройства and Профиль say so.
 - Статистика → Обзор draws a 30-day line under Пользователи, Дружбы, Входы на сайт and Открытые заявки; Ждут места на спорт has none, since Backend keeps no daily count of waiting entries.
 - Needs Backend with alllexey-dev/itmo-widgets-backend#67 on both hosts first; API types come from Backend c719ab1.

@@ -24,12 +24,10 @@ import {
   DELETE_ACCOUNT,
   GOOGLE_PLAY,
   IS_IN_GOOGLE_PLAY,
+  LATEST_RELEASE,
   MCP,
   ALTSTORE,
-  SIDESTORE,
-  SIDELOADLY,
   PRIVACY,
-  RELEASES,
   TELEGRAM,
   WEB_APP_LOGIN,
 } from '../site/links';
@@ -40,8 +38,38 @@ import './landing.css';
 type Hue = 'blue' | 'pink' | 'yellow' | 'purple' | 'green';
 
 /**
- * A screenshot in the system colour scheme. The browser picks the file from the media query,
- * so the prerendered HTML is right before any script runs and hydration has nothing to change.
+ * A screenshot of one platform in the system colour scheme. The browser picks the file from the
+ * media query, so the prerendered HTML is right before any script runs.
+ */
+function PlatformScreenshot({
+  platform,
+  file,
+  alt,
+  isLazy,
+}: {
+  platform: 'android' | 'ios';
+  file: string;
+  alt: string;
+  isLazy: boolean;
+}) {
+  return (
+    <picture className={`la-os la-os--${platform}`}>
+      <source srcSet={`/img/dark/${file}.webp`} media="(prefers-color-scheme: dark)" />
+      <img
+        src={`/img/light/${file}.webp`}
+        alt={alt}
+        width={540}
+        height={960}
+        loading={isLazy ? 'lazy' : undefined}
+      />
+    </picture>
+  );
+}
+
+/**
+ * The same screen on Android and on iPhone. Both are in the HTML and `PlatformSwitch` shows one
+ * of them with CSS alone, as public pages ship without JavaScript. The iPhone frame is always
+ * lazy: hidden, it is not downloaded until the visitor switches to it.
  */
 function Screenshot({
   name,
@@ -53,16 +81,45 @@ function Screenshot({
   isLazy?: boolean;
 }) {
   return (
-    <picture>
-      <source srcSet={`/img/dark/${name}.webp`} media="(prefers-color-scheme: dark)" />
-      <img
-        src={`/img/light/${name}.webp`}
-        alt={alt}
-        width={540}
-        height={960}
-        loading={isLazy ? 'lazy' : undefined}
-      />
-    </picture>
+    <>
+      <PlatformScreenshot platform="android" file={name} alt={alt} isLazy={isLazy} />
+      <PlatformScreenshot platform="ios" file={`ios-${name}`} alt={alt} isLazy />
+    </>
+  );
+}
+
+/**
+ * Chooses the platform of every screenshot on the page: two radio buttons that `landing.css`
+ * reads with `:has()`. Android is the default.
+ */
+function PlatformSwitch() {
+  return (
+    <fieldset className="la-switch">
+      <legend className="la-switch-legend">Скриншоты с платформы</legend>
+      <div className="la-switch-track">
+        <label className="la-switch-option">
+          <input
+            className="la-switch-input la-switch-input--android"
+            type="radio"
+            name="la-platform"
+            value="android"
+            defaultChecked
+          />
+          <BrandIcon brand="android" size={16} />
+          Android
+        </label>
+        <label className="la-switch-option">
+          <input
+            className="la-switch-input la-switch-input--ios"
+            type="radio"
+            name="la-platform"
+            value="ios"
+          />
+          <BrandIcon brand="apple" size={16} />
+          iPhone
+        </label>
+      </div>
+    </fieldset>
   );
 }
 
@@ -78,10 +135,24 @@ function Phone({ name, alt, className }: { name: string; alt: string; className:
 /** Vertical focus of a cropped screenshot in percent; each value has a class in `landing.css`. */
 type ShotFocus = 0 | 4 | 8 | 12 | 55 | 100;
 
-/** Screenshot crop peeking out of a bento tile. */
-function Shot({ name, alt, y = 0 }: { name: string; alt: string; y?: ShotFocus }) {
+/** A focus of the iPhone frame alone, where the two platforms lay the screen out differently. */
+type IosShotFocus = 70;
+
+/** Screenshot crop peeking out of a bento tile; `iosY` replaces `y` for the iPhone frame. */
+function Shot({
+  name,
+  alt,
+  y = 0,
+  iosY,
+}: {
+  name: string;
+  alt: string;
+  y?: ShotFocus;
+  iosY?: IosShotFocus;
+}) {
+  const ios = iosY === undefined ? '' : ` la-shot--ios-y${iosY}`;
   return (
-    <figure className={`la-shot la-shot--y${y}`}>
+    <figure className={`la-shot la-shot--y${y}${ios}`}>
       <Screenshot name={name} alt={alt} isLazy />
     </figure>
   );
@@ -150,6 +221,7 @@ function Hero() {
               label="Google Play"
               size="lg"
               variant="primary"
+              icon={<BrandIcon brand="googleplay" size={18} />}
               href={GOOGLE_PLAY}
               target="_blank"
               rel="noreferrer"
@@ -185,19 +257,22 @@ function Hero() {
         </HStack>
       </VStack>
 
-      <div className="la-stage">
-        <Shapes />
-        <Phone className="la-phone--left" name="qr" alt="Пропуск: QR-код, имя, группа и ИСУ" />
-        <Phone
-          className="la-phone--right"
-          name="sport-mine"
-          alt="Спорт: баллы за семестр и записи"
-        />
-        <Phone
-          className="la-phone--center"
-          name="home"
-          alt="Сегодня: пара, на которую идти, и день на линии времени"
-        />
+      <div className="la-showcase">
+        <div className="la-stage">
+          <Shapes />
+          <Phone className="la-phone--left" name="qr" alt="Пропуск: QR-код, имя, группа и ИСУ" />
+          <Phone
+            className="la-phone--right"
+            name="sport-mine"
+            alt="Спорт: баллы за семестр и записи"
+          />
+          <Phone
+            className="la-phone--center"
+            name="home"
+            alt="Сегодня: пара, на которую идти, и день на линии времени"
+          />
+        </div>
+        <PlatformSwitch />
       </div>
     </section>
   );
@@ -311,7 +386,7 @@ function Features() {
           title="Друзья"
           text="Видно, где сейчас друзья и какие пары у вас общие."
         >
-          <Shot name="friends" alt="Чьё расписание: где сейчас друзья" y={4} />
+          <Shot name="friends" alt="Чьё расписание: где сейчас друзья" y={4} iosY={70} />
         </Tile>
         <Tile
           layout="split"
@@ -458,7 +533,11 @@ function DownloadSection() {
     <section id="download" className="site-wrap la-section">
       <SectionHead
         title="Скачать"
-        lead="Версия 2.3 — бета. Сборки для Android и iPhone выходят в релизах на GitHub."
+        lead={
+          IS_IN_GOOGLE_PLAY
+            ? 'Версия 2.3. Android — в Google Play и файлом APK, iPhone — файлом .ipa из релиза на GitHub.'
+            : 'Версия 2.3. Сборки для Android и iPhone выходят в релизах на GitHub.'
+        }
       />
       <div className="la-platforms">
         <PlatformCard
@@ -468,10 +547,13 @@ function DownloadSection() {
           requirement="Android 8.0 и новее"
           text={
             <>
-              APK arm64 подходит почти всем телефонам, armv7&nbsp;— совсем старым.
-              В&nbsp;релизах&nbsp;— бета 2.3 и&nbsp;стабильная версия 2.2.
               {IS_IN_GOOGLE_PLAY
-                ? null
+                ? 'Проще всего поставить из\u00A0Google Play: обновления придут сами. '
+                : null}
+              APK из&nbsp;релиза на&nbsp;GitHub: arm64 подходит почти всем телефонам, armv7&nbsp;—
+              совсем старым.
+              {IS_IN_GOOGLE_PLAY
+                ? ' Версии из\u00A0Google Play и\u00A0с\u00A0GitHub ставятся друг поверх друга.'
                 : ' В\u00A0Google Play приложения пока нет, но скоро будет: закрытое тестирование уже идёт.'}
             </>
           }
@@ -481,6 +563,7 @@ function DownloadSection() {
               label="Google Play"
               variant="primary"
               size="lg"
+              icon={<BrandIcon brand="googleplay" size={18} />}
               href={GOOGLE_PLAY}
               target="_blank"
               rel="noreferrer"
@@ -491,7 +574,7 @@ function DownloadSection() {
             variant={IS_IN_GOOGLE_PLAY ? 'secondary' : 'primary'}
             size="lg"
             icon={<BrandIcon brand="github" size={18} />}
-            href={RELEASES}
+            href={LATEST_RELEASE}
             target="_blank"
             rel="noreferrer"
           />
@@ -503,23 +586,14 @@ function DownloadSection() {
           requirement="iOS 26.1 и новее"
           text={
             <>
-              Бета ставится не&nbsp;из&nbsp;App Store: скачайте файл .ipa из&nbsp;релиза
+              В&nbsp;App Store приложения пока нет: скачайте файл .ipa из&nbsp;релиза
               и&nbsp;установите его через{' '}
-              <span className="la-nowrap">
-                <Link href={ALTSTORE} hasUnderline>
-                  AltStore
-                </Link>
-                ,
-              </span>{' '}
-              <Link href={SIDESTORE} hasUnderline>
-                SideStore
-              </Link>{' '}
-              или{' '}
-              <Link href={SIDELOADLY} hasUnderline>
-                Sideloadly
+              <Link href={ALTSTORE} hasUnderline>
+                AltStore
               </Link>
-              &nbsp;— пошаговые инструкции есть на&nbsp;их сайтах. Уведомлений пока нет,
-              а&nbsp;записывать на&nbsp;спорт при закрытом приложении умеет{' '}
+              &nbsp;— пошаговая инструкция есть на&nbsp;его сайте. С&nbsp;SideStore
+              и&nbsp;Sideloadly не&nbsp;работают виджеты. Уведомлений пока нет, а&nbsp;записывать
+              на&nbsp;спорт при закрытом приложении умеет{' '}
               <Link href={AGENT} hasUnderline>
                 itmo-widgets-agent
               </Link>
@@ -532,7 +606,7 @@ function DownloadSection() {
             variant="primary"
             size="lg"
             icon={<BrandIcon brand="github" size={18} />}
-            href={RELEASES}
+            href={LATEST_RELEASE}
             target="_blank"
             rel="noreferrer"
           />
