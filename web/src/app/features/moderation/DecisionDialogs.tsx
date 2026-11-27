@@ -12,7 +12,12 @@ import { ToggleButton, ToggleButtonGroup } from '@astryxdesign/core/ToggleButton
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { formatDate } from '../../lib/format';
 import { CAPABILITIES } from './labels';
-import type { DecisionRequest, RestrictionCapability, UserRestriction } from './types';
+import type {
+  DecisionRequest,
+  LinkAudience,
+  RestrictionCapability,
+  UserRestriction,
+} from './types';
 
 const NOTE_LIMIT = 500;
 
@@ -285,6 +290,62 @@ export function HideAllDialog({
         onChange={setTyped}
         autoComplete="off"
         hasAutoFocus
+      />
+    </FormDialog>
+  );
+}
+
+/**
+ * Approving a FLOW link for another of the flows its author could pick from. The link's flow is
+ * chosen at first and cannot be sent: approving for it is the plain `Одобрить`. The note is
+ * optional and stays in the case's history.
+ */
+export function FlowDialog({
+  options,
+  current,
+  ...dialog
+}: DecisionDialogProps & { options: LinkAudience[]; current: number | null }) {
+  const [flow, setFlow] = useState(String(current ?? ''));
+  const [note, setNote] = useState('');
+  const trimmed = note.trim();
+  const chosen = options.find((option) => String(option.flowId) === flow);
+  return (
+    <FormDialog
+      title="Одобрить для другого потока"
+      text="Ссылку увидят студенты выбранного потока вместо того, что выбрал автор. Заявка закроется."
+      submitLabel="Одобрить"
+      isValid={chosen !== undefined && chosen.flowId !== current && trimmed.length <= NOTE_LIMIT}
+      isSaving={dialog.isSaving}
+      onClose={dialog.onClose}
+      onSubmit={() => {
+        if (!chosen) return;
+        dialog.onSubmit({
+          action: 'APPROVE',
+          flowId: chosen.flowId,
+          ...(trimmed ? { note: trimmed } : {}),
+        });
+      }}
+    >
+      <Selector
+        label="Поток"
+        options={options.map((option) => ({
+          value: String(option.flowId),
+          label: option.label,
+          description: option.flowId === current ? 'Сейчас' : undefined,
+        }))}
+        value={flow}
+        data-autofocus="true"
+        hasSearch={options.length > 8}
+        onChange={setFlow}
+      />
+      <TextArea
+        label="Комментарий"
+        description="Останется в истории заявки"
+        value={note}
+        onChange={setNote}
+        rows={3}
+        maxLength={NOTE_LIMIT}
+        isOptional
       />
     </FormDialog>
   );

@@ -8,6 +8,7 @@ import { useToast } from '@astryxdesign/core/Toast';
 import { Token, type TokenColor } from '@astryxdesign/core/Token';
 import {
   ArrowLeft,
+  ArrowRightLeft,
   Ban,
   Check,
   CircleHelp,
@@ -30,12 +31,19 @@ import { casePath, decide, DECISION_FORGETS, MODERATION } from './api';
 import { CaseAuthor } from './CaseAuthor';
 import { CaseChanges } from './CaseChanges';
 import { CaseHistory } from './CaseHistory';
-import { LinkPreview, ReviewPreview } from './CasePreview';
-import { HideAllDialog, RejectDialog, RestrictDialog } from './DecisionDialogs';
-import { decisionsFor, isHidden, type DecisionOption } from './decisions';
+import { LinkFlows, LinkPreview, ReviewPreview } from './CasePreview';
+import { FlowDialog, HideAllDialog, RejectDialog, RestrictDialog } from './DecisionDialogs';
+import {
+  canApproveForAnotherFlow,
+  decisionsFor,
+  flowOptionsOf,
+  isHidden,
+  type DecisionOption,
+} from './decisions';
 import {
   CASE_STATUSES,
   doneText,
+  flowLabelOf,
   OUTCOME_COLORS,
   periodLabel,
   REASONS,
@@ -172,7 +180,7 @@ export function CaseDetail({
   const forget = useForget();
   const titleId = useId();
   const detail = useApiQuery<ModerationCase>(casePath(caseId));
-  const [dialog, setDialog] = useState<'reject' | 'restrict' | 'hideAll' | null>(null);
+  const [dialog, setDialog] = useState<'reject' | 'restrict' | 'hideAll' | 'flow' | null>(null);
   const [sent, setSent] = useState<ModerationAction | null>(null);
 
   const decision = useApiMutation({
@@ -239,6 +247,17 @@ export function CaseDetail({
   const open = data?.status === 'OPEN' && target !== null;
   const options = data ? decisionsFor(data) : [];
   const linkUrl = target?.targetType === 'SUBJECT_RESOURCE' ? target.revision.url : null;
+  const link = target?.targetType === 'SUBJECT_RESOURCE' ? target : null;
+  const flows = link ? flowOptionsOf(link) : null;
+  const canMoveFlow = open && link !== null && canApproveForAnotherFlow(link, options);
+
+  /** Approving for another flow names the flow in its toast. */
+  function approveForFlow(request: DecisionRequest) {
+    if (!link || request.flowId === undefined) return;
+    const flow = flowLabelOf(link, request.flowId) ?? `№ ${request.flowId}`;
+    const verb = link.revision.status === 'PENDING' ? 'одобрена' : 'оставлена';
+    submit(request, `Ссылка ${verb} для потока ${flow}`);
+  }
 
   function take(option: DecisionOption) {
     if (option.action === 'REJECT') setDialog('reject');
@@ -433,6 +452,25 @@ export function CaseDetail({
                       ) : (
                         <ReviewPreview target={target} />
                       )}
+                      {link && flows ? (
+                        <LinkFlows
+                          options={flows}
+                          current={link.revision.flowId}
+                          action={
+                            canMoveFlow ? (
+                              <Button
+                                label="Одобрить для другого потока"
+                                icon={<ArrowRightLeft size={16} />}
+                                variant="ghost"
+                                size="sm"
+                                tooltip="Ссылку увидят студенты другого потока из этого списка. Заявка закроется."
+                                isDisabled={pending}
+                                onClick={() => setDialog('flow')}
+                              />
+                            ) : null
+                          }
+                        />
+                      ) : null}
                       <CaseChanges target={target} />
                       <CaseAuthor
                         author={target.author}
@@ -477,6 +515,11 @@ export function CaseDetail({
                     isPlainClose={isPlainClose(data)}
                     targetType={data.targetType}
                     revertingId={revertingId}
+                    flowName={
+                      target?.targetType === 'SUBJECT_RESOURCE'
+                        ? (flowId) => flowLabelOf(target, flowId)
+                        : undefined
+                    }
                     onUndo={(decision) =>
                       onUndo({ caseId: data.id, targetType: data.targetType, decision })
                     }
@@ -504,6 +547,15 @@ export function CaseDetail({
           active={target.submitterHistory.activeRestrictions}
           isSaving={pending}
           onSubmit={submit}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
+      {link && flows && dialog === 'flow' ? (
+        <FlowDialog
+          options={flows}
+          current={link.revision.flowId}
+          isSaving={pending}
+          onSubmit={approveForFlow}
           onClose={() => setDialog(null)}
         />
       ) : null}

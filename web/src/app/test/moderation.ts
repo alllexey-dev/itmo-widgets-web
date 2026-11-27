@@ -86,6 +86,7 @@ export function linkTarget(
       title: seed.title,
       visibility: 'ALL',
       flowId: null,
+      flowOptions: null,
       status: 'PENDING',
       submittedAt: minutesAgo(30),
       decidedAt: null,
@@ -232,6 +233,7 @@ export function decisionOf(
     actor: 'MODERATOR',
     revertedAt: null,
     revertibleUntil: null,
+    flowId: null,
     ...overrides,
   } satisfies ModerationDecision;
 }
@@ -340,11 +342,14 @@ function linkStatus(
 
 /**
  * What a decision does to the thing the case is about, the way Backend applies it: approving
- * touches only a revision that waits, and neither approving nor rejecting shows what is hidden.
+ * touches only a revision that waits, and neither approving nor rejecting shows what is hidden. An
+ * approval with [flowId] moves the link revision to that flow, and the link with it when the
+ * revision is what students see.
  */
 function decidedTarget(
   target: ModerationCase['target'],
   action: DecisionRequest['action'],
+  flowId?: number,
 ): ModerationCase['target'] {
   if (!target) return target;
   const now = new Date().toISOString();
@@ -371,11 +376,22 @@ function decidedTarget(
         return target;
     }
   }
-  const { link, revision } = target;
+  const { link } = target;
+  const revision = flowId === undefined ? target.revision : { ...target.revision, flowId };
+  const audienceLabel =
+    revision.flowOptions?.find((option) => option.flowId === revision.flowId)?.label ??
+    (revision.flowId === link.flowId ? link.audienceLabel : null);
   const hidden = link.status === 'HIDDEN';
   switch (action) {
     case 'APPROVE':
-      if (!waits) return target;
+      if (!waits) {
+        if (flowId === undefined) return target;
+        return {
+          ...target,
+          revision,
+          link: { ...link, flowId: revision.flowId, audienceLabel },
+        };
+      }
       return {
         ...target,
         revision: { ...revision, status: 'APPROVED', decidedAt: now },
@@ -387,6 +403,7 @@ function decidedTarget(
           title: revision.title,
           visibility: revision.visibility,
           flowId: revision.flowId,
+          audienceLabel,
         },
       };
     case 'REJECT':
@@ -444,6 +461,17 @@ function hiddenByAuthorSweep(target: Target): Target {
       status: published ? 'HIDDEN' : waits ? 'REJECTED' : target.link.status,
     },
   };
+}
+
+/**
+ * Whether Backend takes the `flowId` of a decision: only with an `APPROVE` of a FLOW link revision
+ * that lists flow options, and only one of them. Anything else is 400 `invalid_request_data`.
+ */
+function isValidFlow(target: Target | null, body: DecisionRequest): boolean {
+  if (body.flowId === undefined || body.flowId === null) return true;
+  if (body.action !== 'APPROVE' || target?.targetType !== 'SUBJECT_RESOURCE') return false;
+  const { visibility, flowOptions } = target.revision;
+  return visibility === 'FLOW' && (flowOptions ?? []).some((o) => o.flowId === body.flowId);
 }
 
 /**
@@ -622,9 +650,17 @@ export function moderationBackend(
       if (current.status !== 'OPEN' && body.action !== 'RESTORE') {
         return fail(409, 'business_rule_violation');
       }
+      if (!isValidFlow(current.target, body)) return fail(400, 'invalid_request_data');
       if (!isAccepted(current.target, body.action)) return fail(409, 'business_rule_violation');
       const keepsOpen = KEEP_OPEN.includes(body.action);
-      let target = decidedTarget(current.target, body.action);
+      // The same flow as now is a plain approval.
+      const moved =
+        current.target?.targetType === 'SUBJECT_RESOURCE' &&
+        body.flowId != null &&
+        body.flowId !== current.target.revision.flowId
+          ? body.flowId
+          : undefined;
+      let target = decidedTarget(current.target, body.action, moved);
       const counted: Partial<HistoryCounts> = {};
       if (current.target && target) {
         if (body.action === 'APPROVE' && current.target.revision.status === 'PENDING') {
@@ -682,6 +718,7 @@ export function moderationBackend(
         restriction: body.restriction
           ? { capability: body.restriction.capability, days: body.restriction.days ?? null }
           : null,
+        flowId: moved ?? null,
       });
       const updated: ModerationCase = {
         ...current,

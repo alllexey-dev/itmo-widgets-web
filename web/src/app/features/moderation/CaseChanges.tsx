@@ -3,7 +3,7 @@ import { Token } from '@astryxdesign/core/Token';
 import { VisuallyHidden } from '@astryxdesign/core/VisuallyHidden';
 import { Sparkles } from 'lucide-react';
 import { hasApprovedVersion } from './decisions';
-import { CATEGORIES, visibilityLabel } from './labels';
+import { CATEGORIES, flowLabelOf, visibilityLabel } from './labels';
 import { Section } from './Section';
 import type { CaseTarget, SubjectLinkTarget } from './types';
 import { wordDiff } from './wordDiff';
@@ -18,8 +18,9 @@ interface DiffRow extends Record<string, unknown> {
 
 const CAPTION = 'Изменения относительно одобренной версии';
 
-function linkRows({ revision, link }: SubjectLinkTarget): DiffRow[] {
-  const audience = revision.flowId === link.flowId ? link.audienceLabel : null;
+function linkRows(target: SubjectLinkTarget): DiffRow[] {
+  const { revision, link } = target;
+  const audience = flowLabelOf(target, revision.flowId);
   return [
     {
       key: 'category',
