@@ -23,6 +23,12 @@ export const pages = {
     file: 'index.html',
     hydrate: false,
   },
+  'landing-en': {
+    load: () => import('./landing/LandingPageEn'),
+    source: 'src/public/landing/LandingPageEn.tsx',
+    file: 'en/index.html',
+    hydrate: false,
+  },
   privacy: {
     load: () => import('./pages/PrivacyPage'),
     source: 'src/public/pages/PrivacyPage.tsx',

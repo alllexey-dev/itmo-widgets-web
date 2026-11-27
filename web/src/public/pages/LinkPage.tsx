@@ -7,7 +7,14 @@ import { Text } from '@astryxdesign/core/Text';
 import type { ReactNode } from 'react';
 
 import { BrandIcon } from '../../shared/BrandIcon';
-import { APP_STORE, GOOGLE_PLAY, IS_IN_GOOGLE_PLAY, LATEST_RELEASE } from '../site/links';
+import {
+  APP_STORE,
+  GOOGLE_PLAY,
+  IS_IN_APP_STORE,
+  IS_IN_GOOGLE_PLAY,
+  LATEST_RELEASE,
+  TESTFLIGHT,
+} from '../site/links';
 import { SitePage } from '../site/SitePage';
 
 import './link.css';
@@ -57,7 +64,10 @@ export function LinkNote({ children }: { children: ReactNode }) {
   );
 }
 
-/** The download buttons of a link page: App Store, Google Play, APK; `apk` is the variant of the APK button. */
+/**
+ * The download buttons of a link page: the iPhone one (App Store once `IS_IN_APP_STORE` is on,
+ * TestFlight until then), Google Play, APK; `apk` is the variant of the APK button.
+ */
 export function LinkActions({
   apk,
   children,
@@ -68,13 +78,15 @@ export function LinkActions({
   return (
     <HStack gap={2} wrap="wrap" hAlign="center" className="lk-actions">
       {children}
-      <Button
-        label="App Store"
-        variant="secondary"
-        size="lg"
-        icon={<BrandIcon brand="apple" size={18} />}
-        href={APP_STORE}
-      />
+      {IS_IN_APP_STORE || TESTFLIGHT ? (
+        <Button
+          label={IS_IN_APP_STORE ? 'App Store' : 'TestFlight'}
+          variant="secondary"
+          size="lg"
+          icon={<BrandIcon brand="apple" size={18} />}
+          href={IS_IN_APP_STORE ? APP_STORE : TESTFLIGHT}
+        />
+      ) : null}
       {IS_IN_GOOGLE_PLAY ? (
         <Button
           label="Google Play"

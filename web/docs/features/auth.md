@@ -25,10 +25,12 @@ another. What happens when a connection ends is described in `../architecture.md
 ## Phone approval - `/login`
 
 `LoginPage` (`src/app/features/auth/`) is one card: the steps on one side and, on the other, the QR,
-the six-digit code to compare with the phone, the time the code has left, a status line and
-`Скопировать ссылку` (the pairing link, for a phone that cannot scan its own screen; there the panel
-with the code comes first). In the app: Профиль -> Устройства -> Подключить устройство, scan or
-paste, compare the code, confirm. The QR is dark on light in every theme.
+the time the code has left, a status line and `Скопировать ссылку` (the pairing link, for a phone
+that cannot scan its own screen; there the panel with the code comes first). In the app: Профиль ->
+Устройства -> Подключить устройство, scan or paste, check that the card names this browser (`name`
+below), confirm. There is no code to compare: the phone shows the browser and asks to approve only a
+QR on the user's own screen (the app's `docs/features/connections.md`, Why no code). The QR is dark
+on light in every theme.
 
 The page goes to `/` when a connection exists and no `?next=` is given. A visitor without one gets a
 `CONNECT` challenge; a signed-in user with `?next=` (the shell's dialogs) gets a `RENEW` challenge of
@@ -43,9 +45,7 @@ is an app path other than `/login`.
    `POST /api/pair/challenges` `{kind: "CONNECT", client: "web", name, version, scopes: ["user"]}`
    (`name` is the browser and OS, `Chrome, macOS`; `version` the web build) or
    `POST /api/client/pair/renew` `{keyCommitment}`; keeps `claimSecret` from the answer in memory;
-3. shows the QR `https://<host>/pair#v1.<code>.<pk>.<s>` (base64url) and the SAS: the first 20 bits
-   of `SHA-256("iw-pair-sas-v1" || challengeId || pk || s)` modulo 10^6, as `542 873`, the same
-   digits the phone shows;
+3. shows the QR `https://<host>/pair#v1.<code>.<pk>.<s>` (base64url);
 4. claims `POST /api/pair/challenges/{id}/claim {claimSecret}` every 2 s while the tab is visible and
    the code is alive; returning to the tab claims at once. `PENDING` (202) waits for a scan, `OPENED`
    asks to confirm in the app and gives the code 10 minutes from then, as Backend does;
