@@ -32,6 +32,7 @@ import {
   DELETE_ACCOUNT,
   GITHUB,
   GOOGLE_PLAY,
+  IS_IN_APP_STORE,
   IS_IN_GOOGLE_PLAY,
   LATEST_RELEASE,
   MCP,
@@ -242,7 +243,9 @@ function GooglePlayButton() {
   );
 }
 
+/** Shown only while `IS_IN_APP_STORE` in `links.ts` is on. */
 function AppStoreButton() {
+  if (!IS_IN_APP_STORE) return null;
   return (
     <Button
       label="App Store"
@@ -255,14 +258,17 @@ function AppStoreButton() {
   );
 }
 
-/** Shown only once `TESTFLIGHT` in `links.ts` holds the public beta link. */
+/**
+ * Shown only once `TESTFLIGHT` in `links.ts` holds the public beta link. Until the app is in the
+ * App Store it is the main iPhone button.
+ */
 function TestFlightButton({ label }: { label: string }) {
   if (!TESTFLIGHT) return null;
   return (
     <Button
       label={label}
       size="lg"
-      variant="secondary"
+      variant={IS_IN_APP_STORE ? 'secondary' : 'primary'}
       icon={<BrandIcon brand="apple" size={18} />}
       href={TESTFLIGHT}
       {...external}
@@ -713,7 +719,9 @@ function DownloadSection({
           requirement={copy.iphone}
           note={
             <>
-              {TESTFLIGHT ? `${copy.iphoneTestflight} ` : null}
+              {TESTFLIGHT
+                ? `${IS_IN_APP_STORE ? copy.iphoneTestflight : copy.iphoneTestflightOnly} `
+                : null}
               {copy.iphoneIpa[0]}
               <Link href={ALTSTORE} hasUnderline {...external}>
                 AltStore

@@ -38,16 +38,19 @@
 
 ## Куда ведут кнопки скачивания
 
-Основные способы установки - магазины: Google Play на Android и App Store на iPhone
-(`GOOGLE_PLAY`, `APP_STORE` в `web/src/public/site/links.ts`). Они стоят на первом экране
-лендинга и в карточках Android и iPhone. Сборки, включая беты, выходят и в
+Основные способы установки - Google Play на Android и TestFlight на iPhone (`GOOGLE_PLAY`,
+`TESTFLIGHT` в `web/src/public/site/links.ts`). Они стоят на первом экране лендинга и в
+карточках Android и iPhone. Сборки, включая беты, выходят и в
 [релизах на GitHub](https://github.com/alllexey-dev/ITMO.Widgets/releases): APK и `.ipa` -
 запасной путь, на лендинге это тихие ссылки рядом с кнопками магазинов, а подробности
 (arm64 и armv7, AltStore) - мелким текстом под ними.
 
-TestFlight. Публичная ссылка на бету для iPhone - константа `TESTFLIGHT` в `links.ts`
-(помечена `TODO(TestFlight)`). Пока она пустая, кнопки TestFlight нет; когда в ней ссылка, кнопка
-появляется на первом экране и в карточке iPhone, а в тексте карточки - строка про бету.
+App Store. Запись приложения уже есть (`APP_STORE`), но самого приложения в магазине пока нет,
+поэтому `IS_IN_APP_STORE` выключен: кнопки App Store нет, а TestFlight - главная кнопка iPhone,
+и в карточке iPhone написано, что в App Store приложения пока нет. Когда приложение выйдет,
+флаг включается: появляется кнопка App Store, TestFlight становится второстепенной кнопкой, а
+строка в карточке - про бета-версии. Пустой `TESTFLIGHT` убирает кнопку TestFlight и строку
+про нее.
 
 Telegram-канал `https://t.me/itmowidgets` - анонсы и новости, файлы там не раздаются. GitHub и
 канал стоят на первом экране плашками под кнопками магазинов и в плитке "Открытый код".

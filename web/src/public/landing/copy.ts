@@ -80,6 +80,8 @@ export interface LandingCopy {
     apk: string;
     iphone: string;
     iphoneTestflight: string;
+    /** The TestFlight line while the app is not in the App Store. */
+    iphoneTestflightOnly: string;
     /** The text around the AltStore link. */
     iphoneIpa: [before: string, after: string];
     ipa: string;
@@ -204,6 +206,7 @@ const ru: LandingCopy = {
     apk: 'APK на GitHub',
     iphone: 'iOS 26.1 и новее',
     iphoneTestflight: 'Бета-версии выходят в TestFlight.',
+    iphoneTestflightOnly: 'В App Store приложения пока нет, только в TestFlight.',
     iphoneIpa: ['Файл .ipa ставится через ', ', пушей в такой сборке нет.'],
     ipa: '.ipa на GitHub',
   },
@@ -327,6 +330,7 @@ const en: LandingCopy = {
     apk: 'APK on GitHub',
     iphone: 'iOS 26.1 or newer',
     iphoneTestflight: 'Beta builds come out in TestFlight.',
+    iphoneTestflightOnly: 'The app is not in the App Store yet, only in TestFlight.',
     iphoneIpa: ['The .ipa installs with ', ' and gets no push notifications.'],
     ipa: '.ipa on GitHub',
   },

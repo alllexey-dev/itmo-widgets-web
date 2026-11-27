@@ -17,6 +17,11 @@ export const GOOGLE_PLAY = 'https://play.google.com/store/apps/details?id=dev.al
 /** The App Store record of the iPhone app (`APP_STORE_ID` in the app's `Base.xcconfig`). */
 export const APP_STORE = 'https://apps.apple.com/app/id6838850366';
 /**
+ * The iPhone app is not in the App Store yet, so the landing shows no App Store button and
+ * TestFlight takes its place as the main iPhone button. `true` brings the App Store button back.
+ */
+export const IS_IN_APP_STORE: boolean = false;
+/**
  * The app is published in Google Play since 2.3.0 (24 November 2026): the landing and the link
  * pages show the Play button. `false` hides it and brings back the "скоро" notes.
  */
@@ -28,11 +33,10 @@ export const PRIVACY = '/privacy.html';
 export const DELETE_ACCOUNT = '/delete-account';
 
 /**
- * TODO(TestFlight): the public TestFlight link of the iPhone beta, e.g.
- * 'https://testflight.apple.com/join/XXXXXXXX'. While it is empty the landing shows no TestFlight
- * button; set it and the button appears on the first screen and in the iPhone card.
+ * The public TestFlight link of the iPhone beta. The landing shows a TestFlight button on the first
+ * screen and in the iPhone card while it is set; an empty string hides both.
  */
-export const TESTFLIGHT: string = '';
+export const TESTFLIGHT: string = 'https://testflight.apple.com/join/agWdPJgj';
 
 /**
  * Live GitHub figures of the app repository, drawn by shields.io as images: public pages run no
