@@ -745,7 +745,10 @@ describe('SystemPage', () => {
       expect(state).toHaveTextContent(
         'Причины за 7 дней: сеть — 9, ответ сервера — 5, авторизация — 2, разбор данных — 1',
       );
-      expect(state).not.toHaveTextContent('17');
+      // The sum of the two is no figure of its own. Not `toHaveTextContent`: the card also shows the time of the last
+      // success, which has a 17 in it for an hour a day.
+      expect(within(state).getByText('6')).toBeInTheDocument();
+      expect(within(state).queryByText('17')).not.toBeInTheDocument();
     });
 
     it('folds a long list of runs to the latest five', async () => {
