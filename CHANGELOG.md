@@ -4,6 +4,7 @@ Dates are production deploys; before 2026-10-02 they are commit dates.
 
 ## Unreleased
 
+- iPhone links: `/.well-known/apple-app-site-association` on both hosts (JSON, no redirects, checked by `scripts/check-site.sh`) lets the iOS app open `/u/*`, `/sport/*` and `/pair` as Universal Links. The profile and sport link pages no longer say that iPhone links do not open, and every link page has an App Store button.
 - The landing follows the 2.3.0 release: the Google Play button is on (first screen, the Android card, link pages), the "бета" wording is gone, the APK and .ipa buttons open the latest GitHub release, and the iPhone card names AltStore only, since widgets do not work with SideStore and Sideloadly.
 - The landing shows every screenshot for Android or for iPhone: a switch under the phones of the first screen changes the whole page. It works without JavaScript (radio buttons and `:has()`), and the iPhone frames are downloaded only after the switch.
 - Landing screenshots are re-shot on the 2.3.0 app for both platforms (demo, 24 November 2026): the new day timeline, the widgets gallery with "Пара", picture avatars of the demo students. Google Play buttons have the Play icon.

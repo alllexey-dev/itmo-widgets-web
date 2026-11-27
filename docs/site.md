@@ -24,7 +24,7 @@
   - `web/src/app/` - кабинет `/app/`;
   - `web/src/shared/` и `web/src/themes/` - тема и стили, общие для публичных страниц и кабинета;
   - `web/public/` - файлы, которые отдаются как есть: `img/`, `link/link.js`,
-    `.well-known/assetlinks.json`;
+    `.well-known/assetlinks.json`, `.well-known/apple-app-site-association`;
   - `web/AGENTS.md` - правила работы с Astryx.
 - `deploy/site.nginx.conf` - адреса и заголовки сайта; `Dockerfile` собирает `web/` и кладет
   `web/dist` в образ `nginx:alpine`.
@@ -73,20 +73,30 @@
 
 ## Ссылки на приложение
 
-Приложение для Android открывает ссылки `/u/{isu}` (профиль), `/sport/{id}` и
-`/sport/p/{id}` (занятие по спорту и прогноз занятия) как проверенные App Links
-на `widgets.alllexey.dev` и `dev.widgets.alllexey.dev`. Для этого сайт отдает:
+Приложение открывает ссылки `/u/{isu}` (профиль), `/sport/{id}` и `/sport/p/{id}`
+(занятие по спорту и прогноз занятия) и `/pair` на `widgets.alllexey.dev` и
+`dev.widgets.alllexey.dev`: на Android как проверенные App Links, на iPhone как Universal
+Links. Для этого сайт отдает:
 
 - `web/public/.well-known/assetlinks.json` - один файл на оба хоста: пакет
   `dev.alllexey.itmowidgets`, отпечатки SHA-256 ключа выпуска и debug-ключа.
   Отдается как `application/json` без перенаправлений (`deploy/site.nginx.conf`).
+- `web/public/.well-known/apple-app-site-association` (без расширения) - тоже один файл на оба
+  хоста: `applinks.details` для app ID `PR27F87U8S.dev.alllexey.itmowidgets` (Team ID
+  разработчика и bundle id приложения), компоненты `/u/*`, `/sport/*`, `/pair`. Отдается как
+  `application/json` без перенаправлений. iPhone не скачивает файл с сайта сам: его забирает CDN
+  Apple при установке или обновлении приложения, поэтому правка доходит до телефонов не сразу
+  (до суток и переустановка или обновление приложения). Что сейчас лежит в CDN:
+  `curl https://app-site-association.cdn-apple.com/a/v1/widgets.alllexey.dev`.
 - `/u/*` -> `link/profile.html`, `/sport/*` -> `link/sport.html` - страницы для тех, у кого нет
   приложения: без запросов к API, без номера ИСУ или занятия в тексте, `noindex`,
   `no-referrer`. Единственный скрипт этих двух документов - `web/public/link/link.js`,
   обычный файл (не модуль и не React), подключенный в их `<head>` как `<script src defer>`.
   На Android он превращает кнопку "Открыть в приложении" (`id="open-app"`) в `intent://` с
-  переходом на релизы, если приложения нет; на других системах кнопка скрыта. Путь, запрос и
-  фрагмент ссылки переходят в `intent://` без изменений.
+  переходом на релизы, если приложения нет; на других системах кнопка скрыта: iPhone не
+  открывает Universal Link со страницы того же сайта. Путь, запрос и фрагмент ссылки переходят в
+  `intent://` без изменений. Кнопки скачивания на всех трех страницах ссылок: App Store, Google
+  Play и APK.
 - `/pair` -> `link/pair.html` - ссылка подключения устройства
   `https://<host>/pair#v1.<код>.<ключ>.<секрет>`. Ключ и секрет устройства
   лежат только во фрагменте после `#`: браузер не отправляет его ни в запросе,
@@ -103,6 +113,11 @@
 `adb shell pm verify-app-links --re-verify dev.alllexey.itmowidgets`, затем
 `adb shell pm get-app-links dev.alllexey.itmowidgets`. Подробности - в
 `docs/features/app-links.md` репозитория приложения.
+
+Другой Team ID или bundle id iOS-приложения: поменять `appIDs` в
+`apple-app-site-association` и выкатить сайт. Проверка на iPhone с установленным из App Store
+или TestFlight приложением: ссылка `https://widgets.alllexey.dev/u/1` из Заметок или Сообщений
+открывает приложение, долгое нажатие на нее показывает "Открыть в ITMO.Widgets".
 
 ## Политика и удаление аккаунта
 
@@ -152,7 +167,8 @@ connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; fram
   Поэтому все четыре заголовка заданы один раз на уровне `server`, а `location` только
   присваивает переменные `$cache_control` и `$robots`; пустое значение заголовок не отправляет.
 - Кеш: HTML и `link.js` - `no-cache` (HTML называет файлы своей сборки по хешам),
-  `/assets/*` - год и `immutable` (имена с хешем), `/img/*` - неделя, `assetlinks.json` - час.
+  `/assets/*` - год и `immutable` (имена с хешем), `/img/*` - неделя, `assetlinks.json` и
+  `apple-app-site-association` - час.
 - `/app` перенаправляет на `/app/`; `/app/*` без файла отдает `/app/index.html`. Остальные
   несуществующие адреса - 404.
 
@@ -233,6 +249,6 @@ scripts/check-site.sh <адрес>          # работающий образ: �
 публичные страницы пререндерены и не содержат инлайновых стилей и скриптов; что политика и
 удаление аккаунта отдаются без скриптов; что страницы ссылок не показывают идентификатор из
 адреса, не обращаются к API и грузят только `link.js`; что `/pair` не грузит ни скриптов, ни
-чужих ресурсов; маршруты кабинета, кеш, 404 и `assetlinks.json`. Скрипт сравнивает `link.js`
-и `assetlinks.json` с файлами рабочей копии, так что на развернутом хосте его запускают из
+чужих ресурсов; маршруты кабинета, кеш, 404, `assetlinks.json` и `apple-app-site-association`. Скрипт
+сравнивает `link.js` и оба файла `.well-known` с файлами рабочей копии, так что на развернутом хосте его запускают из
 той же ревизии, что выложена.
