@@ -4,6 +4,10 @@ Dates are production deploys; before 2026-10-02 they are commit dates.
 
 ## Unreleased
 
+- The landing is in Russian and English: `/` and `/en/`, an RU/EN switch in the header, `lang`, title, description, Open Graph, `canonical` and `hreflang` per language. `lang.js` remembers the choice in `localStorage` and sends a visitor who chose English from `/` to `/en/`; without scripts the switch is two links.
+- The landing copy is rewritten in both languages. Google Play and TestFlight are the main buttons (the App Store button waits behind `IS_IN_APP_STORE` until the app is published there); the APK and the .ipa from GitHub Releases are quiet links under them.
+- GitHub and Telegram are on the first screen: pills with the live star count and release downloads (shields.io images) and the Telegram channel, plus an "Открытый код" tile in the feature grid that replaces "Устройства".
+- A new "Агент и MCP-сервер" section says what itmo-widgets-agent and itmo-mcp give, for whom, and how to get them. The web version is no longer a call to action: one quiet link under that section, gone from the header and the download cards.
 - The sign-in page no longer shows a code to compare with the phone: step 3 says to check that the app names this browser and confirm. The app's card names the browser and asks to approve only a QR on the user's own screen; the wire to Backend is unchanged, so the page works with every app version.
 - The landing follows the 2.3.0 release: the Google Play button is on (first screen, the Android card, link pages), the "бета" wording is gone, the APK and .ipa buttons open the latest GitHub release, and the iPhone card names AltStore only, since widgets do not work with SideStore and Sideloadly.
 - The landing shows every screenshot for Android or for iPhone: a switch under the phones of the first screen changes the whole page. It works without JavaScript (radio buttons and `:has()`), and the iPhone frames are downloaded only after the switch.
