@@ -11,6 +11,7 @@ import { demoBackend } from './src/app/test/demo/plugin';
  */
 const pages = {
   index: 'index.html',
+  'index-en': 'en/index.html',
   privacy: 'privacy.html',
   'delete-account': 'delete-account.html',
   'link-profile': 'link/profile.html',
@@ -22,6 +23,7 @@ const pages = {
 /** Dev and preview answer the production addresses that are not files. */
 const rewrites: [RegExp, string][] = [
   [/^\/app(?:\/(?!index\.html$)[^.]*)?$/, '/app/index.html'],
+  [/^\/en$/, '/en/index.html'],
   [/^\/delete-account\/?$/, '/delete-account.html'],
   [/^\/u\/[^.]*$/, '/link/profile.html'],
   [/^\/sport\/[^.]*$/, '/link/sport.html'],

@@ -36,8 +36,8 @@ const steps = [
     text: 'Или вставьте ссылку, если сайт открыт на том же телефоне',
   },
   {
-    title: 'Сверьте код и подтвердите',
-    text: 'Подтверждайте, только если код в приложении совпадает',
+    title: 'Подтвердите на телефоне',
+    text: 'Проверьте, что в приложении указан этот браузер, и нажмите «Подключить»',
   },
 ];
 
@@ -152,17 +152,6 @@ function Panel({ view, flow }: { view: LoginState; flow: LoginFlow }) {
           </div>
         ) : null}
       </div>
-
-      {view.kind === 'active' ? (
-        <VStack gap={1} hAlign="center">
-          <Text type="supporting" color="secondary">
-            Код для сверки
-          </Text>
-          <Text size="3xl" weight="bold" hasTabularNumbers className="login-code">
-            <span translate="no">{view.challenge.sas}</span>
-          </Text>
-        </VStack>
-      ) : null}
 
       <VStack gap={2} width="100%">
         <ProgressBar

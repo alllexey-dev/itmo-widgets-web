@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["PR27F87U8S.dev.alllexey.itmowidgets"],
+        "components": [
+          { "/": "/u/*", "comment": "Profile" },
+          { "/": "/sport/*", "comment": "Sport lesson or predicted lesson" },
+          { "/": "/pair", "comment": "Device pairing; the key is in the fragment" }
+        ]
+      }
+    ]
+  }
+}

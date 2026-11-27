@@ -18,8 +18,6 @@ export type ClaimStatus = Schemas['PairingClaimResponse']['status'];
 export interface LoginChallenge extends CreatedChallenge {
   /** What the QR encodes: `https://<host>/pair#v1.<code>.<pk>.<s>`. */
   link: string;
-  /** The six digits the phone shows next to the request, as `542 873`. */
-  sas: string;
 }
 
 const CREATE_PATH = '/api/pair/challenges';
@@ -46,13 +44,6 @@ function base64url(bytes: Uint8Array): string {
     .replace(/=+$/, '');
 }
 
-function uuidBytes(uuid: string): Uint8Array {
-  const hex = uuid.replace(/-/g, '');
-  return Uint8Array.from({ length: 16 }, (_, index) =>
-    parseInt(hex.slice(index * 2, index * 2 + 2), 16),
-  );
-}
-
 /**
  * A fresh X25519 key pair and secret, kept in this page's memory only. The web never opens a sealed
  * bundle, so the private key is not extractable and is dropped with the challenge.
@@ -68,22 +59,6 @@ async function createKeys(): Promise<{ publicKey: Uint8Array; secret: Uint8Array
 /** `SHA-256("iw-pair-commit-v1" || pk || s)`, base64url without padding. */
 export async function keyCommitment(publicKey: Uint8Array, secret: Uint8Array): Promise<string> {
   return base64url(await sha256('iw-pair-commit-v1', publicKey, secret));
-}
-
-/** The first 20 bits of `SHA-256("iw-pair-sas-v1" || challengeId || pk || s)` modulo 10^6. */
-export async function verificationCode(
-  challengeId: string,
-  publicKey: Uint8Array,
-  secret: Uint8Array,
-): Promise<string> {
-  const [a = 0, b = 0, c = 0] = await sha256(
-    'iw-pair-sas-v1',
-    uuidBytes(challengeId),
-    publicKey,
-    secret,
-  );
-  const digits = String(((a << 12) | (b << 4) | (c >> 4)) % 1_000_000).padStart(6, '0');
-  return `${digits.slice(0, 3)} ${digits.slice(3)}`;
 }
 
 export function pairLink(code: string, publicKey: Uint8Array, secret: Uint8Array): string {
@@ -109,7 +84,6 @@ export async function createChallenge(kind: PairingKind): Promise<LoginChallenge
   return {
     ...created,
     link: pairLink(created.code, publicKey, secret),
-    sas: await verificationCode(created.challengeId, publicKey, secret),
   };
 }
 

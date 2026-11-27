@@ -7,7 +7,14 @@ import { Text } from '@astryxdesign/core/Text';
 import type { ReactNode } from 'react';
 
 import { BrandIcon } from '../../shared/BrandIcon';
-import { GOOGLE_PLAY, IS_IN_GOOGLE_PLAY, LATEST_RELEASE } from '../site/links';
+import {
+  APP_STORE,
+  GOOGLE_PLAY,
+  IS_IN_APP_STORE,
+  IS_IN_GOOGLE_PLAY,
+  LATEST_RELEASE,
+  TESTFLIGHT,
+} from '../site/links';
 import { SitePage } from '../site/SitePage';
 
 import './link.css';
@@ -57,7 +64,10 @@ export function LinkNote({ children }: { children: ReactNode }) {
   );
 }
 
-/** The download buttons of a link page; `apk` is the variant of the APK button. */
+/**
+ * The download buttons of a link page: the iPhone one (App Store once `IS_IN_APP_STORE` is on,
+ * TestFlight until then), Google Play, APK; `apk` is the variant of the APK button.
+ */
 export function LinkActions({
   apk,
   children,
@@ -68,6 +78,15 @@ export function LinkActions({
   return (
     <HStack gap={2} wrap="wrap" hAlign="center" className="lk-actions">
       {children}
+      {IS_IN_APP_STORE || TESTFLIGHT ? (
+        <Button
+          label={IS_IN_APP_STORE ? 'App Store' : 'TestFlight'}
+          variant="secondary"
+          size="lg"
+          icon={<BrandIcon brand="apple" size={18} />}
+          href={IS_IN_APP_STORE ? APP_STORE : TESTFLIGHT}
+        />
+      ) : null}
       {IS_IN_GOOGLE_PLAY ? (
         <Button
           label="Google Play"
@@ -93,8 +112,10 @@ export function PlayNote() {
 }
 
 /**
- * A profile or sport link. `public/link/link.js`, loaded by these two documents only, finds the
- * button by its id: on Android it becomes an `intent://` link, elsewhere it is hidden.
+ * A profile or sport link. The apps open these addresses themselves (App Links on Android,
+ * Universal Links on iPhone), so the page is seen without the app. `public/link/link.js`, loaded
+ * by these two documents only, finds the button by its id: on Android it becomes an `intent://`
+ * link, elsewhere it is hidden (an iPhone never opens a Universal Link from a page of its own site).
  */
 export function AppLinkPage({ title }: { title: string }) {
   return (
@@ -104,8 +125,8 @@ export function AppLinkPage({ title }: { title: string }) {
         и&nbsp;друзья.
       </LinkText>
       <LinkText color="secondary">
-        Ссылка открывается в&nbsp;приложении для Android. На iPhone такие ссылки пока
-        не&nbsp;открываются.
+        Ссылка открывается в&nbsp;приложении на&nbsp;Android и&nbsp;iPhone. Если приложения ещё
+        нет, установите его и&nbsp;откройте ссылку снова.
       </LinkText>
       <LinkActions apk="secondary">
         <Button id="open-app" label="Открыть в приложении" variant="primary" size="lg" href="" />

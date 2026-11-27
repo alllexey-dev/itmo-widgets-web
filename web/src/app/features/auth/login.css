@@ -153,10 +153,6 @@
   background: var(--color-success);
 }
 
-.login-code {
-  letter-spacing: 0.08em;
-}
-
 @media (max-width: 760px) {
   .login-grid {
     grid-template-columns: minmax(0, 1fr);

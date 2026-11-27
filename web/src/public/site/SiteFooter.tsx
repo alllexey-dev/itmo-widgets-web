@@ -3,19 +3,21 @@ import { HStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 
 import { BrandIcon } from '../../shared/BrandIcon';
+import { frameCopy, type Lang } from './i18n';
 import { DELETE_ACCOUNT, GITHUB, ISSUES, PRIVACY, TELEGRAM } from './links';
 
 /** The footer of every public page: the policy, account deletion, contacts and the unofficial note. */
-export function SiteFooter() {
+export function SiteFooter({ lang = 'ru' }: { lang?: Lang }) {
+  const copy = frameCopy[lang];
   return (
     <footer className="site-footer">
       <div className="site-wrap site-footer-inner">
-        <HStack as="nav" aria-label="Ссылки" gap={5} wrap="wrap" vAlign="center">
+        <HStack as="nav" aria-label={copy.footerLabel} gap={5} wrap="wrap" vAlign="center">
           <Link href={PRIVACY} isStandalone color="secondary">
-            Политика конфиденциальности
+            {copy.privacyPolicy}
           </Link>
           <Link href={DELETE_ACCOUNT} isStandalone color="secondary">
-            Удаление аккаунта
+            {copy.deleteAccount}
           </Link>
           <Link href={GITHUB} isStandalone color="secondary" target="_blank" rel="noreferrer">
             <BrandIcon className="site-brand-icon" brand="github" />
@@ -26,11 +28,11 @@ export function SiteFooter() {
             Telegram
           </Link>
           <Link href={ISSUES} isStandalone color="secondary" target="_blank" rel="noreferrer">
-            Сообщить о проблеме
+            {copy.issues}
           </Link>
         </HStack>
         <Text type="supporting" color="secondary">
-          © 2026 alllexey · Неофициальное приложение. Не связано с Университетом ИТМО.
+          {copy.unofficial}
         </Text>
       </div>
     </footer>
