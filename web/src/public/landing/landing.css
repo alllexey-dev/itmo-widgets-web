@@ -89,14 +89,25 @@
 .la-pill-stat {
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-1);
+  gap: var(--spacing-1-5);
+  color: var(--color-icon-secondary);
 }
 
-/* A shields.io figure: a transparent SVG with only the number, see `BADGES`. */
+/* An empty <source> of a badge's <picture> would be one more flex item and double the gap. */
+.la-pill-stat source {
+  display: none;
+}
+
+/*
+ * A shields.io figure: a transparent SVG with only the number, see `BADGES`. shields.io pads the
+ * number with 5px on each side; the negative margin takes that out, so the gaps around the number
+ * are the page's own.
+ */
 .la-badge {
   display: block;
   width: auto;
   height: 20px;
+  margin-inline: -5px;
 }
 
 .la-stage {
@@ -450,11 +461,11 @@
   outline-offset: 2px;
 }
 
+/* Never narrower than the title, so the arrow never runs into the figure; the text below wraps. */
 .la-link-row-copy {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  min-width: 0;
 }
 
 .la-link-row-title {
@@ -469,16 +480,14 @@
   color: var(--color-icon-secondary);
 }
 
+/* The figure, if any, follows the text on the same line and wraps under it when the row is narrow. */
 .la-link-row-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--spacing-3);
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
-}
-
-.la-link-row-figure {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  color: var(--color-icon-secondary);
 }
 
 /* Agent and MCP */

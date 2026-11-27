@@ -421,9 +421,11 @@ function LinkRow({
           {title}
           <ArrowUpRight size={14} aria-hidden="true" />
         </span>
-        <span className="la-link-row-text">{text}</span>
+        <span className="la-link-row-text">
+          {text}
+          {figure}
+        </span>
       </span>
-      {figure ? <span className="la-link-row-figure">{figure}</span> : null}
     </a>
   );
 }
