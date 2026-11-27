@@ -238,14 +238,17 @@ for path in /missing /assets/missing.js /img/missing.webp /.vite/manifest.json /
     security_headers "$path"
 done
 
-request /.well-known/assetlinks.json 200
-security_headers /.well-known/assetlinks.json
-[ -z "$(header Location)" ] || fail 'assetlinks.json must not redirect'
-case "$(header Content-Type)" in
-    application/json|application/json\;*) ;;
-    *) fail 'assetlinks.json must be application/json' ;;
-esac
-parse_json "$TMP/body"
-cmp -s "$TMP/body" "$WEB/public/.well-known/assetlinks.json" ||
-    fail 'assetlinks.json differs from web/public/.well-known/assetlinks.json'
+# App Links (Android) and Universal Links (iOS): the verifiers take JSON only, without redirects.
+for file in assetlinks.json apple-app-site-association; do
+    request "/.well-known/$file" 200
+    security_headers "/.well-known/$file"
+    [ -z "$(header Location)" ] || fail "$file must not redirect"
+    case "$(header Content-Type)" in
+        application/json|application/json\;*) ;;
+        *) fail "$file must be application/json" ;;
+    esac
+    parse_json "$TMP/body"
+    cmp -s "$TMP/body" "$WEB/public/.well-known/$file" ||
+        fail "$file differs from web/public/.well-known/$file"
+done
 echo 'Site routes, headers, page rules, app links and JSON checks passed.'

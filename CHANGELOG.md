@@ -4,6 +4,7 @@ Dates are production deploys; before 2026-10-02 they are commit dates.
 
 ## Unreleased
 
+- iPhone links: `/.well-known/apple-app-site-association` on both hosts (JSON, no redirects, checked by `scripts/check-site.sh`) lets the iOS app open `/u/*`, `/sport/*` and `/pair` as Universal Links. The profile and sport link pages no longer say that iPhone links do not open, and every link page has an iPhone button: TestFlight while `IS_IN_APP_STORE` is off, App Store once it is on.
 - The landing is in Russian and English: `/` and `/en/`, an RU/EN switch in the header, `lang`, title, description, Open Graph, `canonical` and `hreflang` per language. `lang.js` remembers the choice in `localStorage` and sends a visitor who chose English from `/` to `/en/`; without scripts the switch is two links.
 - The landing copy is rewritten in both languages. Google Play and TestFlight are the main buttons (the App Store button waits behind `IS_IN_APP_STORE` until the app is published there); the APK and the .ipa from GitHub Releases are quiet links under them.
 - GitHub and Telegram are on the first screen: pills with the live star count and release downloads (shields.io images) and the Telegram channel, plus an "Открытый код" tile in the feature grid that replaces "Устройства".
