@@ -15,7 +15,7 @@ import {
   userOf,
 } from '../../test/server';
 import { mockHomeSources } from '../../test/student';
-import { keyCommitment, verificationCode } from './pairing';
+import { keyCommitment } from './pairing';
 
 function setTabHidden(hidden: boolean) {
   Object.defineProperty(document, 'visibilityState', {
@@ -51,7 +51,7 @@ async function copiedLink(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('LoginPage', () => {
-  it('shows the QR, the code to compare and the time left', async () => {
+  it('shows the QR and the time left, with no code to compare', async () => {
     mockSignedOut();
     mockChallenges('ABCDEFGH');
     mockClaim();
@@ -60,7 +60,8 @@ describe('LoginPage', () => {
 
     expect(await qr()).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Вход через приложение' })).toBeInTheDocument();
-    expect(screen.getByText(/^\d{3} \d{3}$/)).toBeInTheDocument();
+    expect(screen.queryByText(/^\d{3} \d{3}$/)).not.toBeInTheDocument();
+    expect(screen.getByText('Подтвердите на телефоне')).toBeInTheDocument();
     expect(screen.getByText('2:00')).toBeInTheDocument();
     expect(screen.getByText(WAITING)).toBeInTheDocument();
   });
@@ -105,10 +106,6 @@ describe('LoginPage', () => {
         scopes: ['user'],
       },
     ]);
-    const [{ challengeId } = challengeOf('unused')] = challenges.issued;
-    expect(
-      screen.getByText(await verificationCode(challengeId, publicKey, secret)),
-    ).toBeInTheDocument();
     expect(await findToast('Ссылка скопирована')).toBeInTheDocument();
   });
 
@@ -180,7 +177,7 @@ describe('LoginPage', () => {
     },
   );
 
-  it('asks to compare the code once the phone opened it and gives it ten minutes', async () => {
+  it('asks to confirm in the app once the phone opened the code and gives it ten minutes', async () => {
     mockSignedOut();
     mockChallenges('ABCDEFGH');
     mockClaim(() => 'OPENED');
