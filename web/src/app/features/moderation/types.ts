@@ -24,7 +24,7 @@ export type LinkAudience = Schemas['LinkAudience'];
  * snapshot yet: once a Backend master has them, refresh it and drop these additions. An older
  * Backend sends neither field, which means the same as null.
  *
- * `flowOptions`: the flows the author could pick from, in Backend's order (by depth, then name);
+ * `flowOptions`: the flows the author could pick from, in the order the author's picker listed them;
  * null when the client sent none.
  */
 export type SubjectLinkRevision = Schemas['SubjectLinkRevision'] & {

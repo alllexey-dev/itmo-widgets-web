@@ -97,7 +97,8 @@ export function LinkPreview({ target, hasKeys }: { target: SubjectLinkTarget; ha
 }
 
 /**
- * The flows the author could show a FLOW link to, in Backend's order, with the link's flow marked.
+ * The flows the author could show a FLOW link to, in the order the author's picker listed them,
+ * with the link's flow marked.
  * `action` is what a moderator can do with them: approve the link for another one.
  */
 export function LinkFlows({

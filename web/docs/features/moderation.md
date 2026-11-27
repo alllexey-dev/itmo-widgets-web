@@ -48,7 +48,7 @@ queue. `ModerationPage` shows the queue and the open case.
     of a flow is the link's `audienceLabel` for the link's flow, else its label among the revision's
     `flowOptions` (`flowLabelOf`).
   - Flows (`LinkFlows`, `Потоки на выбор`), for a FLOW link whose revision has `flowOptions`: the
-    flows the author could pick from, in Backend's order (by depth, then name), the revision's flow
+    flows the author could pick from, in the order the author's picker listed them, the revision's flow
     (the author's pick, or the one a moderator approved it for) marked `Сейчас`. An open case that offers `Одобрить` / `Оставить` has
     `Одобрить для другого потока` here (see [Decisions](#decisions)). Without the list (`null`, or no
     field from an older Backend; an older app sends none) there is no section and no flow change.
