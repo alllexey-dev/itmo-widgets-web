@@ -28,6 +28,77 @@
   color: var(--color-icon-secondary);
 }
 
+/* The shield sits on the first line of a note that wraps. */
+.la-hero-note > svg {
+  flex: none;
+  margin-block-start: 2px;
+}
+
+.la .la-other-ways {
+  padding-inline: var(--spacing-2);
+}
+
+/* GitHub and Telegram pills under the hero buttons. */
+
+.la-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-height: 36px;
+  padding-inline: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-background-surface);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast),
+    border-color var(--duration-fast);
+}
+
+.la-pill:hover {
+  border-color: var(--color-border-emphasized);
+  background: var(--color-background-muted);
+}
+
+.la-pill:focus-visible {
+  outline: 2px solid var(--color-text-accent);
+  outline-offset: 2px;
+}
+
+.la-pill--telegram {
+  color: var(--color-icon-blue);
+}
+
+.la-pill--telegram:hover {
+  background: var(--color-background-blue);
+}
+
+/* The figure part of a pill: a hairline before the live numbers. */
+.la-pill-figure {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding-inline-start: var(--spacing-2);
+  border-inline-start: 1px solid var(--color-border);
+  color: var(--color-icon-secondary);
+}
+
+.la-pill-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+/* A shields.io figure: a transparent SVG with only the number, see `BADGES`. */
+.la-badge {
+  display: block;
+  width: auto;
+  height: 20px;
+}
+
 .la-stage {
   position: relative;
   width: 100%;
@@ -344,10 +415,113 @@
   object-position: 50% 70%;
 }
 
-.la .la-devices {
-  align-self: center;
+.la .la-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-self: flex-end;
+  gap: var(--spacing-3);
   width: 100%;
   padding-block-end: var(--spacing-5);
+}
+
+/* A row of the open-source tile is one link; a border marks it on the card in both schemes. */
+.la-link-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  min-width: 0;
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-container);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast),
+    border-color var(--duration-fast);
+}
+
+.la-link-row:hover {
+  border-color: var(--color-border-emphasized);
+  background: var(--color-background-muted);
+}
+
+.la-link-row:focus-visible {
+  outline: 2px solid var(--color-text-accent);
+  outline-offset: 2px;
+}
+
+.la-link-row-copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.la-link-row-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  font-weight: var(--font-weight-semibold);
+}
+
+.la-link-row-title svg {
+  flex: none;
+  color: var(--color-icon-secondary);
+}
+
+.la-link-row-text {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.la-link-row-figure {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  color: var(--color-icon-secondary);
+}
+
+/* Agent and MCP */
+
+.la-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-4);
+}
+
+.la .la-tool {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+}
+
+.la .la-tool-body {
+  flex: 1 1 auto;
+}
+
+/* The itmo-mcp install command: a block with the inset of a field, a border in both schemes. */
+.la-command {
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-element);
+  background: var(--color-background-muted);
+  font-size: var(--font-size-sm);
+  overflow-x: auto;
+}
+
+.la-points {
+  display: flex;
+  list-style: disc;
+  font-size: var(--font-size-sm);
+  line-height: calc(20 / 14);
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin: 0;
+  padding-inline-start: var(--spacing-5);
+}
+
+.la-points li::marker {
+  color: var(--color-icon-secondary);
 }
 
 /* Icon chips */
@@ -405,7 +579,7 @@
 
 .la-platforms {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-4);
 }
 
@@ -413,10 +587,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-5);
-}
-
-.la .la-platform-body {
-  flex: 1 1 auto;
 }
 
 /* Tablet */
@@ -431,14 +601,29 @@
   .la-bento {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: none;
+    grid-auto-rows: auto;
     grid-auto-flow: dense;
+  }
+
+  /* Rows size to their tiles here, so a compact tile alone in its row is not 400px tall. */
+  .la .la-tile {
+    height: 400px;
+  }
+
+  .la .la-tile--compact {
+    height: auto;
+  }
+
+  .la-tile--compact .la-tile-visual {
+    flex: none;
   }
 
   .la-facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .la-platforms {
+  .la-platforms,
+  .la-tools {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -453,6 +638,10 @@
   .la-bento {
     grid-template-columns: minmax(0, 1fr);
     grid-auto-rows: auto;
+  }
+
+  .la .la-tile {
+    height: auto;
   }
 
   .la .la-tile--wide,
@@ -486,6 +675,10 @@
   .la-facts {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--spacing-3);
+  }
+
+  .la .la-links {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .la-fact {

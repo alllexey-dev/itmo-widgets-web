@@ -105,15 +105,17 @@ scripts() {
 }
 
 # A public page is prerendered: its content is in the HTML. The CSP allows no inline style,
-# inline script or inline handler, so the HTML must have none.
+# inline script or inline handler, so the HTML must have none. The third argument is the
+# unofficial note of the page's language (Russian by default).
 public_page() {
     path=$1
+    note=${3:-'Неофициальное приложение. Не связано с Университетом ИТМО.'}
     request "$path" 200
     security_headers "$path"
     [ "$(header Cache-Control)" = no-cache ] || fail "$path must be served with Cache-Control: no-cache"
     has "$path" "data-prerendered data-page=\"$2\""
     has "$path" '<h1'
-    has "$path" 'Неофициальное приложение. Не связано с Университетом ИТМО.'
+    has "$path" "$note"
     lacks "$path" '<!--page-->'
     lacks "$path" '<style'
     ! grep -Eq '<[^>]* (style|on[a-z]+)=' "$TMP/body" || fail "$path has an inline style or handler"
@@ -127,12 +129,33 @@ noindex() {
 }
 
 public_page / landing
+has / '<html lang="ru">'
 has / '<link rel="canonical" href="https://widgets.alllexey.dev/" />'
 has / 'href="/privacy.html"'
 has / 'href="/delete-account"'
 has / 'href="/app/login"'
-[ -z "$(scripts | grep -v '^<script type="module" crossorigin src="/assets/[^"]*">$')" ] ||
-    fail '/ may load only the module scripts of its build'
+has / 'href="/en/"'
+[ -z "$(scripts | grep -v '^<script src="/lang.js">$')" ] || fail '/ may load no script but /lang.js'
+
+# The English landing: same rules, its own language and metadata.
+public_page /en/ landing-en 'Unofficial app, not affiliated with ITMO University.'
+has /en/ '<html lang="en">'
+has /en/ '<link rel="canonical" href="https://widgets.alllexey.dev/en/" />'
+has /en/ '<meta property="og:locale" content="en_US" />'
+has /en/ 'href="/"'
+[ -z "$(scripts | grep -v '^<script src="/lang.js">$')" ] || fail '/en/ may load no script but /lang.js'
+request /en 301
+security_headers /en
+[ "$(header Location)" = /en/ ] || fail '/en must redirect to /en/'
+
+# lang.js only remembers the RU/EN choice in localStorage: no requests, no cookies.
+request /lang.js 200
+security_headers /lang.js
+cmp -s "$TMP/body" "$WEB/public/lang.js" || fail '/lang.js differs from web/public/lang.js'
+! grep -Eq 'fetch|XMLHttpRequest|sendBeacon|WebSocket|EventSource|import\(|document\.cookie|sessionStorage' "$WEB/public/lang.js" ||
+    fail 'lang.js must not make requests or set cookies'
+
+request / 200
 ASSET=$(grep -o '/assets/[^"]*\.css' "$TMP/body" | head -n 1)
 [ -n "$ASSET" ] || fail '/ links no stylesheet from /assets/'
 

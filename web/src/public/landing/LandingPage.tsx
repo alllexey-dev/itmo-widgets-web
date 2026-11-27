@@ -1,41 +1,55 @@
 import { Button } from '@astryxdesign/core/Button';
 import { Card, type CardVariant } from '@astryxdesign/core/Card';
+import { Code } from '@astryxdesign/core/Code';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Link } from '@astryxdesign/core/Link';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { Token } from '@astryxdesign/core/Token';
 import {
+  ArrowUpRight,
   Bot,
   CircleOff,
-  Globe,
+  Download,
   KeyRound,
   Server,
   ServerCog,
   ShieldCheck,
   Smartphone,
+  Star,
   type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { BrandIcon } from '../../shared/BrandIcon';
+import type { Lang } from '../site/i18n';
 import {
   AGENT,
+  ALTSTORE,
+  APP_STORE,
+  BADGE_COLOR,
+  BADGES,
   DELETE_ACCOUNT,
+  GITHUB,
   GOOGLE_PLAY,
   IS_IN_GOOGLE_PLAY,
   LATEST_RELEASE,
   MCP,
-  ALTSTORE,
+  MCP_NPM,
   PRIVACY,
   TELEGRAM,
+  TESTFLIGHT,
   WEB_APP_LOGIN,
 } from '../site/links';
 import { SitePage } from '../site/SitePage';
+import { landingCopy, type LandingCopy } from './copy';
 
 import './landing.css';
 
 type Hue = 'blue' | 'pink' | 'yellow' | 'purple' | 'green';
+
+/** Opens an outside address in a new tab without sending this page as the referrer. */
+const external = { target: '_blank', rel: 'noreferrer' } as const;
 
 /**
  * A screenshot of one platform in the system colour scheme. The browser picks the file from the
@@ -92,10 +106,10 @@ function Screenshot({
  * Chooses the platform of every screenshot on the page: two radio buttons that `landing.css`
  * reads with `:has()`. Android is the default.
  */
-function PlatformSwitch() {
+function PlatformSwitch({ legend }: { legend: string }) {
   return (
     <fieldset className="la-switch">
-      <legend className="la-switch-legend">Скриншоты с платформы</legend>
+      <legend className="la-switch-legend">{legend}</legend>
       <div className="la-switch-track">
         <label className="la-switch-option">
           <input
@@ -167,6 +181,26 @@ function IconChip({ icon, hue }: { icon: ReactNode; hue: Hue }) {
   );
 }
 
+/**
+ * A live figure of the app repository from shields.io (`BADGES`), in the text colour of the
+ * system scheme. The alt text is empty: if shields.io is blocked the browser draws nothing
+ * instead of a broken image, and the `title` of the figure still says what it counts.
+ */
+function Badge({ badge }: { badge: keyof typeof BADGES }) {
+  return (
+    <picture>
+      <source srcSet={BADGES[badge] + BADGE_COLOR.dark} media="(prefers-color-scheme: dark)" />
+      <img
+        className="la-badge"
+        src={BADGES[badge] + BADGE_COLOR.light}
+        alt=""
+        height={20}
+        referrerPolicy="no-referrer"
+      />
+    </picture>
+  );
+}
+
 /** The coloured shapes of the app icon, drawn with theme hue tokens. */
 function Shapes() {
   return (
@@ -195,12 +229,82 @@ function SectionHead({ title, lead }: { title: string; lead?: string }) {
   );
 }
 
-function Hero() {
+function GooglePlayButton() {
+  return (
+    <Button
+      label="Google Play"
+      size="lg"
+      variant="primary"
+      icon={<BrandIcon brand="googleplay" size={18} />}
+      href={GOOGLE_PLAY}
+      {...external}
+    />
+  );
+}
+
+function AppStoreButton() {
+  return (
+    <Button
+      label="App Store"
+      size="lg"
+      variant="primary"
+      icon={<BrandIcon brand="apple" size={18} />}
+      href={APP_STORE}
+      {...external}
+    />
+  );
+}
+
+/** Shown only once `TESTFLIGHT` in `links.ts` holds the public beta link. */
+function TestFlightButton({ label }: { label: string }) {
+  if (!TESTFLIGHT) return null;
+  return (
+    <Button
+      label={label}
+      size="lg"
+      variant="secondary"
+      icon={<BrandIcon brand="apple" size={18} />}
+      href={TESTFLIGHT}
+      {...external}
+    />
+  );
+}
+
+/**
+ * Pills under the hero buttons: the app repository with its stars and release downloads (the
+ * downloads are GitHub's too, so they share its pill) and the Telegram channel.
+ */
+function Community({ copy }: { copy: LandingCopy['hero'] }) {
+  return (
+    <HStack gap={2} wrap="wrap" vAlign="center" className="la-community">
+      <a className="la-pill" href={GITHUB} {...external}>
+        <BrandIcon brand="github" size={16} />
+        {copy.stars}
+        <span className="la-pill-figure">
+          <span className="la-pill-stat" title={copy.starsTitle}>
+            <Star size={14} aria-hidden="true" />
+            <Badge badge="stars" />
+          </span>
+          <span className="la-pill-stat" title={copy.downloadsTitle}>
+            <Download size={14} aria-hidden="true" />
+            <Badge badge="downloads" />
+          </span>
+        </span>
+      </a>
+      <a className="la-pill la-pill--telegram" href={TELEGRAM} {...external}>
+        <BrandIcon brand="telegram" size={16} />
+        {copy.telegram}
+      </a>
+    </HStack>
+  );
+}
+
+function Hero({ copy, shots }: { copy: LandingCopy['hero']; shots: LandingCopy['shots'] }) {
   return (
     <section className="site-wrap la-hero">
       <VStack gap={5} className="la-hero-copy">
         <HStack>
-          <Token label="Для студентов ИТМО · Android и iPhone" color="blue" />
+          <Token label={copy.token} color="blue" />
         </HStack>
         <Heading
           level={1}
@@ -209,50 +313,30 @@ function Hero() {
           textWrap="balance"
           className="la-hero-title"
         >
-          My&nbsp;ITMO, который вы&nbsp;заслужили
+          {copy.title}
         </Heading>
         <Text size="xl" color="secondary" textWrap="pretty" className="la-hero-pitch">
-          Расписание, QR-пропуск, зачётка, запись на&nbsp;спорт и&nbsp;друзья&nbsp;—
-          в&nbsp;приложении и&nbsp;виджетах на&nbsp;главном экране.
+          {copy.pitch}
         </Text>
         <HStack gap={2} wrap="wrap" vAlign="center">
-          {IS_IN_GOOGLE_PLAY ? (
-            <Button
-              label="Google Play"
-              size="lg"
-              variant="primary"
-              icon={<BrandIcon brand="googleplay" size={18} />}
-              href={GOOGLE_PLAY}
-              target="_blank"
-              rel="noreferrer"
-            />
-          ) : null}
-          <Button
-            label="Скачать для Android"
-            size="lg"
-            variant={IS_IN_GOOGLE_PLAY ? 'secondary' : 'primary'}
-            icon={<BrandIcon brand="android" size={18} />}
+          {IS_IN_GOOGLE_PLAY ? <GooglePlayButton /> : null}
+          <AppStoreButton />
+          <TestFlightButton label={copy.testflight} />
+          <Link
             href="#download"
-          />
-          <Button
-            label="Для iPhone"
-            size="lg"
-            variant="secondary"
-            icon={<BrandIcon brand="apple" size={18} />}
-            href="#download"
-          />
-          <Button
-            label="Веб-версия"
-            size="lg"
-            variant="ghost"
-            icon={<Globe size={18} />}
-            href={WEB_APP_LOGIN}
-          />
+            isStandalone
+            hasUnderline
+            weight="semibold"
+            className="la-other-ways"
+          >
+            {copy.otherWays}
+          </Link>
         </HStack>
-        <HStack gap={2} vAlign="center" className="la-hero-note">
+        <Community copy={copy} />
+        <HStack gap={2} vAlign="start" className="la-hero-note">
           <ShieldCheck size={16} aria-hidden="true" />
           <Text type="supporting" color="secondary">
-            Неофициальное приложение. Вход через ITMO.ID&nbsp;— пароль приложение не&nbsp;видит.
+            {copy.note}
           </Text>
         </HStack>
       </VStack>
@@ -260,36 +344,36 @@ function Hero() {
       <div className="la-showcase">
         <div className="la-stage">
           <Shapes />
-          <Phone className="la-phone--left" name="qr" alt="Пропуск: QR-код, имя, группа и ИСУ" />
-          <Phone
-            className="la-phone--right"
-            name="sport-mine"
-            alt="Спорт: баллы за семестр и записи"
-          />
-          <Phone
-            className="la-phone--center"
-            name="home"
-            alt="Сегодня: пара, на которую идти, и день на линии времени"
-          />
+          <Phone className="la-phone--left" name="qr" alt={shots.qr} />
+          <Phone className="la-phone--right" name="sport-mine" alt={shots.sportMine} />
+          <Phone className="la-phone--center" name="home" alt={shots.homeHero} />
         </div>
-        <PlatformSwitch />
+        <PlatformSwitch legend={copy.platformLegend} />
       </div>
     </section>
   );
 }
 
 interface TileProps {
-  title: string;
-  text: string;
+  copy: [title: string, text: string];
   variant: CardVariant;
   /** `wide` spans two columns, `split` also puts the copy beside the visual. */
   layout?: 'single' | 'wide' | 'split';
+  /** A tile without screenshots, which takes only the height of its content where it can. */
+  isCompact?: boolean;
   children: ReactNode;
 }
 
-function Tile({ title, text, variant, layout = 'single', children }: TileProps) {
+function Tile({
+  copy: [title, text],
+  variant,
+  layout = 'single',
+  isCompact = false,
+  children,
+}: TileProps) {
+  const compact = isCompact ? ' la-tile--compact' : '';
   return (
-    <Card variant={variant} padding={0} className={`la-tile la-tile--${layout}`}>
+    <Card variant={variant} padding={0} className={`la-tile la-tile--${layout}${compact}`}>
       <VStack gap={1} className="la-tile-copy">
         <Heading level={3} weight="bold" className="la-tile-title">
           {title}
@@ -303,348 +387,368 @@ function Tile({ title, text, variant, layout = 'single', children }: TileProps) 
   );
 }
 
-const devices: {
-  icon: LucideIcon;
+/**
+ * A row of the open-source tile: the whole row is the link. An icon chip, the name with a line
+ * under it, and a live figure at the end. A border, not a fill, marks the row, so it shows on the
+ * card in both schemes.
+ */
+function LinkRow({
+  icon,
+  hue,
+  href,
+  title,
+  text,
+  figure,
+}: {
+  icon: ReactNode;
   hue: Hue;
+  href: string;
   title: string;
   text: string;
-  href: string;
-  isExternal: boolean;
-}[] = [
-  {
-    icon: Globe,
-    hue: 'blue',
-    title: 'Веб-версия',
-    text: 'В браузере',
-    href: WEB_APP_LOGIN,
-    isExternal: false,
-  },
-  {
-    icon: Server,
-    hue: 'green',
-    title: 'itmo-widgets-agent',
-    text: 'Автозапись на спорт',
-    href: AGENT,
-    isExternal: true,
-  },
-  {
-    icon: Bot,
-    hue: 'purple',
-    title: 'itmo-mcp',
-    text: 'Пары и баллы для ИИ',
-    href: MCP,
-    isExternal: true,
-  },
-];
+  figure?: ReactNode;
+}) {
+  return (
+    <a className="la-link-row" href={href} {...external}>
+      <IconChip icon={icon} hue={hue} />
+      <span className="la-link-row-copy">
+        <span className="la-link-row-title">
+          {title}
+          <ArrowUpRight size={14} aria-hidden="true" />
+        </span>
+        <span className="la-link-row-text">{text}</span>
+      </span>
+      {figure ? <span className="la-link-row-figure">{figure}</span> : null}
+    </a>
+  );
+}
 
-function Features() {
+function Features({ copy, shots }: { copy: LandingCopy['features']; shots: LandingCopy['shots'] }) {
   return (
     <section id="features" className="site-wrap la-section">
-      <SectionHead title="Что внутри" />
+      <SectionHead title={copy.title} />
       <div className="la-bento">
-        <Tile
-          layout="wide"
-          variant="blue"
-          title="Сегодня и виджеты"
-          text="Ближайшая пара, аудитория и сколько осталось — в приложении и на главном экране."
-        >
-          <Shot name="home" alt="Сегодня: текущая пара, аудитория и время до конца" />
-          <Shot name="widgets" alt="Виджеты «Расписание на день» и «Список пар»" />
+        <Tile layout="wide" variant="blue" copy={copy.today}>
+          <Shot name="home" alt={shots.home} />
+          <Shot name="widgets" alt={shots.widgets} />
         </Tile>
-        <Tile
-          variant="pink"
-          title="QR-пропуск"
-          text="Открывается в одно касание. Последний код работает без сети."
-        >
-          <Shot name="qr" alt="Пропуск: QR-код, имя, группа и ИСУ" y={100} />
+        <Tile variant="pink" copy={copy.qr}>
+          <Shot name="qr" alt={shots.qr} y={100} />
         </Tile>
-        <Tile
-          variant="yellow"
-          title="Расписание и маршрут"
-          text="Путь до аудитории на карте кампуса. Об изменениях приложение сообщит."
-        >
-          <Shot name="lesson" alt="Карточка пары: аудитория, маршрут и друзья на паре" />
+        <Tile variant="yellow" copy={copy.schedule}>
+          <Shot name="lesson" alt={shots.lesson} />
         </Tile>
-        <Tile
-          variant="purple"
-          title="Зачётка и баллы"
-          text="Баллы из БАРС, My ITMO и таблиц преподавателей. Новая оценка — уведомлением."
-        >
-          <Shot name="recordbook" alt="Зачётка: баллы и их источники" y={12} />
+        <Tile variant="purple" copy={copy.recordbook}>
+          <Shot name="recordbook" alt={shots.recordbook} y={12} />
         </Tile>
-        <Tile
-          layout="wide"
-          variant="green"
-          title="Спорт и автозапись"
-          text="Очередь займёт освободившееся место, секция запишет на занятие каждые две недели."
-        >
-          <Shot name="sport" alt="Запись на спорт: поиск, фильтры и свободные места" y={8} />
-          <Shot name="sport-mine" alt="Моё: баллы за семестр и записи" y={8} />
+        <Tile layout="wide" variant="green" copy={copy.sport}>
+          <Shot name="sport" alt={shots.sport} y={8} />
+          <Shot name="sport-mine" alt={shots.sportMine} y={8} />
         </Tile>
-        <Tile
-          variant="blue"
-          title="Друзья"
-          text="Видно, где сейчас друзья и какие пары у вас общие."
-        >
-          <Shot name="friends" alt="Чьё расписание: где сейчас друзья" y={4} iosY={70} />
+        <Tile variant="blue" copy={copy.friends}>
+          <Shot name="friends" alt={shots.friends} y={4} iosY={70} />
         </Tile>
-        <Tile
-          layout="split"
-          variant="yellow"
-          title="Отзывы о преподавателях"
-          text="Краткая ИИ-сводка и отзывы студентов — анонимные по умолчанию."
-        >
-          <Shot name="teacher" alt="ИИ-сводка и отзывы о преподавателе" y={55} />
+        <Tile layout="split" variant="yellow" copy={copy.reviews}>
+          <Shot name="teacher" alt={shots.teacher} y={55} />
         </Tile>
-        <Tile
-          layout="split"
-          variant="default"
-          title="Устройства"
-          text="Веб-версия, агент автозаписи и MCP-сервер подключаются по QR-коду из приложения."
-        >
-          <VStack gap={2} className="la-devices">
-            {devices.map((device) => (
-              <Card key={device.title} padding={3} variant="muted">
-                <HStack gap={3} vAlign="center">
-                  <IconChip icon={<device.icon size={20} />} hue={device.hue} />
-                  <VStack gap={0}>
-                    <Link
-                      href={device.href}
-                      isStandalone
-                      weight="semibold"
-                      isExternalLink={device.isExternal}
-                    >
-                      {device.title}
-                    </Link>
-                    <Text type="supporting" color="secondary">
-                      {device.text}
-                    </Text>
-                  </VStack>
-                </HStack>
-              </Card>
-            ))}
-          </VStack>
+        <Tile layout="wide" variant="default" copy={copy.open} isCompact>
+          <div className="la-links">
+            <LinkRow
+              icon={<BrandIcon brand="github" size={20} />}
+              hue="purple"
+              href={GITHUB}
+              title="ITMO.Widgets"
+              text={copy.repoText}
+              figure={
+                <span className="la-pill-stat" title={copy.starsTitle}>
+                  <Star size={14} aria-hidden="true" />
+                  <Badge badge="stars" />
+                </span>
+              }
+            />
+            <LinkRow
+              icon={<BrandIcon brand="telegram" size={20} />}
+              hue="blue"
+              href={TELEGRAM}
+              title={copy.channel}
+              text={copy.channelText}
+            />
+          </div>
         </Tile>
       </div>
     </section>
   );
 }
 
-const facts: { icon: LucideIcon; hue: Hue; title: string; text: string }[] = [
-  {
-    icon: KeyRound,
-    hue: 'blue',
-    title: 'Пароль не нужен',
-    text: 'Вход на официальной странице ITMO.ID. Пароль приложение не видит.',
-  },
-  {
-    icon: Smartphone,
-    hue: 'purple',
-    title: 'Данные — на телефоне',
-    text: 'Расписание, зачётка и пропуск загружаются с сайтов университета прямо на телефон.',
-  },
-  {
-    icon: ServerCog,
-    hue: 'green',
-    title: 'Сервер — по выбору',
-    text: 'Друзья, очереди на спорт, отзывы и устройства работают через сервер и включаются отдельно.',
-  },
-  {
-    icon: CircleOff,
-    hue: 'pink',
-    title: 'Без рекламы',
-    text: 'Рекламы и сторонней аналитики нет. Аккаунт на сервере можно удалить.',
-  },
+function ToolCard({
+  icon,
+  hue,
+  name,
+  badge,
+  copy,
+  extra,
+  links,
+}: {
+  icon: LucideIcon;
+  hue: Hue;
+  name: string;
+  badge?: string;
+  copy: LandingCopy['tools']['agent'];
+  extra?: ReactNode;
+  links: ReactNode;
+}) {
+  const Icon = icon;
+  return (
+    <Card padding={6} className="la-tool">
+      <VStack gap={4} className="la-tool-body">
+        <HStack gap={3} vAlign="center">
+          <IconChip icon={<Icon size={20} />} hue={hue} />
+          <VStack gap={0}>
+            <HStack gap={2} vAlign="center" wrap="wrap">
+              <Heading level={3} weight="bold">
+                {name}
+              </Heading>
+              {badge ? <Token label={badge} size="sm" /> : null}
+            </HStack>
+            <Text type="supporting" color="secondary">
+              {copy.tagline}
+            </Text>
+          </VStack>
+        </HStack>
+        <Text weight="semibold" textWrap="pretty">
+          {copy.audience}
+        </Text>
+        <ul className="la-points">
+          {copy.points.map((point) => (
+            <li key={point}>
+              <Text color="secondary" textWrap="pretty">
+                {point}
+              </Text>
+            </li>
+          ))}
+        </ul>
+        {extra}
+        <Text type="supporting" color="secondary" textWrap="pretty">
+          {copy.setup}
+        </Text>
+      </VStack>
+      <HStack gap={2} wrap="wrap" vAlign="center">
+        {links}
+      </HStack>
+    </Card>
+  );
+}
+
+function Tools({ copy }: { copy: LandingCopy['tools'] }) {
+  return (
+    <section id="tools" className="site-wrap la-section">
+      <SectionHead title={copy.title} lead={copy.lead} />
+      <div className="la-tools">
+        <ToolCard
+          icon={Server}
+          hue="green"
+          name="itmo-widgets-agent"
+          badge={copy.beta}
+          copy={copy.agent}
+          links={
+            <Button
+              label={copy.agent.link}
+              variant="secondary"
+              size="lg"
+              icon={<BrandIcon brand="github" size={18} />}
+              href={AGENT}
+              {...external}
+            />
+          }
+        />
+        <ToolCard
+          icon={Bot}
+          hue="purple"
+          name="itmo-mcp"
+          copy={copy.mcp}
+          extra={
+            <div className="la-command">
+              <Code>npx -y itmo-mcp setup</Code>
+            </div>
+          }
+          links={
+            <>
+              <Button
+                label={copy.mcp.link}
+                variant="secondary"
+                size="lg"
+                icon={<BrandIcon brand="github" size={18} />}
+                href={MCP}
+                {...external}
+              />
+              <Button label="npm" variant="ghost" size="lg" href={MCP_NPM} {...external} />
+            </>
+          }
+        />
+      </div>
+      <div className="la-section-links">
+        <Text color="secondary" textWrap="pretty">
+          {copy.web}{' '}
+          <Link href={WEB_APP_LOGIN} hasUnderline>
+            {copy.webLink}
+          </Link>
+        </Text>
+      </div>
+    </section>
+  );
+}
+
+const factIcons: { icon: LucideIcon; hue: Hue }[] = [
+  { icon: KeyRound, hue: 'blue' },
+  { icon: Smartphone, hue: 'purple' },
+  { icon: ServerCog, hue: 'green' },
+  { icon: CircleOff, hue: 'pink' },
 ];
 
-function Trust() {
+function Trust({ copy }: { copy: LandingCopy['privacy'] }) {
   return (
     <section id="privacy" className="site-wrap la-section">
-      <SectionHead title="Ваши данные остаются вашими" />
+      <SectionHead title={copy.title} />
       <div className="la-facts">
-        {facts.map((fact) => (
-          <Card key={fact.title} padding={5}>
-            <div className="la-fact">
-              <IconChip icon={<fact.icon size={20} />} hue={fact.hue} />
-              <VStack gap={1}>
-                <Heading level={3} weight="bold">
-                  {fact.title}
-                </Heading>
-                <Text color="secondary" textWrap="pretty">
-                  {fact.text}
-                </Text>
-              </VStack>
-            </div>
-          </Card>
-        ))}
+        {copy.facts.map((fact, index) => {
+          const { icon: Icon, hue } = factIcons[index];
+          return (
+            <Card key={fact.title} padding={5}>
+              <div className="la-fact">
+                <IconChip icon={<Icon size={20} />} hue={hue} />
+                <VStack gap={1}>
+                  <Heading level={3} weight="bold">
+                    {fact.title}
+                  </Heading>
+                  <Text color="secondary" textWrap="pretty">
+                    {fact.text}
+                  </Text>
+                </VStack>
+              </div>
+            </Card>
+          );
+        })}
       </div>
       <HStack gap={5} wrap="wrap" className="la-section-links">
         <Link href={PRIVACY} isStandalone hasUnderline>
-          Политика конфиденциальности
+          {copy.policy}
         </Link>
         <Link href={DELETE_ACCOUNT} isStandalone hasUnderline>
-          Как удалить аккаунт
+          {copy.deletion}
         </Link>
       </HStack>
     </section>
   );
 }
 
+/** A platform of the download section: the store button first, the fallback ways in small print. */
 function PlatformCard({
   icon,
   hue,
   title,
   requirement,
-  text,
+  note,
   children,
 }: {
   icon: ReactNode;
   hue: Hue;
   title: string;
   requirement: string;
-  text: ReactNode;
+  note: ReactNode;
   children: ReactNode;
 }) {
   return (
     <Card padding={6} className="la-platform">
-      <VStack gap={4} className="la-platform-body">
-        <HStack gap={3} vAlign="center">
-          <IconChip icon={icon} hue={hue} />
-          <VStack gap={0}>
-            <Heading level={3} weight="bold">
-              {title}
-            </Heading>
-            <Text type="supporting" color="secondary">
-              {requirement}
-            </Text>
-          </VStack>
-        </HStack>
-        <Text color="secondary" textWrap="pretty">
-          {text}
-        </Text>
-      </VStack>
-      <VStack gap={2}>{children}</VStack>
+      <HStack gap={3} vAlign="center">
+        <IconChip icon={icon} hue={hue} />
+        <VStack gap={0}>
+          <Heading level={3} weight="bold">
+            {title}
+          </Heading>
+          <Text type="supporting" color="secondary">
+            {requirement}
+          </Text>
+        </VStack>
+      </HStack>
+      <HStack gap={4} wrap="wrap" vAlign="center">
+        {children}
+      </HStack>
+      <Text type="supporting" color="secondary" textWrap="pretty">
+        {note}
+      </Text>
     </Card>
   );
 }
 
-function DownloadSection() {
+/** A quiet link to a GitHub release file, the fallback way to install. */
+function ReleaseLink({ label }: { label: string }) {
+  return (
+    <Link href={LATEST_RELEASE} isStandalone hasUnderline {...external}>
+      <BrandIcon className="site-brand-icon" brand="github" />
+      {label}
+    </Link>
+  );
+}
+
+function DownloadSection({
+  copy,
+  hero,
+}: {
+  copy: LandingCopy['download'];
+  hero: LandingCopy['hero'];
+}) {
   return (
     <section id="download" className="site-wrap la-section">
-      <SectionHead
-        title="Скачать"
-        lead={
-          IS_IN_GOOGLE_PLAY
-            ? 'Версия 2.3. Android — в Google Play и файлом APK, iPhone — файлом .ipa из релиза на GitHub.'
-            : 'Версия 2.3. Сборки для Android и iPhone выходят в релизах на GitHub.'
-        }
-      />
+      <SectionHead title={copy.title} lead={copy.lead} />
       <div className="la-platforms">
         <PlatformCard
           icon={<BrandIcon brand="android" size={20} />}
           hue="green"
           title="Android"
-          requirement="Android 8.0 и новее"
-          text={
-            <>
-              {IS_IN_GOOGLE_PLAY
-                ? 'Проще всего поставить из\u00A0Google Play: обновления придут сами. '
-                : null}
-              APK из&nbsp;релиза на&nbsp;GitHub: arm64 подходит почти всем телефонам, armv7&nbsp;—
-              совсем старым.
-              {IS_IN_GOOGLE_PLAY
-                ? ' Версии из\u00A0Google Play и\u00A0с\u00A0GitHub ставятся друг поверх друга.'
-                : ' В\u00A0Google Play приложения пока нет, но скоро будет: закрытое тестирование уже идёт.'}
-            </>
-          }
+          requirement={copy.android}
+          note={copy.androidNote}
         >
-          {IS_IN_GOOGLE_PLAY ? (
-            <Button
-              label="Google Play"
-              variant="primary"
-              size="lg"
-              icon={<BrandIcon brand="googleplay" size={18} />}
-              href={GOOGLE_PLAY}
-              target="_blank"
-              rel="noreferrer"
-            />
-          ) : null}
-          <Button
-            label="Скачать APK на GitHub"
-            variant={IS_IN_GOOGLE_PLAY ? 'secondary' : 'primary'}
-            size="lg"
-            icon={<BrandIcon brand="github" size={18} />}
-            href={LATEST_RELEASE}
-            target="_blank"
-            rel="noreferrer"
-          />
+          {IS_IN_GOOGLE_PLAY ? <GooglePlayButton /> : null}
+          <ReleaseLink label={copy.apk} />
         </PlatformCard>
         <PlatformCard
           icon={<BrandIcon brand="apple" size={20} />}
           hue="pink"
           title="iPhone"
-          requirement="iOS 26.1 и новее"
-          text={
+          requirement={copy.iphone}
+          note={
             <>
-              В&nbsp;App Store приложения пока нет: скачайте файл .ipa из&nbsp;релиза
-              и&nbsp;установите его через{' '}
-              <Link href={ALTSTORE} hasUnderline>
+              {TESTFLIGHT ? `${copy.iphoneTestflight} ` : null}
+              {copy.iphoneIpa[0]}
+              <Link href={ALTSTORE} hasUnderline {...external}>
                 AltStore
               </Link>
-              &nbsp;— пошаговая инструкция есть на&nbsp;его сайте. С&nbsp;SideStore
-              и&nbsp;Sideloadly не&nbsp;работают виджеты. Уведомлений пока нет, а&nbsp;записывать
-              на&nbsp;спорт при закрытом приложении умеет{' '}
-              <Link href={AGENT} hasUnderline>
-                itmo-widgets-agent
-              </Link>
-              .
+              {copy.iphoneIpa[1]}
             </>
           }
         >
-          <Button
-            label="Скачать .ipa на GitHub"
-            variant="primary"
-            size="lg"
-            icon={<BrandIcon brand="github" size={18} />}
-            href={LATEST_RELEASE}
-            target="_blank"
-            rel="noreferrer"
-          />
-        </PlatformCard>
-        <PlatformCard
-          icon={<Globe size={20} />}
-          hue="blue"
-          title="Веб-версия"
-          requirement="Браузер и телефон с приложением"
-          text={'Подключается по QR-коду в приложении: «Профиль\u00A0→\u00A0Устройства».'}
-        >
-          <Button
-            label="Открыть веб-версию"
-            variant="secondary"
-            size="lg"
-            icon={<Globe size={18} />}
-            href={WEB_APP_LOGIN}
-          />
+          <AppStoreButton />
+          <TestFlightButton label={hero.testflight} />
+          <ReleaseLink label={copy.ipa} />
         </PlatformCard>
       </div>
-      <HStack gap={2} vAlign="center" className="la-section-links">
-        <Link href={TELEGRAM} isStandalone hasUnderline target="_blank" rel="noreferrer">
-          <BrandIcon className="site-brand-icon" brand="telegram" />
-          Новости и анонсы — в Telegram-канале
-        </Link>
-      </HStack>
     </section>
   );
 }
 
-/** The landing: a short page with the features as a bento grid. */
-export default function LandingPage() {
+/** The landing in one language; `/` is Russian, `/en/` English (`LandingPageEn`). */
+export function Landing({ lang }: { lang: Lang }) {
+  const copy = landingCopy[lang];
   return (
-    <SitePage header="landing" className="la">
-      <Hero />
-      <Features />
-      <Trust />
-      <DownloadSection />
+    <SitePage header="landing" lang={lang} className="la">
+      <Hero copy={copy.hero} shots={copy.shots} />
+      <Features copy={copy.features} shots={copy.shots} />
+      <Tools copy={copy.tools} />
+      <Trust copy={copy.privacy} />
+      <DownloadSection copy={copy.download} hero={copy.hero} />
     </SitePage>
   );
+}
+
+export default function LandingPage() {
+  return <Landing lang="ru" />;
 }
