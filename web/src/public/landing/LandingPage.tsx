@@ -483,7 +483,6 @@ function ToolCard({
   icon,
   hue,
   name,
-  badge,
   copy,
   extra,
   links,
@@ -491,7 +490,6 @@ function ToolCard({
   icon: LucideIcon;
   hue: Hue;
   name: string;
-  badge?: string;
   copy: LandingCopy['tools']['agent'];
   extra?: ReactNode;
   links: ReactNode;
@@ -507,7 +505,6 @@ function ToolCard({
               <Heading level={3} weight="bold">
                 {name}
               </Heading>
-              {badge ? <Token label={badge} size="sm" /> : null}
             </HStack>
             <Text type="supporting" color="secondary">
               {copy.tagline}
@@ -547,7 +544,6 @@ function Tools({ copy }: { copy: LandingCopy['tools'] }) {
           icon={Server}
           hue="green"
           name="itmo-widgets-agent"
-          badge={copy.beta}
           copy={copy.agent}
           links={
             <Button

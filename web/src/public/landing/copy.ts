@@ -49,7 +49,6 @@ export interface LandingCopy {
   tools: {
     title: string;
     lead: string;
-    beta: string;
     agent: {
       tagline: string;
       audience: string;
@@ -149,33 +148,28 @@ const ru: LandingCopy = {
   },
   tools: {
     title: 'Агент и MCP-сервер',
-    lead: 'Две необязательные программы для вашего компьютера или сервера. Подключаются к приложению по QR-коду: «Профиль → Устройства → Подключить устройство».',
-    beta: 'бета',
+    lead: 'Программы для своего компьютера или сервера. Подключаются по QR-коду: «Профиль → Устройства».',
     agent: {
-      tagline: 'Автозапись на спорт без участия телефона',
-      audience:
-        'Для тех, кто стоит в очередях на физкультуру и держит включённым ноутбук, NAS или сервер.',
+      tagline: 'Автозапись на спорт без участия телефона',
+      audience: 'Для тех, у кого есть всегда включённый ноутбук, NAS или сервер.',
       points: [
-        'Сервер сообщает о свободном месте, агент перепроверяет очередь и записывает вас. Телефону для этого не нужно быть в сети.',
-        'На iPhone с .ipa из релиза пушей нет, и записывать при закрытом приложении там умеет только агент.',
-        'Токен ИТМО хранится только на вашей машине. К ИТМО агент ходит не чаще 60 раз в час.',
+        'Записывает из очереди, как только освобождается место, даже если телефон не в сети.',
+        'Токен ИТМО хранится только на вашей машине.',
       ],
-      setup:
-        'Linux, macOS, Windows, FreeBSD или Docker, ставится одной командой. Пока это бета, доступ включаю по запросу: напишите в Telegram.',
+      setup: 'Linux, macOS, Windows, FreeBSD или Docker.',
       link: 'Установка на GitHub',
     },
     mcp: {
-      tagline: 'My ITMO и БАРС для ИИ-ассистентов',
-      audience: 'Для тех, кто работает с Claude, Codex, Cursor или другим MCP-клиентом.',
+      tagline: 'My ITMO и БАРС для ИИ-ассистентов',
+      audience: 'Для Claude, Codex, Cursor и других MCP-клиентов.',
       points: [
-        'Ассистент сам смотрит расписание, зачётку, баллы БАРС, физкультуру, стипендию и общежитие. Спрашивайте как обычно: «какие пары завтра?»',
-        'Через приложение ITMO.Widgets ему видны ещё отзывы о преподавателях, ссылки предметов и ваши очереди на спорт.',
-        'По умолчанию только читает. Запись на спорт, брони аудиторий и заявки включаются отдельно, и каждое действие ждёт вашего подтверждения.',
+        'Расписание, зачётка, баллы БАРС и физкультура по запросу вроде «какие пары завтра?»',
+        'По умолчанию только читает. Любое изменение ждёт вашего подтверждения.',
       ],
       setup: 'Нужен Node.js 20 или новее.',
       link: 'itmo-mcp на GitHub',
     },
-    web: 'Ещё есть веб-версия, но пока в ней немного: друзья, спорт и устройства.',
+    web: 'Есть и веб-версия, но пока в ней немного.',
     webLink: 'Открыть веб-версию',
   },
   privacy: {
@@ -191,7 +185,7 @@ const ru: LandingCopy = {
       },
       {
         title: 'Сервер, если нужен',
-        text: 'Друзья, очереди на спорт, отзывы и устройства работают через сервер ITMO.Widgets. Он выключен, пока вы сами его не включите.',
+        text: 'Друзья, очереди и отзывы работают через сервер ITMO.Widgets. По умолчанию он выключен.',
       },
       {
         title: 'Без рекламы',
@@ -203,17 +197,14 @@ const ru: LandingCopy = {
   },
   download: {
     title: 'Скачать',
-    lead: 'Ставьте из Google Play или App Store, обновления придут сами. Если магазин не подходит, рядом с кнопками есть APK и .ipa.',
+    lead: 'Из магазина обновления придут сами.',
     android: 'Android 8.0 и новее',
     androidNote:
-      'Если Play нет, возьмите APK в релизах на GitHub: arm64 подходит почти всем телефонам, armv7 нужен совсем старым. Версии из Play и с GitHub ставятся друг поверх друга.',
+      'Нет Google Play? Есть APK: arm64 почти для всех телефонов, armv7 для совсем старых.',
     apk: 'APK на GitHub',
     iphone: 'iOS 26.1 и новее',
-    iphoneTestflight: 'Бета-версии выходят в TestFlight.',
-    iphoneIpa: [
-      'Есть и файл .ipa в релизах на GitHub, его ставят через ',
-      '. Пушей в такой сборке нет, а с SideStore и Sideloadly не работают виджеты.',
-    ],
+    iphoneTestflight: 'Бета-версии выходят в TestFlight.',
+    iphoneIpa: ['Файл .ipa ставится через ', ', пушей в такой сборке нет.'],
     ipa: '.ipa на GitHub',
   },
 };
@@ -280,33 +271,28 @@ const en: LandingCopy = {
   },
   tools: {
     title: 'Agent and MCP server',
-    lead: 'Two optional programs for your own computer or server. Both connect to the app with a QR code from “Профиль → Устройства → Подключить устройство” (Profile → Devices → Connect a device).',
-    beta: 'beta',
+    lead: 'Programs for your own computer or server. They connect with a QR code from “Профиль → Устройства” (Profile → Devices).',
     agent: {
-      tagline: 'Sport auto sign-up that runs without your phone',
-      audience:
-        'For students who queue for PE classes and have a laptop, NAS or server that stays on.',
+      tagline: 'Sport auto sign-up without your phone',
+      audience: 'For anyone with a laptop, NAS or server that stays on.',
       points: [
-        'The server reports a free spot, the agent rechecks your queue and books you. Your phone does not have to be online for that.',
-        'An iPhone with the .ipa from a release gets no push notifications, so only the agent can book there while the app is closed.',
-        'Your ITMO token stays on your machine. The agent makes at most 60 requests an hour to ITMO.',
+        'Books you from the queue as soon as a spot frees up, even when your phone is offline.',
+        'Your ITMO token stays on your machine.',
       ],
-      setup:
-        'Linux, macOS, Windows, FreeBSD or Docker, installed with one command. It is in beta for now: message me in Telegram and I’ll turn on access.',
+      setup: 'Linux, macOS, Windows, FreeBSD or Docker.',
       link: 'Install guide on GitHub',
     },
     mcp: {
-      tagline: 'My ITMO and BARS for AI assistants',
-      audience: 'For people who use Claude, Codex, Cursor or another MCP client.',
+      tagline: 'My ITMO and BARS for AI assistants',
+      audience: 'For Claude, Codex, Cursor and other MCP clients.',
       points: [
-        'Your assistant reads your schedule, record book, BARS points, PE, scholarship and dorm on its own. Just ask, for example “what classes do I have tomorrow?”',
-        'Through the ITMO.Widgets app it also sees teacher reviews, subject links and your sport queues.',
-        'Read-only by default. Sport sign-ups, room bookings and requests are turned on separately, and every action waits for your confirmation.',
+        'Schedule, record book, BARS points and PE on request, like “what classes do I have tomorrow?”',
+        'Read-only by default. Any change waits for your confirmation.',
       ],
       setup: 'Needs Node.js 20 or newer.',
       link: 'itmo-mcp on GitHub',
     },
-    web: 'There is also a web version, though it has little in it so far: friends, sport and devices.',
+    web: 'There is also a web version, though not much is in it yet.',
     webLink: 'Open the web version',
   },
   privacy: {
@@ -322,7 +308,7 @@ const en: LandingCopy = {
       },
       {
         title: 'Server only if you want it',
-        text: 'Friends, sport queues, reviews and devices go through the ITMO.Widgets server. It stays off until you turn it on.',
+        text: 'Friends, queues and reviews go through the ITMO.Widgets server. It is off by default.',
       },
       {
         title: 'No ads',
@@ -334,17 +320,14 @@ const en: LandingCopy = {
   },
   download: {
     title: 'Download',
-    lead: 'Install from Google Play or the App Store, and updates arrive on their own. If a store does not suit you, the APK and the .ipa are next to the buttons. The app is in Russian.',
+    lead: 'Updates come through the store. The app is in Russian.',
     android: 'Android 8.0 or newer',
     androidNote:
-      'No Play on your phone? Take the APK from GitHub releases: arm64 fits almost every phone, armv7 is for very old ones. Play and GitHub builds install over each other.',
+      'No Google Play? There is an APK: arm64 fits almost every phone, armv7 is for very old ones.',
     apk: 'APK on GitHub',
     iphone: 'iOS 26.1 or newer',
-    iphoneTestflight: 'Beta builds come out in TestFlight.',
-    iphoneIpa: [
-      'There is also an .ipa file in GitHub releases that you install with ',
-      '. That build gets no push notifications, and widgets do not work with SideStore or Sideloadly.',
-    ],
+    iphoneTestflight: 'Beta builds come out in TestFlight.',
+    iphoneIpa: ['The .ipa installs with ', ' and gets no push notifications.'],
     ipa: '.ipa on GitHub',
   },
 };
