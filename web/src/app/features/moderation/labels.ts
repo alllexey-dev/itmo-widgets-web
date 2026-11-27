@@ -32,6 +32,7 @@ import type {
   RestrictionCapability,
   ReviewVerification,
   RevisionStatus,
+  SubjectLinkTarget,
   TargetType,
 } from './types';
 
@@ -303,6 +304,19 @@ export function visibilityLabel(visibility: LinkVisibility, audienceLabel: strin
     case 'ALL':
       return 'Все';
   }
+}
+
+/**
+ * The name of a flow of a link: what students see when it is the link's flow, else its name among
+ * the revision's flow options; null when neither knows it.
+ */
+export function flowLabelOf(
+  { revision, link }: SubjectLinkTarget,
+  flowId: number | null,
+): string | null {
+  if (flowId === null) return null;
+  if (flowId === link.flowId && link.audienceLabel) return link.audienceLabel;
+  return revision.flowOptions?.find((option) => option.flowId === flowId)?.label ?? null;
 }
 
 /** `2026-1` is "2026/27, осень"; `2025-2` is "2025/26, весна". */

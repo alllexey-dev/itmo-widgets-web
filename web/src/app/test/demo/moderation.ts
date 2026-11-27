@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'msw';
 import type {
   AdminRestriction,
+  LinkAudience,
   ModerationCase,
   ModerationDecision,
   ModerationReport,
@@ -164,6 +165,24 @@ function decision(
   return decisionOf(id, action, { createdAt: minutesAgo(minutes), ...overrides });
 }
 
+/** Schedule flows of a subject the way Backend lists them: by depth, then name. */
+function flowsOf(
+  prefix: string,
+  firstId: number,
+  lecture: string,
+  practices: string[],
+): LinkAudience[] {
+  return [
+    { flowId: firstId, label: `${prefix} ${lecture}`, typeId: 1, depth: 1 },
+    ...practices.map((name, index) => ({
+      flowId: firstId + index + 1,
+      label: `${prefix} ${name}`,
+      typeId: 2,
+      depth: 2,
+    })),
+  ];
+}
+
 // --- Open cases, oldest decisions first in the queue order Backend uses (newest opened last here).
 
 function editedLink(): ModerationCase {
@@ -178,6 +197,12 @@ function editedLink(): ModerationCase {
   target.revision.number = 3;
   target.revision.visibility = 'FLOW';
   target.revision.flowId = 7102;
+  // The author picked a practice group for a table of both groups: a moderator may widen it.
+  target.revision.flowOptions = flowsOf('ДИСКР МАТ ПИИКТ', 7101, '1.1', [
+    '1.1.1',
+    '1.1.2',
+    '1.1.3',
+  ]);
   target.link = {
     ...target.link,
     status: 'PUBLISHED',
@@ -593,7 +618,52 @@ function resolved(): ModerationCase[] {
     null,
   );
 
-  return [...approved, rejected, hidden, deleted, swept()];
+  return [...approved, movedFlow(), rejected, hidden, deleted, swept()];
+}
+
+/** Lecture recordings sent for a practice group and approved for the whole lecture flow. */
+function movedFlow(): ModerationCase {
+  const seed = {
+    id: 'demo-done-flow',
+    title: 'Записи лекций по механике',
+    url: 'https://rutube.ru/plst/demo-mechanics',
+    subjectName: 'Физика',
+    ...author(2),
+  };
+  const options = flowsOf('ФИЗ ПИИКТ', 3200, '3.2', ['3.2.1', '3.2.2']);
+  const lectures = options[0] as LinkAudience;
+  const target = linkTarget(seed);
+  target.revision = {
+    ...target.revision,
+    category: 'RECORDINGS',
+    visibility: 'FLOW',
+    flowId: lectures.flowId,
+    flowOptions: options,
+    status: 'APPROVED',
+  };
+  target.link = {
+    ...target.link,
+    category: 'RECORDINGS',
+    visibility: 'FLOW',
+    flowId: lectures.flowId,
+    audienceLabel: lectures.label,
+    status: 'PUBLISHED',
+    score: 5,
+  };
+  return moderationCase(
+    seed,
+    {
+      status: 'RESOLVED',
+      openedAt: minutesAgo(DAY + 5 * HOUR),
+      decisions: [
+        decision('demo-done-d-flow', 'APPROVE', DAY + 4 * HOUR, {
+          flowId: lectures.flowId,
+          note: 'Записи нужны всему потоку, не одной группе',
+        }),
+      ],
+    },
+    target,
+  );
 }
 
 /**

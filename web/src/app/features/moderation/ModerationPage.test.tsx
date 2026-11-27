@@ -1770,4 +1770,159 @@ describe('ModerationPage', () => {
       });
     });
   });
+
+  describe('the flows a link could be shown to', () => {
+    const FLOWS = [
+      { flowId: 3200, label: 'ФИЗ ПИИКТ 3.2', typeId: 1, depth: 1 },
+      { flowId: 3201, label: 'ФИЗ ПИИКТ 3.2.1', typeId: 2, depth: 2 },
+      { flowId: 3202, label: 'ФИЗ ПИИКТ 3.2.2', typeId: 2, depth: 2 },
+    ];
+
+    /** A new link the author showed to the practice flow 3.2.1, with [flowOptions] as sent. */
+    function flowCase(
+      flowOptions: SubjectLinkTarget['revision']['flowOptions'] = FLOWS,
+    ): ModerationCase {
+      const target = linkTarget({ id: 'case-1', title: 'Записи лекций' });
+      target.revision.visibility = 'FLOW';
+      target.revision.flowId = 3201;
+      target.revision.flowOptions = flowOptions;
+      target.link.visibility = 'FLOW';
+      target.link.flowId = 3201;
+      target.link.audienceLabel = 'ФИЗ ПИИКТ 3.2.1';
+      return moderationCase({ id: 'case-1', title: 'Записи лекций' }, {}, target);
+    }
+
+    function flows() {
+      return within(detail()).getByRole('region', { name: /Потоки на выбор/ });
+    }
+
+    it('lists the options in their order with the chosen one marked', async () => {
+      moderatorOnWideScreen();
+      mockModeration([flowCase()]);
+
+      renderApp('/admin/moderation');
+
+      await openedCase('Математический анализ');
+      const items = within(flows()).getAllByRole('listitem');
+      expect(items.map((item) => item.textContent)).toEqual([
+        'ФИЗ ПИИКТ 3.2',
+        'ФИЗ ПИИКТ 3.2.1Сейчас',
+        'ФИЗ ПИИКТ 3.2.2',
+      ]);
+      expect(within(detail()).getByRole('region', { name: 'Ссылка' })).toHaveTextContent(
+        'ФИЗ ПИИКТ 3.2.1',
+      );
+    });
+
+    it('approves for another flow with a note, then names that flow in the history', async () => {
+      moderatorOnWideScreen();
+      const { decisions } = mockModeration([flowCase(), second]);
+      renderApp('/admin/moderation');
+      await openedCase('Математический анализ');
+
+      await userEvent.click(
+        within(flows()).getByRole('button', { name: 'Одобрить для другого потока' }),
+      );
+      const dialog = screen.getByRole('dialog', { name: 'Одобрить для другого потока' });
+      const submit = within(dialog).getByRole('button', { name: 'Одобрить' });
+      // The link's own flow is the plain approval, so the dialog waits for another one.
+      expect(within(dialog).getByRole('combobox', { name: 'Поток' })).toHaveTextContent(
+        'ФИЗ ПИИКТ 3.2.1',
+      );
+      expect(submit).toHaveAttribute('aria-disabled', 'true');
+      await choose(dialog, 'Поток', 'ФИЗ ПИИКТ 3.2');
+      await userEvent.type(
+        within(dialog).getByRole('textbox', { name: /Комментарий/ }),
+        'Записи нужны всему потоку',
+      );
+      await userEvent.click(submit);
+
+      expect(await findToast('Ссылка одобрена для потока ФИЗ ПИИКТ 3.2')).toBeInTheDocument();
+      expect(decisions.map((decision) => decision.body)).toEqual([
+        { action: 'APPROVE', flowId: 3200, note: 'Записи нужны всему потоку' },
+      ]);
+
+      await openedCase('Физика');
+      await userEvent.click(screen.getByRole('radio', { name: 'Решённые' }));
+      expect(await openedCase('Математический анализ')).toBeInTheDocument();
+      const log = within(detail()).getByRole('region', { name: 'Решения' });
+      expect(log).toHaveTextContent('Одобрено для потока ФИЗ ПИИКТ 3.2');
+      expect(log).toHaveTextContent('Записи нужны всему потоку');
+      expect(within(detail()).getByRole('region', { name: 'Ссылка' })).toHaveTextContent(
+        'ФИЗ ПИИКТ 3.2',
+      );
+    });
+
+    it('sends only the flow when no note is written', async () => {
+      moderatorOnWideScreen();
+      const { decisions } = mockModeration([flowCase()]);
+      renderApp('/admin/moderation');
+      await openedCase('Математический анализ');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Одобрить для другого потока' }));
+      const dialog = screen.getByRole('dialog', { name: 'Одобрить для другого потока' });
+      await choose(dialog, 'Поток', 'ФИЗ ПИИКТ 3.2.2');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Одобрить' }));
+
+      expect(await findToast('Ссылка одобрена для потока ФИЗ ПИИКТ 3.2.2')).toBeInTheDocument();
+      expect(decisions[0]?.body).toEqual({ action: 'APPROVE', flowId: 3202 });
+    });
+
+    it('keeps the plain approval one click, without a flow', async () => {
+      moderatorOnWideScreen();
+      const { decisions } = mockModeration([flowCase()]);
+      renderApp('/admin/moderation');
+      await openedCase('Математический анализ');
+
+      await userEvent.keyboard('a');
+
+      expect(await findToast('Ссылка одобрена')).toBeInTheDocument();
+      expect(decisions[0]?.body).toEqual({ action: 'APPROVE' });
+    });
+
+    it.each([
+      ['null', null],
+      ['absent, from an older Backend', undefined],
+    ])('shows no flows and offers no other flow when the options are %s', async (_, options) => {
+      moderatorOnWideScreen();
+      const item = flowCase();
+      if (item.target?.targetType === 'SUBJECT_RESOURCE') {
+        if (options === undefined) delete item.target.revision.flowOptions;
+        else item.target.revision.flowOptions = options;
+      }
+      mockModeration([item]);
+
+      renderApp('/admin/moderation');
+
+      await openedCase('Математический анализ');
+      expect(screen.getByRole('button', { name: 'Одобрить' })).toBeInTheDocument();
+      expect(within(detail()).queryByRole('region', { name: /Потоки на выбор/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /другого потока/ })).toBeNull();
+      expect(within(detail()).getByRole('region', { name: 'Ссылка' })).toHaveTextContent(
+        'ФИЗ ПИИКТ 3.2.1',
+      );
+    });
+
+    it('lists the flows of a closed case without offering to move it', async () => {
+      moderatorOnWideScreen();
+      const item = flowCase();
+      mockModeration([
+        {
+          ...item,
+          status: 'RESOLVED',
+          decisions: [decisionOf('d1', 'APPROVE', { createdAt: minutesAgo(60), flowId: 3209 })],
+        },
+      ]);
+
+      renderApp('/admin/moderation?status=RESOLVED');
+
+      await openedCase('Математический анализ');
+      expect(within(flows()).getAllByRole('listitem')).toHaveLength(3);
+      expect(screen.queryByRole('button', { name: /другого потока/ })).toBeNull();
+      // A flow that is no longer among the options is named by its number.
+      expect(within(detail()).getByRole('region', { name: 'Решения' })).toHaveTextContent(
+        'Одобрено для потока № 3209',
+      );
+    });
+  });
 });

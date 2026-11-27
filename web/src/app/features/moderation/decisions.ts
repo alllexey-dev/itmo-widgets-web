@@ -1,4 +1,4 @@
-import type { CaseTarget, ModerationAction, ModerationCase } from './types';
+import type { CaseTarget, LinkAudience, ModerationAction, ModerationCase } from './types';
 
 /** A decision a case offers in its present state. */
 export interface DecisionOption {
@@ -37,6 +37,28 @@ export function hasApprovedVersion(target: CaseTarget): boolean {
     link.visibility !== revision.visibility ||
     link.flowId !== revision.flowId
   );
+}
+
+/**
+ * The flows the author could show a FLOW link to, as the revision lists them; null for any other
+ * target and for a revision without the list (an older app or Backend).
+ */
+export function flowOptionsOf(target: CaseTarget): LinkAudience[] | null {
+  if (target.targetType !== 'SUBJECT_RESOURCE') return null;
+  const { visibility, flowOptions } = target.revision;
+  return visibility === 'FLOW' && flowOptions && flowOptions.length > 0 ? flowOptions : null;
+}
+
+/**
+ * Whether an approval may move the link to another of its flow options: Backend takes `flowId` with
+ * an `APPROVE` of a FLOW revision that has the list, so the case must offer approving and the list
+ * must name some other flow.
+ */
+export function canApproveForAnotherFlow(target: CaseTarget, options: DecisionOption[]): boolean {
+  if (target.targetType !== 'SUBJECT_RESOURCE') return false;
+  const current = target.revision.flowId;
+  const other = flowOptionsOf(target)?.some((option) => option.flowId !== current) ?? false;
+  return other && options.some((option) => option.action === 'APPROVE');
 }
 
 // The wording differs by grammatical gender, so both kinds are written out.

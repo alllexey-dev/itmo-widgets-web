@@ -29,12 +29,22 @@ interface Props {
   /** The decision being taken back, while it is. */
   revertingId: string | null;
   onUndo: (decision: ModerationDecision) => void;
+  /** The name of a flow of the link, for an approval that moved it to another flow. */
+  flowName?: (flowId: number) => string | null;
 }
 
-/** How the log names a decision; `DISMISS` is named by what it meant for this case. */
-function nameOf(decision: ModerationDecision, isPlainClose: boolean) {
+/**
+ * How the log names a decision; `DISMISS` is named by what it meant for this case, an `APPROVE`
+ * that moved a link to another flow by that flow.
+ */
+function nameOf(decision: ModerationDecision, isPlainClose: boolean, flowName: Props['flowName']) {
   if (decision.action === 'DISMISS' && isPlainClose) {
     return { label: 'Заявка закрыта', icon: CircleCheck };
+  }
+  const flowId = decision.flowId;
+  if (decision.action === 'APPROVE' && flowId != null) {
+    const flow = flowName?.(flowId) ?? `№ ${flowId}`;
+    return { ...ACTIONS.APPROVE, label: `${ACTIONS.APPROVE.label} для потока ${flow}` };
   }
   return ACTIONS[decision.action];
 }
@@ -55,6 +65,7 @@ export function CaseHistory({
   targetType,
   revertingId,
   onUndo,
+  flowName,
 }: Props) {
   // Backend marks at most one decision as revertible; its offer goes away when the window ends.
   const now = useNowPast(decisions.map((decision) => decision.revertibleUntil));
@@ -88,7 +99,7 @@ export function CaseHistory({
         ) : (
           <ol className="mod-timeline">
             {decisions.map((decision) => {
-              const action = nameOf(decision, isPlainClose);
+              const action = nameOf(decision, isPlainClose, flowName);
               const restriction = restrictionText(decision);
               const until = canRevert(decision, now) ? decision.revertibleUntil : null;
               return (

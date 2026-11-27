@@ -1,18 +1,20 @@
 import { Button } from '@astryxdesign/core/Button';
 import { Token } from '@astryxdesign/core/Token';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
-import { BadgeCheck, ExternalLink, EyeOff, UserRound } from 'lucide-react';
+import { BadgeCheck, Check, ExternalLink, EyeOff, UserRound } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { formatDateTime, formatRelative } from '../../lib/format';
 import {
   CATEGORIES,
+  flowLabelOf,
   hostOf,
   scoreText,
   SPORT_VERIFICATION,
   VERIFICATION,
   visibilityLabel,
 } from './labels';
-import type { SubjectLinkTarget, TeacherReviewTarget } from './types';
+import { Section } from './Section';
+import type { LinkAudience, SubjectLinkTarget, TeacherReviewTarget } from './types';
 
 /** A short label over its value; a row of them wraps into as many columns as fit. */
 export function Fact({ label, children }: { label: string; children: ReactNode }) {
@@ -50,8 +52,7 @@ function Address({ url }: { url: string }) {
 export function LinkPreview({ target, hasKeys }: { target: SubjectLinkTarget; hasKeys: boolean }) {
   const { revision, link } = target;
   const category = CATEGORIES[revision.category];
-  // The flow name is known only for the link's current flow.
-  const audience = revision.flowId === link.flowId ? link.audienceLabel : null;
+  const audience = flowLabelOf(target, revision.flowId);
   return (
     <section className="mod-preview" aria-label="Ссылка">
       <div className="mod-preview-head">
@@ -92,6 +93,38 @@ export function LinkPreview({ target, hasKeys }: { target: SubjectLinkTarget; ha
         ) : null}
       </dl>
     </section>
+  );
+}
+
+/**
+ * The flows the author could show a FLOW link to, in the order the author's picker listed them,
+ * with the link's flow marked.
+ * `action` is what a moderator can do with them: approve the link for another one.
+ */
+export function LinkFlows({
+  options,
+  current,
+  action,
+}: {
+  options: LinkAudience[];
+  current: number | null;
+  action?: ReactNode;
+}) {
+  return (
+    <Section title="Потоки на выбор" count={options.length}>
+      <p className="mod-muted mod-empty">Из них автор выбирал, кому показать ссылку.</p>
+      <ul className="mod-flows">
+        {options.map((option) => (
+          <li key={option.flowId}>
+            <span>{option.label}</span>
+            {option.flowId === current ? (
+              <Token label="Сейчас" color="blue" size="sm" icon={<Check size={14} />} />
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      {action ? <div className="mod-flows-actions">{action}</div> : null}
+    </Section>
   );
 }
 

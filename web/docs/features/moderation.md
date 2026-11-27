@@ -41,10 +41,17 @@ queue. `ModerationPage` shows the queue and the open case.
   the title (the link's subject, or the teacher's name as in the row, `ИСУ <teacher>` when nobody
   knows it) over what it is (`Ссылка · 2026/27, осень`,
   `Отзыв о преподавателе · ИСУ <teacher> · <subject>`, with `имя не найдено` in place of the ISU
-  when the title is the ISU); the decisions; the preview; the changes; the author; the reports; the
-  history of decisions.
+  when the title is the ISU); the decisions; the preview; the flows of a FLOW link; the changes; the
+  author; the reports; the history of decisions.
   - Link preview (`LinkPreview`): category, title, the address with the host standing out,
-    `Открыть` (a new tab), who sees it, the revision number and time, the rating, `Скрыта`.
+    `Открыть` (a new tab), who sees it, the revision number and time, the rating, `Скрыта`. The name
+    of a flow is the link's `audienceLabel` for the link's flow, else its label among the revision's
+    `flowOptions` (`flowLabelOf`).
+  - Flows (`LinkFlows`, `Потоки на выбор`), for a FLOW link whose revision has `flowOptions`: the
+    flows the author could pick from, in the order the author's picker listed them, the revision's flow
+    (the author's pick, or the one a moderator approved it for) marked `Сейчас`. An open case that offers `Одобрить` / `Оставить` has
+    `Одобрить для другого потока` here (see [Decisions](#decisions)). Without the list (`null`, or no
+    field from an older Backend; an older app sends none) there is no section and no flow change.
   - Review preview (`ReviewPreview`): `Анонимно` / `С именем`, the ISU check (`Преподавал у автора`,
     `Занятий у автора не найдено`, `Сверка с ИСУ идёт`, each explained in a tooltip: the check
     never decides the case; a review verified because the teacher has a lesson in the sport catalog,
@@ -63,7 +70,8 @@ queue. `ModerationPage` shows the queue and the open case.
     (`Жалоб автора отклонено`); the active restrictions. `Профиль` opens the
     user card and is shown to administrators only. The two actions about the author sit here.
   - History (`CaseHistory`): the reports with their comments, and every decision with who made it
-    (`Модератор` or `Автоматически`), the restriction and the note. A `DISMISS` is named by what it
+    (`Модератор` or `Автоматически`), the restriction and the note. An `APPROVE` with `flowId` reads
+    `Одобрено для потока <name>`, the name as above, `№ <id>` when nobody knows it. A `DISMISS` is named by what it
     meant for the case: `Заявка закрыта` when it only closed a case whose revision was already
     rejected or withdrawn and that reports had not opened, `Жалобы отклонены` otherwise. Without
     decisions an open case says `Решений пока нет`, a closed one `Решений нет`. A reverted decision
@@ -76,7 +84,8 @@ queue. `ModerationPage` shows the queue and the open case.
 
 ### Decisions
 
-One request: `POST /api/admin/moderation/cases/{id}/decisions` with `{action, note?, restriction?}`.
+One request: `POST /api/admin/moderation/cases/{id}/decisions` with
+`{action, note?, restriction?, flowId?}`.
 `decisions.ts` (`decisionsFor`) picks the decisions that make sense for the case as it is, the
 affirmative one first, each with one or two sentences about what it does for the author and for
 other students. The sentences are the tooltips of the buttons and the content of
@@ -105,6 +114,7 @@ request: `Ссылка оставлена как есть` for `Оставить
 | `Скрыть`                                                          | `HIDE`             | -                                                              |
 | `Вернуть`                                                         | `RESTORE`          | -                                                              |
 | `Отклонить жалобы`                                                | `DISMISS`          | -                                                              |
+| `Одобрить для другого потока` (flows section)                     | `APPROVE`          | another flow of `flowOptions`, an optional note                |
 | `Ограничить` (author section)                                     | `RESTRICT_USER`    | what to forbid, the term (1 to 90 days or forever), a reason   |
 | `Скрыть все ссылки автора` / `... отзывы автора` (author section) | `HIDE_ALL_BY_USER` | the author's name, typed in any case                           |
 
@@ -112,6 +122,13 @@ request: `Ссылка оставлена как есть` for `Оставить
   instead of Backend's technical fallback; both dialogs say so under the field. Presets differ for
   links and reviews (`labels.ts`); the default restriction is `Публикация ссылок` for a link and
   `Отзывы` for a review, for 7 days.
+- `Одобрить для другого потока` (`canApproveForAnotherFlow`) is offered on an open case of a FLOW
+  link whose revision lists `flowOptions` with some other flow, when the case offers `APPROVE`. Its
+  dialog lists the flows as radios with the link's flow selected (`Сейчас`) and waits for another
+  one: approving for the link's own flow is the plain `Одобрить`, which stays one click (and `A`)
+  and sends no `flowId`. It sends `{action: "APPROVE", flowId, note?}`; Backend shows the link to
+  that flow instead, and an undo puts the flow back too. The toast names the flow
+  (`Ссылка одобрена для потока ...`, `оставлена` for an approved revision). It has no key.
 - The restrict dialog warns when the author already has an active restriction of the chosen kind, or
   of every kind: Backend adds the new one next to it.
 - Hiding everything by an author (Backend `hideAllBy`) hides what they have published and rejects
